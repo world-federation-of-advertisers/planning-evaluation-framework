@@ -24,10 +24,10 @@ course of the project**
 A typical workflow consists of the following steps:
 
 1.  Generate a Data Design.
-1.  Configure an Experimental Design.
-1.  Run the Evaluator to create the results of evaluating the experiments
+2.  Configure an Experimental Design.
+3.  Run the Evaluator to create the results of evaluating the experiments
     against the data.
-1.  Analyze the results in Colab.
+4.  Analyze the results in Colab.
 
 A Data Design specifies the set of data that will be used for evaluating models.
 It is given by a directory structure. Each subdirectory of the Data Design

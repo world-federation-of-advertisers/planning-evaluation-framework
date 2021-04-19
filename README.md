@@ -9,8 +9,8 @@ multiple publishers, by estimating the number of people that would be reached at
 various frequencies as a function of the amount spent with each publisher. The
 purpose of the Planning Evaluation Framework is to
 
-*   Provide a means for identifying the best candidate planning models to be
-    used in the Halo measurement system;
+*   Provide a means for identifying the best candidate planning modeling strategies
+    to be used in the Halo measurement system;
 *   Provide the ability for publishers to evaluate the quality of models when
     applied to their own internal data sets; and,
 *   Provide the ability to simulate the behavior of the Halo system on realistic
@@ -39,8 +39,8 @@ single publisher. It is a CSV file, where each line is of the form
    vid, spend
 ```
 
-where vid is a virtual user id, and spend is the amount that would have to be
-spent for this impression to be shown.
+where vid is a virtual user id, and spend is the total amount that would have
+to be spent for this impression to be shown.
 
 A Data Design can be synthetic, or it can represent actual publisher data.
 Synthetic data designs can be generated using the program
@@ -48,13 +48,15 @@ Synthetic data designs can be generated using the program
 data available in your organization, you can construct your own data design. An
 example data design can be found in the directory `examples/data_designs`.
 
-An Experimental Design specifies the models that will be evaluated and the
-parameters that will be used for evaluation. An Experimental Design is given by
-a Python class. An Experimental Design is subdivided into Experiments, which are
-further broken down into Trials. An Experiment consists of a collection of
-models and model parameters that are run against a single Dataset. A Trial
-consists of simulating the outcome of one model using one Dataset. For an
-example Experimental Design, see the directory `examples/experimental_designs`.
+An Experimental Design specifies the modeling strategies that will be
+evaluated and the parameters that will be used for evaluation. An
+Experimental Design is given by a Python class. An Experimental Design
+is subdivided into Experiments, which are further broken down into
+Trials. An Experiment consists of a collection of modeling strategies
+and model parameters that are run against a single Dataset. A Trial
+consists of simulating the outcome of one modeling strategy using one
+Dataset and one set of parameter values. For an example Experimental
+Design, see the directory `examples/experimental_designs`.
 
 Once a Data Design and an Experimental Design have been specified, the Evaluator
 can be used to run simulations of the experimental design versus the data
@@ -112,9 +114,9 @@ python3 data_generators/synthetic_data_generator.py \
 ```
 
 In this example, we will use the sample experimental design in the file
-`examples/experimental_designs/goerg_gamma_poisson.py`. This compares Goerg's
-one-point model to the Gamma-Poisson distribution, using the Pairwise Union
-model for overlaps.
+`examples/experimental_designs/goerg_gamma_poisson.py`. This compares [Georg Goerg's
+one-point model](https://research.google/pubs/pub43218/) to the Gamma-Poisson distribution,
+using the Pairwise Union model for overlaps.
 
 ```
 python3 drivers/experimental_design_driver.py \

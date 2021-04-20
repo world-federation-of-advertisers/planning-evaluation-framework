@@ -15,11 +15,11 @@
 
 from absl.testing import absltest
 
-from wfa_planning_evaluation_framework.models.single_publisher_impression_model import ReachPoint
-from wfa_planning_evaluation_framework.models.single_publisher_impression_model import ImpressionsToReachModel
+from wfa_planning_evaluation_framework.models.reach_by_impression_model import ReachPoint
+from wfa_planning_evaluation_framework.models.reach_by_impression_model import ReachCurve
 
 
-class FakeReachModel(ImpressionsToReachModel):
+class FakeReachCurve(ReachCurve):
 
   def _fit(self) -> None:
     self._max_reach = self.data[0].reach_at_frequency[0]
@@ -31,28 +31,28 @@ class FakeReachModel(ImpressionsToReachModel):
     ]
 
 
-class ImpressionsToReachModel(absltest.TestCase):
+class ReachCurveTest(absltest.TestCase):
 
   def test_object_creation(self):
-    model = FakeReachModel([ReachPoint(200, (100,))])
+    model = FakeReachCurve([ReachPoint(200, (100,))])
     self.assertLen(model.data, 1)
     self.assertEqual(model.data[0].impressions, 200)
     self.assertEqual(model.data[0].reach_at_frequency[0], 100)
 
   def test_reach(self):
-    model = FakeReachModel([ReachPoint(100, (200,))])
+    model = FakeReachCurve([ReachPoint(100, (200,))])
     self.assertEqual(model.reach(100), 100)
 
   def test_frequencies(self):
-    model = FakeReachModel([ReachPoint(100, (200,))])
+    model = FakeReachCurve([ReachPoint(100, (200,))])
     self.assertEqual(model.frequencies(100, 2), [100, 50])
 
   def test_max_reach(self):
-    model = FakeReachModel([ReachPoint(100, (200,))])
+    model = FakeReachCurve([ReachPoint(100, (200,))])
     self.assertEqual(model.max_reach, 200)
 
   def test_impressions_at_reach_quantile(self):
-    model = FakeReachModel([ReachPoint(100, (200,))])
+    model = FakeReachCurve([ReachPoint(100, (200,))])
     self.assertEqual(model.impressions_at_reach_quantile(0.001), 0)
     self.assertEqual(model.impressions_at_reach_quantile(0.9), 180)
     self.assertEqual(model.impressions_at_reach_quantile(0.999), 199)

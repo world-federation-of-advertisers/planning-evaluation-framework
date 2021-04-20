@@ -18,6 +18,7 @@ counts to number of users reached.  To fit the model, one or more points
 on the reach curve are provided.
 """
 
+import copy
 from typing import NamedTuple
 
 
@@ -26,14 +27,14 @@ class ReachPoint(NamedTuple):
 
   impressions:  The number of impressions that were shown.
   reach_at_frequency: A tuple of values representing the number of people
-    reached at each frequency.  reach_at_frequency[i] is the number of
-    people who were reached AT LEAST i+1 times.
+    reached at each frequency.  reach_at_frequency[k] is the number of
+    people who were reached AT LEAST k+1 times.
   """
   impressions: int
-  reach_at_frequency: list[int]
+  reach_at_frequency: list
 
 
-class ImpressionsToReachModel:
+class ReachCurve:
   """Models single-publisher reach as a function of impressions."""
 
   def __init__(self, data: [ReachPoint], max_reach: int = None):
@@ -46,7 +47,7 @@ class ImpressionsToReachModel:
     """
     if not data:
       raise ValueError("At least one ReachPoint must be specified")
-    self.data = data.copy()
+    self.data = copy.deepcopy(data)
     self._max_reach = max_reach
     self._fit()
 
@@ -59,7 +60,7 @@ class ImpressionsToReachModel:
     return self.frequencies(impressions, 1)[0]
 
   def frequencies(self, impressions: int, max_frequency: int) -> int:
-    """Returns the estimated reach for frequencies 1..max_frequency.
+    """Returns the estimated k+ reach for frequencies 1..max_frequency.
 
     Args:
       impressions: int, specifies the hypothetical number of impressions that
@@ -67,9 +68,9 @@ class ImpressionsToReachModel:
       max_frequency: int, specifies the number of frequencies for which reach
         will be reported.
     Returns:
-      An array reach[], where reach[i] is the number of people who would be
-      reached AT LEAST i+1 times.  The length of the array is equal to
-      max_frequency.
+      k+ reach.  E.g., an array reach[], where reach[k] is the number of people 
+      who would be reached AT LEAST k+1 times.  The length of the array is equal
+      to max_frequency.
     """
     raise NotImplementedError()
 

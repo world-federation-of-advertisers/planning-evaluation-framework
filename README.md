@@ -149,7 +149,7 @@ following subdirectories:
 
 ### Contributing
 
-## Code formatting
+#### Code formatting
 
 All of the code in this project is formatted with the [yapf](https://github.com/google/yapf/)
 tool, using the following command line:

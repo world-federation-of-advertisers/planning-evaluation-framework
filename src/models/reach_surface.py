@@ -22,42 +22,40 @@ from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 
 
 class ReachSurface:
-  """Models reach as a function of impressions or spend."""
+    """Models reach as a function of impressions or spend."""
 
-  def __init__(self, data: Iterable[ReachPoint], max_reach: int = None):
-    """Constructor
+    def __init__(self, data: Iterable[ReachPoint], max_reach: int = None):
+        """Constructor
 
-    Args:
-      data:  A list of ReachPoints to which the model is to be fit.
-      max_reach:  Optional.  If specified, the maximum possible reach that can
-        be achieved.
-    """
-    self._data = copy.deepcopy(data)
-    if not self._data:
-      raise ValueError("At least one ReachPoint must be specified")
-    dim = len(self._data[0].impressions)
-    if not all([len(point.impressions) == dim for point in data]):
-      raise ValueError("Not all input points have the same dimensionality.")
-    self._max_reach = max_reach
-    self._fit()
+        Args:
+          data:  A list of ReachPoints to which the model is to be fit.
+          max_reach:  Optional.  If specified, the maximum possible reach that can
+            be achieved.
+        """
+        self._data = copy.deepcopy(data)
+        if not self._data:
+            raise ValueError("At least one ReachPoint must be specified")
+        dim = len(self._data[0].impressions)
+        if not all([len(point.impressions) == dim for point in data]):
+            raise ValueError("Not all input points have the same dimensionality.")
+        self._max_reach = max_reach
+        self._fit()
 
-  def _fit(self) -> None:
-    """Fits a model to the data that was provided in the constructor."""
-    raise NotImplementedError()
+    def _fit(self) -> None:
+        """Fits a model to the data that was provided in the constructor."""
+        raise NotImplementedError()
 
-  def by_impressions(self,
-                     impressions: Iterable[int],
-                     max_frequency: int = 1) -> ReachPoint:
-    """Returns the estimated reach for a given impression vector."""
-    raise NotImplementedError()
+    def by_impressions(
+        self, impressions: Iterable[int], max_frequency: int = 1
+    ) -> ReachPoint:
+        """Returns the estimated reach for a given impression vector."""
+        raise NotImplementedError()
 
-  def by_spend(self,
-               spend: Iterable[float],
-               max_frequency: int = 1) -> ReachPoint:
-    """Returns the estimated reach for a given spend vector."""
-    raise NotImplementedError()
+    def by_spend(self, spend: Iterable[float], max_frequency: int = 1) -> ReachPoint:
+        """Returns the estimated reach for a given spend vector."""
+        raise NotImplementedError()
 
-  @property
-  def max_reach(self) -> int:
-    """Returns the max number of people that can potentially be reached."""
-    return self._max_reach
+    @property
+    def max_reach(self) -> int:
+        """Returns the max number of people that can potentially be reached."""
+        return self._max_reach

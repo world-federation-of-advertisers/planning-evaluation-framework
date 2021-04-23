@@ -27,71 +27,71 @@ from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 
 
 class GoergModel(ReachCurve):
-  """Goerg single-point reach curve model."""
+    """Goerg single-point reach curve model."""
 
-  def __init__(self, data: [ReachPoint]):
-    """Constructs an Goerg single point reach model.
+    def __init__(self, data: [ReachPoint]):
+        """Constructs an Goerg single point reach model.
 
-    Args:
-      data:  A list of ReachPoints to which the model is to be fit.
-      max_reach:  Optional.  If specified, the maximum possible reach that can
-        be achieved.
-    """
-    if len(data) != 1:
-      raise ValueError("Exactly one ReachPoint must be specified")
-    self._impressions = data[0].impressions[0]
-    self._reach = data[0].reach(1)
-    self._fit()
-    self._max_reach = self._rho
-    if data[0].spend:
-      self._cpi = data[0].spend[0] / data[0].impressions[0]
-    else:
-      self._cpi = None
+        Args:
+          data:  A list of ReachPoints to which the model is to be fit.
+          max_reach:  Optional.  If specified, the maximum possible reach that can
+            be achieved.
+        """
+        if len(data) != 1:
+            raise ValueError("Exactly one ReachPoint must be specified")
+        self._impressions = data[0].impressions[0]
+        self._reach = data[0].reach(1)
+        self._fit()
+        self._max_reach = self._rho
+        if data[0].spends:
+            self._cpi = data[0].spends[0] / data[0].impressions[0]
+        else:
+            self._cpi = None
 
-  def _fit(self) -> None:
-    """Fits a model to the data that was provided in the constructor."""
-    self._rho = ((self._impressions * self._reach) /
-                 (self._impressions - self._reach))
-    self._beta = self._rho
+    def _fit(self) -> None:
+        """Fits a model to the data that was provided in the constructor."""
+        self._rho = (self._impressions * self._reach) / (
+            self._impressions - self._reach
+        )
+        self._beta = self._rho
 
-  def by_impressions(self,
-                     impressions: [int],
-                     max_frequency: int = 1) -> ReachPoint:
-    """Returns the estimated reach as a function of impressions.
+    def by_impressions(self, impressions: [int], max_frequency: int = 1) -> ReachPoint:
+        """Returns the estimated reach as a function of impressions.
 
-    Args:
-      impressions: list of ints of length 1, specifying the hypothetical number 
-        of impressions that are shown.
-      max_frequency: int, specifies the number of frequencies for which reach
-        will be reported.
-    Returns:
-      A ReachPoint specifying the estimated reach for this number of impressions.
-    """
-    if len(impressions) != 1:
-      raise ValueError("Impressions vector must have a length of 1.")
-    kplus_reach_list = []
-    for k in range(1, max_frequency + 1):
-      kplus_reach = self._rho * (impressions[0] /
-                                 (impressions[0] + self._beta))**k
-      kplus_reach_list.append(kplus_reach)
-    if self._cpi:
-      spend = impressions[0] * self._cpi
-      return ReachPoint(impressions, kplus_reach_list, [spend])
-    else:
-      return ReachPoint(impressions, kplus_reach_list)
+        Args:
+          impressions: list of ints of length 1, specifying the hypothetical number
+            of impressions that are shown.
+          max_frequency: int, specifies the number of frequencies for which reach
+            will be reported.
+        Returns:
+          A ReachPoint specifying the estimated reach for this number of impressions.
+        """
+        if len(impressions) != 1:
+            raise ValueError("Impressions vector must have a length of 1.")
+        kplus_reach_list = []
+        for k in range(1, max_frequency + 1):
+            kplus_reach = (
+                self._rho * (impressions[0] / (impressions[0] + self._beta)) ** k
+            )
+            kplus_reach_list.append(kplus_reach)
+        if self._cpi:
+            spend = impressions[0] * self._cpi
+            return ReachPoint(impressions, kplus_reach_list, [spend])
+        else:
+            return ReachPoint(impressions, kplus_reach_list)
 
-  def by_spend(self, spend: [int], max_frequency: int = 1) -> ReachPoint:
-    """Returns the estimated reach as a function of spend assuming constant CPM
+    def by_spend(self, spends: [int], max_frequency: int = 1) -> ReachPoint:
+        """Returns the estimated reach as a function of spend assuming constant CPM
 
-    Args:
-      spend: list of floats of length 1, specifying the hypothetical spend.
-      max_frequency: int, specifies the number of frequencies for which reach
-        will be reported.
-    Returns:
-      A ReachPoint specifying the estimated reach for this number of impressions.
-    """
-    if not self._cpi:
-      raise ValueError("Impression cost is not known for this ReachPoint.")
-    if len(spend) != 1:
-      raise ValueError("Spend vector must have a length of 1.")
-    return self.by_impressions([spend[0] / self._cpi], max_frequency)
+        Args:
+          spend: list of floats of length 1, specifying the hypothetical spend.
+          max_frequency: int, specifies the number of frequencies for which reach
+            will be reported.
+        Returns:
+          A ReachPoint specifying the estimated reach for this number of impressions.
+        """
+        if not self._cpi:
+            raise ValueError("Impression cost is not known for this ReachPoint.")
+        if len(spends) != 1:
+            raise ValueError("Spend vector must have a length of 1.")
+        return self.by_impressions([spends[0] / self._cpi], max_frequency)

@@ -20,52 +20,60 @@ from typing import Iterable
 
 
 class ReachPoint:
-  """A single point on a reach curve."""
+    """A single point on a reach surface."""
 
-  def __init__(self,
-               impressions: Iterable[int],
-               kplus_frequencies: Iterable[int],
-               spend: Iterable[float] = None):
-    """Represents a single point on a reach curve.
+    def __init__(
+        self,
+        impressions: Iterable[int],
+        kplus_reaches: Iterable[int],
+        spends: Iterable[float] = None,
+    ):
+        """Represents a single point on a reach surface.
 
-    Args:
-      impressions:  The number of impressions that were served by
-        each publisher.  This should be a list
-      kplus_frequencies:  A list of values representing the number
-        of people reached at various frequencies.  kplus_frequencies[k]
-        is the number of people who were reached AT LEAST k+1 times.
-      spend:  If given, the amount that was spent at this point on each
-        publisher.
-    """
-    if spend and len(impressions) != len(spend):
-      raise ValueError("impressions and spend must have same length")
-    self._impressions = tuple(impressions)
-    self._kplus_frequencies = tuple(kplus_frequencies)
-    if spend:
-      self._spend = tuple(spend)
-    else:
-      self._spend = None
+        Args:
+          impressions:  The number of impressions that were served by
+            each publisher.  This should be an iterable.
+          kplus_reaches:  An iterable of values representing the number
+            of people reached at various frequencies.  kplus_reaches[k]
+            is the number of people who were reached AT LEAST k+1 times.
+          spends:  If given, the amount that was spent at this point on each
+            publisher.  An iterable.
+        """
+        if spends and len(impressions) != len(spends):
+            raise ValueError("impressions and spends must have same length")
+        self._impressions = tuple(impressions)
+        self._kplus_reaches = tuple(kplus_reaches)
+        if spends:
+            self._spends = tuple(spends)
+        else:
+            self._spends = None
 
-  @property
-  def impressions(self):
-    """Returns the number of impressions associated with this point."""
-    return self._impressions
+    @property
+    def impressions(self) -> int:
+        """Returns the number of impressions associated with this point."""
+        return self._impressions
 
-  def reach(self, k=1):
-    """Returns the k+ reach associated with this point."""
-    if not 0 < k <= len(self._kplus_frequencies):
-      raise ValueError("k {} is out of range. max allowed is {}".format(
-          k, len(self._kplus_frequencies)))
-    return self._kplus_frequencies[k - 1]
+    def reach(self, k=1) -> int:
+        """Returns the k+ reach associated with this point."""
+        if not 0 < k <= len(self._kplus_reaches):
+            raise ValueError(
+                "k {} is out of range. max allowed is {}".format(
+                    k, len(self._kplus_reaches)
+                )
+            )
+        return self._kplus_reaches[k - 1]
 
-  def frequency(self, k=1):
-    """Returns the number of people reached with frequency exactly k."""
-    if not 0 < k < len(self._kplus_frequencies):
-      raise ValueError("k {} is out of range. max allowed is {}".format(
-          k, len(self._kplus_frequencies)))
-    return self._kplus_frequencies[k - 1] - self._kplus_frequencies[k]
+    def frequency(self, k=1) -> int:
+        """Returns the number of people reached with frequency exactly k."""
+        if not 0 < k < len(self._kplus_reaches):
+            raise ValueError(
+                "k {} is out of range. max allowed is {}".format(
+                    k, len(self._kplus_reaches)
+                )
+            )
+        return self._kplus_reaches[k - 1] - self._kplus_reaches[k]
 
-  @property
-  def spend(self):
-    """Returns the spend associated with this point."""
-    return self._spend
+    @property
+    def spends(self) -> Iterable[float]:
+        """Returns the spends associated with this point."""
+        return self._spends

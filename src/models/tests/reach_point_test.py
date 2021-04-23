@@ -19,31 +19,30 @@ from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 
 
 class ReachPointTest(absltest.TestCase):
+    def test_impressions(self):
+        point = ReachPoint([200, 300], [150, 100])
+        self.assertEqual(point.impressions[0], 200)
+        self.assertEqual(point.impressions[1], 300)
 
-  def test_impressions(self):
-    point = ReachPoint([200, 300], [150, 100])
-    self.assertEqual(point.impressions[0], 200)
-    self.assertEqual(point.impressions[1], 300)
+    def test_reach(self):
+        point = ReachPoint([200, 300], [100, 50])
+        self.assertEqual(point.reach(1), 100)
+        self.assertEqual(point.reach(2), 50)
+        self.assertRaises(ValueError, point.reach, 3)
 
-  def test_reach(self):
-    point = ReachPoint([200, 300], [100, 50])
-    self.assertEqual(point.reach(1), 100)
-    self.assertEqual(point.reach(2), 50)
-    self.assertRaises(ValueError, point.reach, 3)
+    def test_frequency(self):
+        point = ReachPoint([200, 300], [200, 125, 75])
+        self.assertEqual(point.frequency(1), 75)
+        self.assertEqual(point.frequency(2), 50)
+        self.assertRaises(ValueError, point.frequency, 3)
 
-  def test_frequency(self):
-    point = ReachPoint([200, 300], [200, 125, 75])
-    self.assertEqual(point.frequency(1), 75)
-    self.assertEqual(point.frequency(2), 50)
-    self.assertRaises(ValueError, point.frequency, 3)
-
-  def test_spend(self):
-    point = ReachPoint([200, 300], [100, 50])
-    self.assertIsNone(point.spend)
-    point2 = ReachPoint([200, 300], [100, 50], [10., 20.])
-    self.assertEqual(point2.spend[0], 10.)
-    self.assertEqual(point2.spend[1], 20.)
+    def test_spends(self):
+        point = ReachPoint([200, 300], [100, 50])
+        self.assertIsNone(point.spends)
+        point2 = ReachPoint([200, 300], [100, 50], [10.0, 20.0])
+        self.assertEqual(point2.spends[0], 10.0)
+        self.assertEqual(point2.spends[1], 20.0)
 
 
-if __name__ == '__main__':
-  absltest.main()
+if __name__ == "__main__":
+    absltest.main()

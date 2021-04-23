@@ -20,36 +20,35 @@ from wfa_planning_evaluation_framework.models.goerg_model import GoergModel
 
 
 class GoergModelTest(absltest.TestCase):
+    def test_reach(self):
+        model = GoergModel([ReachPoint([200], (100,))])
+        self.assertEqual(model.by_impressions([200]).reach(), 100)
+        self.assertAlmostEqual(model.by_impressions([100]).reach(), 200.0 / 3.0)
 
-  def test_reach(self):
-    model = GoergModel([ReachPoint([200], (100,))])
-    self.assertEqual(model.by_impressions([200]).reach(), 100)
-    self.assertAlmostEqual(model.by_impressions([100]).reach(), 200. / 3.)
+    def test_frequencies(self):
+        model = GoergModel([ReachPoint([200], (100,))])
+        self.assertEqual(model.by_impressions([200], 3).reach(1), 100)
+        self.assertEqual(model.by_impressions([200], 3).reach(2), 50)
+        self.assertEqual(model.by_impressions([200], 3).reach(3), 25)
 
-  def test_frequencies(self):
-    model = GoergModel([ReachPoint([200], (100,))])
-    self.assertEqual(model.by_impressions([200], 3).reach(1), 100)
-    self.assertEqual(model.by_impressions([200], 3).reach(2), 50)
-    self.assertEqual(model.by_impressions([200], 3).reach(3), 25)
+    def test_max_reach(self):
+        model = GoergModel([ReachPoint([200], (100,))])
+        self.assertEqual(model.max_reach, 200)
+        model = GoergModel([ReachPoint([300], (100,))])
+        self.assertEqual(model.max_reach, 150)
 
-  def test_max_reach(self):
-    model = GoergModel([ReachPoint([200], (100,))])
-    self.assertEqual(model.max_reach, 200)
-    model = GoergModel([ReachPoint([300], (100,))])
-    self.assertEqual(model.max_reach, 150)
+    def test_impressions_at_reach_quantile(self):
+        model = GoergModel([ReachPoint([200], (100,))])
+        self.assertEqual(model.impressions_at_reach_quantile(0.001), 0)
+        self.assertEqual(model.impressions_at_reach_quantile(1.0 / 3.0), 100)
+        self.assertEqual(model.impressions_at_reach_quantile(0.5), 200)
 
-  def test_impressions_at_reach_quantile(self):
-    model = GoergModel([ReachPoint([200], (100,))])
-    self.assertEqual(model.impressions_at_reach_quantile(0.001), 0)
-    self.assertEqual(model.impressions_at_reach_quantile(1. / 3.), 100)
-    self.assertEqual(model.impressions_at_reach_quantile(0.5), 200)
-
-  def test_spend_at_reach_quantile(self):
-    model = GoergModel([ReachPoint([20000], (10000,), [200.])])
-    self.assertEqual(model.spend_at_reach_quantile(0.001), 0)
-    self.assertEqual(model.spend_at_reach_quantile(1. / 3.), 100)
-    self.assertEqual(model.spend_at_reach_quantile(0.5), 200)
+    def test_spend_at_reach_quantile(self):
+        model = GoergModel([ReachPoint([20000], (10000,), [200.0])])
+        self.assertEqual(model.spend_at_reach_quantile(0.001), 0)
+        self.assertEqual(model.spend_at_reach_quantile(1.0 / 3.0), 100)
+        self.assertEqual(model.spend_at_reach_quantile(0.5), 200)
 
 
-if __name__ == '__main__':
-  absltest.main()
+if __name__ == "__main__":
+    absltest.main()

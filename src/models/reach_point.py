@@ -25,7 +25,7 @@ class ReachPoint:
     def __init__(
         self,
         impressions: Iterable[int],
-        kplus_frequencies: Iterable[int],
+        kplus_reaches: Iterable[int],
         spends: Iterable[float] = None,
     ):
         """Represents a single point on a reach surface.
@@ -33,8 +33,8 @@ class ReachPoint:
         Args:
           impressions:  The number of impressions that were served by
             each publisher.  This should be an iterable.
-          kplus_frequencies:  An iterable of values representing the number
-            of people reached at various frequencies.  kplus_frequencies[k]
+          kplus_reaches:  An iterable of values representing the number
+            of people reached at various frequencies.  kplus_reaches[k]
             is the number of people who were reached AT LEAST k+1 times.
           spends:  If given, the amount that was spent at this point on each
             publisher.  An iterable.
@@ -42,7 +42,7 @@ class ReachPoint:
         if spends and len(impressions) != len(spends):
             raise ValueError("impressions and spends must have same length")
         self._impressions = tuple(impressions)
-        self._kplus_frequencies = tuple(kplus_frequencies)
+        self._kplus_reaches = tuple(kplus_reaches)
         if spends:
             self._spends = tuple(spends)
         else:
@@ -55,23 +55,23 @@ class ReachPoint:
 
     def reach(self, k=1) -> int:
         """Returns the k+ reach associated with this point."""
-        if not 0 < k <= len(self._kplus_frequencies):
+        if not 0 < k <= len(self._kplus_reaches):
             raise ValueError(
                 "k {} is out of range. max allowed is {}".format(
-                    k, len(self._kplus_frequencies)
+                    k, len(self._kplus_reaches)
                 )
             )
-        return self._kplus_frequencies[k - 1]
+        return self._kplus_reaches[k - 1]
 
     def frequency(self, k=1) -> int:
         """Returns the number of people reached with frequency exactly k."""
-        if not 0 < k < len(self._kplus_frequencies):
+        if not 0 < k < len(self._kplus_reaches):
             raise ValueError(
                 "k {} is out of range. max allowed is {}".format(
-                    k, len(self._kplus_frequencies)
+                    k, len(self._kplus_reaches)
                 )
             )
-        return self._kplus_frequencies[k - 1] - self._kplus_frequencies[k]
+        return self._kplus_reaches[k - 1] - self._kplus_reaches[k]
 
     @property
     def spends(self) -> Iterable[float]:

@@ -11,51 +11,61 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Base class for data designs.
+"""Base class for DataDesign
 
-A data design represents the collection of data sets against which
-an experimental design is to be evaluated.
+A DataDesign represents the collection of DataSets against which
+an experimental design is to be evaluated.  Because the size of all
+of the DataSets in a DataDesign can be large, the individual 
+DataSets within a DataDesign are loaded lazily.
 """
 
 from os import listdir
-from os.path import isdir, join
+from os.path import exists, isdir, join
 from pathlib import Path
-from typing import Iterable
+from typing import List
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 
 
 class DataDesign:
     """A collection of DataSets used for evaluating an ExperimentalDesign."""
 
-    def __init__(self, data_sets: Iterable[DataSet]):
+    def __init__(self, dirpath: str):
         """Constructor
 
         Args:
-          data_sets:  An iterable list of DataSets, one for each experiment
-            that is to be conducted.
+          dirpath:  The directory on disk where the DataSets comprising this
+            DataDesign will be stored.
         """
-        self._data_sets = data_sets
+        self._dirpath = dirpath
+        self._data_set_names = set()
 
-    @property
-    def data_set_count(self):
-        """Number of DataSets represented in this design."""
-        return len(self._data_sets)
-
-    def data_set(self, index: int) -> DataSet:
-        """Returns the DataSet with the given index."""
-        return self._data_sets[index]
-
-    @classmethod
-    def read_data_design(cls, dirpath: str) -> "DataDesign":
-        """Reads a DataDesign from disk."""
-        data_sets = []
+        Path(dirpath).mkdir(parents=True, exist_ok=True)
         for dir in sorted(listdir(dirpath)):
             if isdir(join(dirpath, dir)):
-                data_sets.append(DataSet.read_data_set(join(dirpath, dir)))
-        return cls(data_sets)
+                self._data_set_names.add(dir)
 
-    def write_data_design(self, dirpath: str) -> None:
-        """Writes this DataDesign object to disk."""
-        Path(dirpath).mkdir(parents=True, exist_ok=True)
-        for data_set in self._data_sets:
-            data_set.write_data_set(dirpath)
+    @property
+    def count(self) -> int:
+        """Number of DataSets represented in this design."""
+        return len(self._data_set_names)
+
+    @property
+    def names(self) -> List[str]:
+        """Returns a list of the DataSet names in this DataDesign."""
+        return sorted(self._data_set_names)
+
+    def by_name(self, name: str) -> DataSet:
+        """Returns the DataSet having the given name."""
+        return DataSet.read_data_set(join(self._dirpath, name))
+
+    def add(self, data_set: DataSet) -> None:
+        """Adds a DataSet to this DataDesign."""
+        data_set_path = join(self._dirpath, data_set.name)
+        if exists(data_set_path):
+            raise ValueError(
+                "This DataDesign already contains a DataSet with name {}".format(
+                    data_set.name
+                )
+            )
+        data_set.write_data_set(self._dirpath)
+        self._data_set_names.add(data_set.name)

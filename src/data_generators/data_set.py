@@ -52,10 +52,14 @@ class DataSet:
           name: If specified, a human-readable name that will be associated
             to this DataSet.  For example, it could be an encoding
             of the parameters that were used to create this DataSet,
-            such as "homog_p=10_rep=3".
+            such as "homog_p=10_rep=3".  If no name is given, then a random
+            digit string is assigned as the name.
         """
         self._data_files = publisher_data_files
-        self._name = name
+        if name:
+            self._name = name
+        else:
+            self._name = "{:012d}".format(randint(0, 1e12))
 
     @property
     def publisher_count(self):
@@ -64,7 +68,7 @@ class DataSet:
 
     @property
     def name(self):
-        """Name of this DataSet"""
+        """Name of this DataSet."""
         return self._name
 
     def reach_by_impressions(
@@ -153,9 +157,7 @@ class DataSet:
             used.  If no name was given in the object constructor, then a
             random name is used.
         """
-        if not dataset_dir and not self._name:
-            dataset_dir = "{:012d}".format(randint(0, 1e12))
-        elif not dataset_dir:
+        if not dataset_dir:
             dataset_dir = self._name
         fulldir = join(parent_dir, dataset_dir)
         Path(fulldir).mkdir(parents=True, exist_ok=True)

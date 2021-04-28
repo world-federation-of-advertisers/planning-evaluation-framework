@@ -33,8 +33,9 @@ class HomogeneousImpressionGenerator(ImpressionGenerator):
         """Constructor for the HomogeneousImpressionGenerator.
 
         For each user, the number of impressions assigned to that user is
-        determined by drawing from a Poisson distribution with fixed
-        parameter lambda.
+        determined by drawing from a shifted Poisson distribution with fixed
+        parameter lambda.  The Poisson distribution is shifted by one.  E.g.,
+        the PMF is given by Pr(X=k) = lambda^{k-1} e^{-lambda} / (k-1)!.
 
         Args:
           n:  The number of users.

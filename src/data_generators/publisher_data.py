@@ -18,8 +18,8 @@ Represents real or simulated impression log data for a single publisher.
 
 from collections import Counter
 from copy import deepcopy
+from io import IOBase
 from numpy.random import randint
-from os.path import join
 from typing import Dict
 from typing import Iterable
 from typing import Tuple
@@ -31,31 +31,31 @@ from wfa_planning_evaluation_framework.data_generators.pricing_generator import 
 )
 
 
-class PublisherDataFile:
+class PublisherData:
     """Real or simulated impression log data for a single publisher.
 
-    A PublisherDataFile represents a viewing log for a single publisher.
+    PublisherData represents a viewing log for a single publisher.
     It can be thought of as a sequence of events of the form (id, spend),
     where id is the (virtual) id of a user, and spend is the total spend
     amount that would cause this impression to be shown.
 
-    A PublisherDataFile object can be constructed in one of several ways:
+    A PublisherData object can be constructed in one of several ways:
       1. It can be constructed directly from a list of (id, spend) tuples.
       2. It can be read from a flat file.
       3. It can be generated randomly.
 
     In the last case, e.g. random generation, the generation of the publisher
-    data file is divided into two steps, which are orthogonal to each other.
+    data is divided into two steps, which are orthogonal to each other.
     In the first step, the sequence of id's is generated, with multiplicities.
     In the second step, spend information is associated to the id's.  Thus,
-    to generate a random PublisherDataFile, two objects must be given: an
+    to generate random PublisherData, two objects must be given: an
     ImpressionGenerator object and a PriceGenerator object.
     """
 
     def __init__(
         self, impression_log_data: Iterable[Tuple[int, float]], name: str = None
     ):
-        """Constructs a PublisherDataFile object from raw event data.
+        """Constructs a PublisherData object from raw event data.
 
         Internally, the data is sorted in increasing order by total spend.
         To fetch the users reached for a given spend, the prefix of events
@@ -69,38 +69,52 @@ class PublisherDataFile:
             that would need to be spent in order for this impression to be
             shown.
           name: If specified, a human-readable name that will be associated
-            to this publisher data file.  For example, it could be an encoding
-            of the parameters that were used to create this publisher data file,
-            such as "homog_n10000_lambda5".
+            to this publisher data.  For example, it could be an encoding
+            of the parameters that were used to create this publisher data,
+            such as "homog_n10000_lambda5".  If not given, a random digit
+            string is assigned as the name of the PublisherData object.
         """
         self._data = deepcopy(impression_log_data)
         self._data.sort(key=lambda x: x[1])  # sort by spend
         self._name = name
+        if not self._name:
+            self._name = "{:012d}".format(randint(0, 1e12))
         self._spend = max([spend for (_, spend) in impression_log_data])
         self._reach = len(set([id for (id, _) in impression_log_data]))
 
     @property
-    def impressions(self):
-        """Total number of impressions represented by this PublisherDataFile."""
+    def max_impressions(self):
+        """Total number of impressions represented by this PublisherData object."""
         return len(self._data)
 
     @property
-    def spend(self):
-        """Total spend represented by this PublisherDataFile."""
+    def max_spend(self):
+        """Total spend represented by this PublisherData object."""
         return self._spend
 
     @property
-    def reach(self):
-        """Total number of unique users represented by this PublisherDataFile."""
+    def max_reach(self):
+        """Total number of unique users represented by this PublisherData object."""
         return self._reach
 
     @property
     def name(self):
-        """Returns the name associated with this PublisherDataFile."""
+        """Returns the name associated with this PublisherData object."""
         return self._name
 
-    def spend_by_impressions(self, impressions):
-        """Returns the amount spent to obtain a given number of impressions."""
+    @name.setter
+    def name(self, new_name):
+        """Updates the name associated with this PublisherData object."""
+        self._name = new_name
+
+    def spend_by_impressions(self, impressions: int):
+        """Returns the amount spent to obtain a given number of impressions.
+
+        Args:
+          impressions:  Hypothetical number of impressions purchased.
+        Returns:
+          Hypothetical spend that corresponds to the given number of impressions.
+        """
         if not impressions:
             return 0.0
         return self._data[impressions - 1][1]
@@ -127,27 +141,18 @@ class PublisherDataFile:
         """
         return dict(Counter([id for id, s in self._data if s <= spend]))
 
-    def write_publisher_data_file(self, parent_dir: str, filename: str = None) -> None:
-        """Writes this PublisherDataFile object to disk.
+    def write_publisher_data(self, file: IOBase) -> None:
+        """Writes this PublisherData object to disk.
 
         Args:
-          parent_dir:  The directory where the file is to be written.
-          filename:  The name of the file.  If not specified, then the name
-            given in the object constructor is used.  If no name was given
-            in the object constructor, then a random string is chosen.
+          file: A file object where the publisher data will be written.
         """
-        if not filename and not self._name:
-            filename = "{:012d}".format(randint(0, 1e12))
-        elif not filename:
-            filename = self._name
-        fullpath = join(parent_dir, filename)
-        with open(fullpath, "w") as file:
-            for user_id, spend in self._data:
-                file.write("{},{}\n".format(user_id, spend))
+        for user_id, spend in self._data:
+            file.write("{},{}\n".format(user_id, spend))
 
     @classmethod
-    def read_publisher_data_file(cls, filepath: str) -> "PublisherDataFile":
-        """Reads a publisher data file from disk and returns the object.
+    def read_publisher_data(cls, file: IOBase) -> "PublisherData":
+        """Reads publisher data and returns the object.
 
         The file is assumed to consist of a sequence of lines of the form
            id,total_spend
@@ -155,35 +160,33 @@ class PublisherDataFile:
         amount that would have to be spent in order for this impression to
         be shown.
 
-        The name associated to the PublisherDataFile object is the last
+        The name associated to the PublisherData object is the last
         component of the filepath.
 
         Args:
-          filepath:  Directory path from which the file should be read.
+          file:  A file object from which publisher data will be read.
         Returns:
-          The PublisherDataFile object representing the contents of this form.
+          The PublisherData object representing the contents of this form.
         """
         impression_log = []
         line_no = 0
-        with open(filepath) as file:
-            for line in file:
-                line_no += 1
-                try:
-                    id_string, spend_string = line.split(",")
-                    impression_log.append((int(id_string), float(spend_string)))
-                except (ValueError, RuntimeError) as e:
-                    raise RuntimeError("At line {}: {}".format(line_no, line)) from e
-        name = filepath.split("/")[-1]
-        return cls(impression_log, name)
+        for line in file:
+            line_no += 1
+            try:
+                id_string, spend_string = line.split(",")
+                impression_log.append((int(id_string), float(spend_string)))
+            except (ValueError, RuntimeError) as e:
+                raise RuntimeError("At line {}: {}".format(line_no, line)) from e
+        return cls(impression_log)
 
     @classmethod
-    def generate_publisher_data_file(
+    def generate_publisher_data(
         cls,
         impression_generator: ImpressionGenerator,
         pricing_generator: PricingGenerator,
         name: str = None,
-    ) -> "PublisherDataFile":
-        """Generates a random publisher data file.
+    ) -> "PublisherData":
+        """Generates random publisher data.
 
         Args:
           impression_generator:  An ImpressionGenerator object that returns a
@@ -191,8 +194,8 @@ class PublisherDataFile:
           pricing_generator:  A PricingGenerator object that annotates a list of
             id's with randomly generated price information.
           name:  If specfied, the name that will be associated with this
-            PublisherDataFile.
+            PublisherData.
         Returns:
-          A randomly generated PublisherDataFile.
+          A randomly generated PublisherData object.
         """
         return cls(pricing_generator(impression_generator()), name)

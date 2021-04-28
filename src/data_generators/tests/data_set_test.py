@@ -23,8 +23,8 @@ from wfa_planning_evaluation_framework.data_generators.fixed_price_generator imp
 from wfa_planning_evaluation_framework.data_generators.homogeneous_impression_generator import (
     HomogeneousImpressionGenerator,
 )
-from wfa_planning_evaluation_framework.data_generators.publisher_data_file import (
-    PublisherDataFile,
+from wfa_planning_evaluation_framework.data_generators.publisher_data import (
+    PublisherData,
 )
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 
@@ -32,8 +32,8 @@ from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 class DataSetTest(absltest.TestCase):
     @classmethod
     def setUpClass(cls):
-        pdf1 = PublisherDataFile([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
-        pdf2 = PublisherDataFile([(2, 0.03), (4, 0.06)], "pdf2")
+        pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
+        pdf2 = PublisherData([(2, 0.03), (4, 0.06)], "pdf2")
         data_set = DataSet([pdf1, pdf2], "test")
         cls.data_set = data_set
 

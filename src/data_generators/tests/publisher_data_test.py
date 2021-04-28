@@ -15,6 +15,7 @@
 
 from absl.testing import absltest
 from numpy.random import RandomState
+from os.path import join
 from tempfile import TemporaryDirectory
 
 from wfa_planning_evaluation_framework.data_generators.fixed_price_generator import (
@@ -23,28 +24,28 @@ from wfa_planning_evaluation_framework.data_generators.fixed_price_generator imp
 from wfa_planning_evaluation_framework.data_generators.homogeneous_impression_generator import (
     HomogeneousImpressionGenerator,
 )
-from wfa_planning_evaluation_framework.data_generators.publisher_data_file import (
-    PublisherDataFile,
+from wfa_planning_evaluation_framework.data_generators.publisher_data import (
+    PublisherData,
 )
 
 
-class PublisherDataFileTest(absltest.TestCase):
+class PublisherDataTest(absltest.TestCase):
     def test_properties(self):
-        pdf = PublisherDataFile([(1, 0.01), (2, 0.02), (1, 0.04)], "test")
-        self.assertEqual(pdf.impressions, 3)
-        self.assertEqual(pdf.spend, 0.04)
-        self.assertEqual(pdf.reach, 2)
+        pdf = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04)], "test")
+        self.assertEqual(pdf.max_impressions, 3)
+        self.assertEqual(pdf.max_spend, 0.04)
+        self.assertEqual(pdf.max_reach, 2)
         self.assertEqual(pdf.name, "test")
 
     def test_user_counts_by_impressions(self):
-        pdf = PublisherDataFile([(1, 0.01), (1, 0.04), (2, 0.02)])
+        pdf = PublisherData([(1, 0.01), (1, 0.04), (2, 0.02)])
         self.assertEqual(pdf.user_counts_by_impressions(0), {})
         self.assertEqual(pdf.user_counts_by_impressions(1), {1: 1})
         self.assertEqual(pdf.user_counts_by_impressions(2), {1: 1, 2: 1})
         self.assertEqual(pdf.user_counts_by_impressions(3), {1: 2, 2: 1})
 
     def test_user_counts_by_spend(self):
-        pdf = PublisherDataFile([(1, 0.01), (1, 0.04), (2, 0.02)])
+        pdf = PublisherData([(1, 0.01), (1, 0.04), (2, 0.02)])
         self.assertEqual(pdf.user_counts_by_spend(0), {})
         self.assertEqual(pdf.user_counts_by_spend(0.01), {1: 1})
         self.assertEqual(pdf.user_counts_by_spend(0.015), {1: 1})
@@ -52,21 +53,25 @@ class PublisherDataFileTest(absltest.TestCase):
         self.assertEqual(pdf.user_counts_by_spend(0.07), {1: 2, 2: 1})
 
     def test_read_and_write_publisher_data(self):
-        pdf = PublisherDataFile([(1, 0.01), (2, 0.02), (1, 0.04)], "test")
+        pdf = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04)], "test")
         with TemporaryDirectory() as d:
-            pdf.write_publisher_data_file(d)
-            new_pdf = PublisherDataFile.read_publisher_data_file("{}/test".format(d))
-            self.assertEqual(new_pdf.impressions, 3)
-            self.assertEqual(new_pdf.spend, 0.04)
-            self.assertEqual(new_pdf.reach, 2)
-            self.assertEqual(new_pdf.name, "test")
+            filename = join(d, "pdf_data")
+            pdf_file = open(filename, "w")
+            pdf.write_publisher_data(pdf_file)
+            pdf_file.close()
 
-    def test_generate_publisher_data_file(self):
-        pdf = PublisherDataFile.generate_publisher_data_file(
+            new_file = open(filename)
+            new_pdf = PublisherData.read_publisher_data(new_file)
+            self.assertEqual(new_pdf.max_impressions, 3)
+            self.assertEqual(new_pdf.max_spend, 0.04)
+            self.assertEqual(new_pdf.max_reach, 2)
+            new_file.close()
+
+    def test_generate_publisher_data(self):
+        pdf = PublisherData.generate_publisher_data(
             HomogeneousImpressionGenerator(3, 5), FixedPriceGenerator(0.01), "test"
         )
-        self.assertEqual(pdf.reach, 3)
-        self.assertEqual(pdf.name, "test")
+        self.assertEqual(pdf.max_reach, 3)
 
 
 if __name__ == "__main__":

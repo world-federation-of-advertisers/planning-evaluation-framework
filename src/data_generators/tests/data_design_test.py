@@ -16,8 +16,8 @@
 from absl.testing import absltest
 from tempfile import TemporaryDirectory
 
-from wfa_planning_evaluation_framework.data_generators.publisher_data_file import (
-    PublisherDataFile,
+from wfa_planning_evaluation_framework.data_generators.publisher_data import (
+    PublisherData,
 )
 from wfa_planning_evaluation_framework.data_generators.data_design import DataDesign
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
@@ -26,12 +26,12 @@ from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 class DataDesignTest(absltest.TestCase):
     @classmethod
     def setUpClass(cls):
-        pdf11 = PublisherDataFile([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf11")
-        pdf12 = PublisherDataFile([(2, 0.03), (4, 0.06)], "pdf12")
+        pdf11 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf11")
+        pdf12 = PublisherData([(2, 0.03), (4, 0.06)], "pdf12")
         cls.data_set1 = DataSet([pdf11, pdf12], "ds1")
 
-        pdf21 = PublisherDataFile([(1, 0.01), (2, 0.02), (2, 0.04), (3, 0.05)], "pdf21")
-        pdf22 = PublisherDataFile([(2, 0.03), (3, 0.06)], "pdf22")
+        pdf21 = PublisherData([(1, 0.01), (2, 0.02), (2, 0.04), (3, 0.05)], "pdf21")
+        pdf22 = PublisherData([(2, 0.03), (3, 0.06)], "pdf22")
         cls.data_set2 = DataSet([pdf21, pdf22], "ds2")
 
     def test_properties(self):

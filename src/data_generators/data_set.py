@@ -17,14 +17,15 @@ Represents real or simulated impression log data for multiple publishers.
 """
 
 from collections import defaultdict
+from copy import deepcopy
 from os import listdir
 from os.path import isfile, join
 from pathlib import Path
 from typing import Dict
 from typing import Iterable
 from typing import List
-from wfa_planning_evaluation_framework.data_generators.publisher_data_file import (
-    PublisherDataFile,
+from wfa_planning_evaluation_framework.data_generators.publisher_data import (
+    PublisherData,
 )
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 
@@ -42,12 +43,12 @@ class DataSet:
     """
 
     def __init__(
-        self, publisher_data_files: Iterable[PublisherDataFile], name: str = None
+        self, publisher_data_list: Iterable[PublisherData], name: str = None
     ):
         """Constructor
 
         Args:
-          publisher_data_files:  An iterable list of PublisherDataFiles,
+          publisher_data_list:  An iterable list of PublisherDatas,
             one for each of the publishers that comprise this DataSet.
           name: If specified, a human-readable name that will be associated
             to this DataSet.  For example, it could be an encoding
@@ -55,7 +56,7 @@ class DataSet:
             such as "homog_p=10_rep=3".  If no name is given, then a random
             digit string is assigned as the name.
         """
-        self._data_files = publisher_data_files
+        self._data = deepcopy(publisher_data_list)
         if name:
             self._name = name
         else:
@@ -64,7 +65,7 @@ class DataSet:
     @property
     def publisher_count(self):
         """Number of publishers represented in this DataSet."""
-        return len(self._data_files)
+        return len(self._data)
 
     @property
     def name(self):
@@ -95,8 +96,8 @@ class DataSet:
         counts = defaultdict(int)
         spends = []
         for i, imp in enumerate(impressions):
-            spends.append(self._data_files[i].spend_by_impressions(imp))
-            for id, freq in self._data_files[i].user_counts_by_impressions(imp).items():
+            spends.append(self._data[i].spend_by_impressions(imp))
+            for id, freq in self._data[i].user_counts_by_impressions(imp).items():
                 counts[id] += freq
         kplus_reaches = self._counts_to_histogram(counts, max_frequency)
         return ReachPoint(impressions, kplus_reaches, spends)
@@ -140,7 +141,7 @@ class DataSet:
         counts = defaultdict(int)
         impressions = []
         for i, publisher_spend in enumerate(spends):
-            user_counts = self._data_files[i].user_counts_by_spend(publisher_spend)
+            user_counts = self._data[i].user_counts_by_spend(publisher_spend)
             impressions.append(sum(user_counts.values()))
             for id, freq in user_counts.items():
                 counts[id] += freq
@@ -161,8 +162,10 @@ class DataSet:
             dataset_dir = self._name
         fulldir = join(parent_dir, dataset_dir)
         Path(fulldir).mkdir(parents=True, exist_ok=True)
-        for pdf in self._data_files:
-            pdf.write_publisher_data_file(fulldir)
+        for pdf in self._data:
+            with open(join(fulldir, pdf.name), "w") as file:
+                pdf.write_publisher_data(file)
+                file.close()
 
     @classmethod
     def read_data_set(cls, dirpath: str) -> "DataSet":
@@ -182,11 +185,12 @@ class DataSet:
         for f in sorted(listdir(dirpath)):
             filepath = join(dirpath, f)
             if isfile(filepath):
-                try:
-                    pdf_list.append(
-                        PublisherDataFile.read_publisher_data_file(filepath)
-                    )
-                except (ValueError, RuntimeError) as e:
-                    raise RuntimeError("In publisher file {}".format(filepath)) from e
+                with open(filepath) as file:
+                    try:
+                        pdf = PublisherData.read_publisher_data(file)
+                        pdf.name = f
+                        pdf_list.append(pdf)
+                    except (ValueError, RuntimeError) as e:
+                        raise RuntimeError("In publisher file {}".format(filepath)) from e
         name = dirpath.split("/")[-1]
         return cls(pdf_list, name)

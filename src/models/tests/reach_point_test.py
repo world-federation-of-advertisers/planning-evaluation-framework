@@ -43,6 +43,34 @@ class ReachPointTest(absltest.TestCase):
         self.assertEqual(point2.spends[0], 10.0)
         self.assertEqual(point2.spends[1], 20.0)
 
+    def test_frequencies_to_kplus_reaches(self):
+        self.assertEqual(ReachPoint.frequencies_to_kplus_reaches([]), [])
+        self.assertEqual(ReachPoint.frequencies_to_kplus_reaches([1]), [1])
+        self.assertEqual(ReachPoint.frequencies_to_kplus_reaches([2, 1]), [3, 1])
+
+    def test_user_counts_to_frequencies(self):
+        self.assertEqual(ReachPoint.user_counts_to_frequencies({}, 3), [0, 0, 0])
+        self.assertEqual(ReachPoint.user_counts_to_frequencies({3: 1}, 3), [1, 0, 0])
+        self.assertEqual(
+            ReachPoint.user_counts_to_frequencies({3: 1, 2: 1}, 3), [2, 0, 0]
+        )
+        self.assertEqual(
+            ReachPoint.user_counts_to_frequencies({3: 1, 2: 1, 1: 2, 4: 3, 5: 4}, 3),
+            [2, 1, 2],
+        )
+
+    def test_user_counts_to_kplus_reaches(self):
+        self.assertEqual(ReachPoint.user_counts_to_kplus_reaches({}, 3), [0, 0, 0])
+        self.assertEqual(ReachPoint.user_counts_to_kplus_reaches({3: 1}, 3), [1, 0, 0])
+        self.assertEqual(ReachPoint.user_counts_to_kplus_reaches({3: 2}, 3), [1, 1, 0])
+        self.assertEqual(
+            ReachPoint.user_counts_to_kplus_reaches({3: 1, 2: 1}, 3), [2, 0, 0]
+        )
+        self.assertEqual(
+            ReachPoint.user_counts_to_kplus_reaches({3: 1, 2: 1, 1: 2, 4: 3, 5: 4}, 3),
+            [5, 3, 2],
+        )
+
 
 if __name__ == "__main__":
     absltest.main()

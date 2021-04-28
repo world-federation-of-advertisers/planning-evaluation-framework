@@ -16,7 +16,9 @@
 Represents a single point on either a reach curve or a reach surface.
 """
 
+from typing import Dict
 from typing import Iterable
+from typing import List
 
 
 class ReachPoint:
@@ -77,3 +79,59 @@ class ReachPoint:
     def spends(self) -> Iterable[float]:
         """Returns the spends associated with this point."""
         return self._spends
+
+    @staticmethod
+    def frequencies_to_kplus_reaches(frequencies: Iterable[int]):
+        """Converts a list of frequencies to corresponding k-plus reaches.
+
+        Args:
+          frequencies:  List of frequencies, where frequencies[i] is the
+            number of people reached exactly i+1 times.
+        Returns:
+          kplus_reaches, where kplus_reaches[k] is the number of people
+            reached k+1 or more times.
+        """
+        kplus_reaches = frequencies.copy()
+        for k in range(len(frequencies) - 2, -1, -1):
+            kplus_reaches[k] += kplus_reaches[k + 1]
+        return kplus_reaches
+
+    @staticmethod
+    def user_counts_to_frequencies(
+        counts: Dict[int, int], max_frequency: int
+    ) -> List[int]:
+        """Constructs k+ reaches from a dictionary of per-id reach counts.
+
+        Args:
+          counts: A dictionary mapping user id to the number of times that
+            the id is reached.
+          max_frequency: The maximum frequency to include in the output
+            list of k+ reaches.
+        Returns:
+          kplus_reaches, where kplus_reaches[k] is the number of people
+            reached k+1 or more times.
+        """
+        frequency_counts = [0] * max_frequency
+        for c in counts.values():
+            frequency_counts[min(c, max_frequency) - 1] += 1
+        return frequency_counts
+
+    @staticmethod
+    def user_counts_to_kplus_reaches(
+        counts: Dict[int, int], max_frequency: int
+    ) -> List[int]:
+        """Constructs k+ reaches from a dictionary of per-id reach counts.
+
+        Args:
+          counts: A dictionary mapping user id to the number of times that
+            the id is reached.
+          max_frequency: The maximum frequency to include in the output
+            list of k+ reaches.
+        Returns:
+          kplus_reaches, where kplus_reaches[k] is the number of people
+            reached k+1 or more times.
+        """
+        frequency_counts = ReachPoint.user_counts_to_frequencies(counts, max_frequency)
+        for i in range(max_frequency - 2, -1, -1):
+            frequency_counts[i] += frequency_counts[i + 1]
+        return frequency_counts

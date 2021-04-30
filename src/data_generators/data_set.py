@@ -72,6 +72,36 @@ class DataSet:
         """Name of this DataSet."""
         return self._name
 
+    def spend_by_impressions(self, impressions: Iterable[int]) -> List[float]:
+        """Returns spend vector corresponding to a given impression vector.
+
+        Args:
+          impressions:  Iterable of hypothetical impression buys, having
+            one value per publisher.
+        Returns:
+          List of corresponding spends.  If I is the vector of impressions
+          and S is the returned vector of spends, then S[k] is the amount
+          that would need to be spent with the k-th publisher to obtain
+          I[k] impressions.
+        """
+        return [self._data[i].spend_by_impressions(impressions[i])
+                for i in range(len(self._data))]
+
+    def impressions_by_spend(self, spends: Iterable[float]) -> List[int]:
+        """Returns impression vector corresponding to a given spend vector.
+
+        Args:
+          spends:  Iterable of hypothetical spend amounts, having
+            one value per publisher.
+        Returns:
+          List of corresponding impression counts.  If S is the vector of
+          spends and I is the returned vector of impression counts, then
+          I[k] is the number of impressions that would be obtained for
+          a spend of S[k] with publisher k.
+        """
+        return [self._data[i].impressions_by_spend(spends[i])
+                for i in range(len(self._data))]
+    
     def reach_by_impressions(
         self, impressions: Iterable[int], max_frequency: int = 10
     ) -> ReachPoint:

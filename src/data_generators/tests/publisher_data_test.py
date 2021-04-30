@@ -37,6 +37,23 @@ class PublisherDataTest(absltest.TestCase):
         self.assertEqual(pdf.max_reach, 2)
         self.assertEqual(pdf.name, "test")
 
+    def test_spend_by_impressions(self):
+        pdf = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04)], "test")
+        self.assertEqual(pdf.spend_by_impressions(0), 0)
+        self.assertEqual(pdf.spend_by_impressions(1), 0.01)
+        self.assertEqual(pdf.spend_by_impressions(2), 0.02)
+        self.assertEqual(pdf.spend_by_impressions(3), 0.04)
+        self.assertEqual(pdf.spend_by_impressions(4), 0.04)
+
+    def test_impressions_by_spend(self):
+        pdf = PublisherData([(1, 0.01), (2, 0.02), (3, 0.02), (1, 0.04)], "test")
+        self.assertEqual(pdf.impressions_by_spend(0.005), 0)
+        self.assertEqual(pdf.impressions_by_spend(0.01), 1)
+        self.assertEqual(pdf.impressions_by_spend(0.015), 1)
+        self.assertEqual(pdf.impressions_by_spend(0.02), 3)
+        self.assertEqual(pdf.impressions_by_spend(0.04), 4)
+        self.assertEqual(pdf.impressions_by_spend(0.05), 4)
+    
     def test_user_counts_by_impressions(self):
         pdf = PublisherData([(1, 0.01), (1, 0.04), (2, 0.02)])
         self.assertEqual(pdf.user_counts_by_impressions(0), {})

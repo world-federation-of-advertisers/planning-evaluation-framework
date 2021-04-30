@@ -16,6 +16,7 @@
 Represents real or simulated impression log data for a single publisher.
 """
 
+from bisect import bisect_right
 from collections import Counter
 from copy import deepcopy
 from io import IOBase
@@ -79,8 +80,9 @@ class PublisherData:
         self._name = name
         if not self._name:
             self._name = "{:012d}".format(randint(0, 1e12))
-        self._spend = max([spend for (_, spend) in impression_log_data])
-        self._reach = len(set([id for (id, _) in impression_log_data]))
+        self._spends = [spend for (_, spend) in impression_log_data]
+        self._max_spend = max([spend for (_, spend) in impression_log_data])
+        self._max_reach = len(set([id for (id, _) in impression_log_data]))
 
     @property
     def max_impressions(self):
@@ -90,12 +92,12 @@ class PublisherData:
     @property
     def max_spend(self):
         """Total spend represented by this PublisherData object."""
-        return self._spend
+        return self._max_spend
 
     @property
     def max_reach(self):
         """Total number of unique users represented by this PublisherData object."""
-        return self._reach
+        return self._max_reach
 
     @property
     def name(self):
@@ -107,7 +109,7 @@ class PublisherData:
         """Updates the name associated with this PublisherData object."""
         self._name = new_name
 
-    def spend_by_impressions(self, impressions: int):
+    def spend_by_impressions(self, impressions: int) -> float:
         """Returns the amount spent to obtain a given number of impressions.
 
         Args:
@@ -117,8 +119,19 @@ class PublisherData:
         """
         if not impressions:
             return 0.0
-        return self._data[impressions - 1][1]
+        return self._data[min(len(self._data), impressions) - 1][1]
 
+    def impressions_by_spend(self, spend: float) -> int:
+        """Returns the number of impressions for a given spend.
+
+        Args:
+          spend:  Hypothetical spend amount.
+        Returns:
+          Hypothetical number of impressions that would have been obtained for
+          that spend.
+        """
+        return bisect_right(self._spends, spend)
+    
     def user_counts_by_impressions(self, impressions: int) -> Dict[int, int]:
         """Number of times each user is reached for a given impression buy.
 

@@ -23,6 +23,25 @@ DP_NOISE_MECHANISM_GAUSSIAN = "Gaussian"
 DP_NOISE_MECHANISM_DISCRETE_GAUSSIAN = "Discrete Gaussian"
 
 
+class PrivacyBudget(NamedTuple):
+    """Specifies the amount of privacy budget an operation is allowed to use.
+
+    Equivalently, indirectly specifies the amount of noise that will be added
+    to the results of an operation.
+
+    An algorithm A is (epsilon, delta) differentially private, if when
+    databases D_1 and D_2 differ by only a single row, the probability
+    that A outputs x on D_1 is related to the probability that A outputs
+    x on D_2 by the relation:
+
+      Pr(x | D_1) \leq exp(epsilon) Pr(x | D_2) + delta.
+
+    """
+
+    epsilon: float
+    delta: float
+
+
 class NoisingEvent(NamedTuple):
     """Records the addition of differentially private noise
 
@@ -34,8 +53,7 @@ class NoisingEvent(NamedTuple):
     discrete Laplace noise to the buckets of a histogram.
     """
 
-    epsilon: float  # Amount of budget used in this event.
-    delta: float  # Amount of budget used in this event.
+    budget: PrivacyBudget  # Privacy budget associated to this event.
     mechanism: str  # See DP_NOISE_MECHANISM above.
     params: Dict  # Mechanism-specific parameters.
 
@@ -43,22 +61,18 @@ class NoisingEvent(NamedTuple):
 class PrivacyTracker:
     """A class for tracking and reporting privacy budget usage.
 
-    NOTE:  This implementation does not report privacy consumption when
+    TODO #1: This implementation does not report privacy consumption when
     using the advanced composition rule or when using privacy loss
-    distributions.  That would be an important addition to this code
-    when performing workflow evaluations, but is probably not necessary
-    for model evaluation.
+    distributions.
 
-    A second way in which this code could be extended is that it
-    does not currently allow for tracking of per-EDP privacy budgets.
+    TODO #2: Extend this code to allow for tracking of per-EDP privacy budgets.
 
-    A third way in which this code could be extended would be track
-    privacy usage by partition.  In other words, if one noising event
-    applied to the M25-34 demo group and a second noising event
-    applied to the F35-44 demo group, then by using the parallel
-    composition rule, the total noise applied would be the maximum of
-    the two events.  Again, this is something that would be useful for
-    workflow evaluation but probably not for model evaluation.
+    TODO #3: Extend this code to track privacy usage by partition.  
+    In other words, if one noising event applied to the M25-34 demo group 
+    and a second noising event applied to the F35-44 demo group, then by 
+    using the parallel composition rule, the total noise applied would be 
+    the maximum of the two events.  Again, this is something that would be 
+    useful for workflow evaluation but probably not for model evaluation.
     """
 
     def __init__(self):
@@ -68,14 +82,9 @@ class PrivacyTracker:
         self._noising_events = []  # A list of NoisingEvents
 
     @property
-    def epsilon(self) -> float:
-        """Total epsilon that has been consumed so far."""
-        return self._epsilon_sum
-
-    @property
-    def delta(self) -> float:
-        """Total delta that has been consumed so far."""
-        return self._delta_sum
+    def privacy_consumption(self) -> PrivacyBudget:
+        """Returns the total privacy budget consumed so far."""
+        return PrivacyBudget(self._epsilon_sum, self._delta_sum)
 
     @property
     def mechanisms(self) -> List[str]:
@@ -84,6 +93,6 @@ class PrivacyTracker:
 
     def append(self, event: NoisingEvent) -> None:
         """Records an application of differentially private noise."""
-        self._epsilon_sum += event.epsilon
-        self._delta_sum += event.delta
+        self._epsilon_sum += event.budget.epsilon
+        self._delta_sum += event.budget.delta
         self._noising_events.append(event)

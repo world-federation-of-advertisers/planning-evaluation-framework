@@ -39,9 +39,10 @@ class TestPointGenerator:
     def __init__(self, dataset: DataSet):
         """Creates a test point generator for the given DataSet."""
         self._npublishers = dataset.publisher_count
-        self._max_spends = np.array([dataset._data[i].max_spend
-                                     for i in range(dataset.publisher_count)])
-    
+        self._max_spends = np.array(
+            [dataset._data[i].max_spend for i in range(dataset.publisher_count)]
+        )
+
     def test_points(self) -> Iterable[List[float]]:
         """Returns a generator for generating a list of test points.
 
@@ -54,7 +55,3 @@ class TestPointGenerator:
           surface.
         """
         raise NotImplementedError()
-
-
-    
-    

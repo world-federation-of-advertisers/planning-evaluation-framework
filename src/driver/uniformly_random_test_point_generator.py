@@ -22,11 +22,14 @@ import numpy as np
 from typing import Iterable
 from typing import List
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
-from wfa_planning_evaluation_framework.driver.test_point_generator import TestPointGenerator
+from wfa_planning_evaluation_framework.driver.test_point_generator import (
+    TestPointGenerator,
+)
 
 
 class UniformlyRandomTestPointGenerator(TestPointGenerator):
     """Generates a collection of test points for a given simulation."""
+
     def __init__(self, dataset: DataSet, rng: np.random.Generator):
         """Returns a UniformlyRandomTestPointGenerator.
 
@@ -51,11 +54,5 @@ class UniformlyRandomTestPointGenerator(TestPointGenerator):
           was chosen heuristically on the belief that this would give an
           acceptably small sampling variance for the modeling errors.
         """
-        for i in range(max(self._npublishers**2, 100)):
+        for i in range(max(self._npublishers ** 2, 100)):
             yield list(self._max_spends * self._rng.random(size=self._npublishers))
-            
-        
-
-
-    
-    

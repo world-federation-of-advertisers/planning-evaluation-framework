@@ -44,9 +44,6 @@ class UniformlyRandomTestPointGenerator(TestPointGenerator):
     def test_points(self) -> Iterable[List[float]]:
         """Returns a generator for generating a list of test points.
 
-        Args:
-          dataset:  The underlying data from which the reach surface model
-            is constructed.
         Returns:
           An iterable of spend vectors representing locations where
           the true reach surface is to be compared to the modeled reach

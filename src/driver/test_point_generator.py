@@ -37,7 +37,12 @@ class TestPointGenerator:
     """Generates a collection of test points for a given simulation."""
 
     def __init__(self, dataset: DataSet):
-        """Creates a test point generator for the given DataSet."""
+        """Creates a test point generator for the given DataSet.
+
+        Args:
+          dataset:  The underlying data from which the reach surface model
+            is constructed, and for which test points should be generated.
+        """
         self._npublishers = dataset.publisher_count
         self._max_spends = np.array(
             [dataset._data[i].max_spend for i in range(dataset.publisher_count)]
@@ -46,9 +51,6 @@ class TestPointGenerator:
     def test_points(self) -> Iterable[List[float]]:
         """Returns a generator for generating a list of test points.
 
-        Args:
-          dataset:  The underlying data from which the reach surface model
-            is constructed.
         Returns:
           An iterable of spend vectors representing locations where
           the true reach surface is to be compared to the modeled reach

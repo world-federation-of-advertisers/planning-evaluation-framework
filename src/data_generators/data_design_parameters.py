@@ -14,25 +14,7 @@
 """Defines the parameters for generating a DataDesign."""
 
 from numpy.random import Generator
-from typing import List
 from typing import NamedTuple
-from wfa_planning_evaluation_framework.data_generators.impression_generator import (
-    ImpressionGenerator, PricingGenerator)
-
-
-class DataDesignParameters(NamedTuple):
-  """Parameters to create one DataDesign.
-
-    num_reps:  Number of repetitions of the DataSet for this DataDesign.
-    data_set_parameters:  Recepie of creating a DataSet. Each rep creates a new
-        DataSet from these parameters by introducing randomness to it.
-    output_folder:  Where this data design folder should be persisted.
-    """
-
-  num_reps: int
-  data_set_parameters: DataSetParameters
-  output_folder: str
-
 
 class PricingGeneratorParameters(NamedTuple):
   """Parameters to create one PricingGenerator.
@@ -47,10 +29,10 @@ class PricingGeneratorParameters(NamedTuple):
     """
 
   pricing_generator: str
-  fixed_price_cost: float
-  variable_price_prob: float
-  variable_price_mean: float
-  variable_price_std_dev: float
+  fixed_price_cost: float = 0.0
+  variable_price_prob: float = 0.0
+  variable_price_mean: float = 0.0
+  variable_price_std_dev: float = 0.0
 
 
 class ImpressionGeneratorParameters(NamedTuple):
@@ -72,6 +54,7 @@ class OverlapModelParameters(NamedTuple):
     """
 
   overlap_model: str
+  # TODO(uakyol) : Add overlap model params when that base class is implemented.
 
 class DataSetParameters(NamedTuple):
   """Parameters to create one DataSet.
@@ -91,4 +74,17 @@ class DataSetParameters(NamedTuple):
   publisher_size_decay_rate: int
   pricing_generator_params: PricingGeneratorParameters
   impression_generator_params: ImpressionGeneratorParameters
-  # TODO(uakyol) : Add overlap model params when that base class is implemented.
+  overlap_model_params: OverlapModelParameters
+
+class DataDesignParameters(NamedTuple):
+  """Parameters to create one DataDesign.
+
+    num_reps:  Number of repetitions of the DataSet for this DataDesign.
+    data_set_parameters:  Recepie of creating a DataSet. Each rep creates a new
+        DataSet from these parameters by introducing randomness to it.
+    output_folder:  Where this data design folder should be persisted.
+    """
+
+  num_reps: int
+  data_set_parameters: DataSetParameters
+  output_folder: str

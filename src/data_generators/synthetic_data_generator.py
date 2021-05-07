@@ -13,9 +13,18 @@
 # limitations under the License.
 """Generates a DataDesign from DataDesignParameters."""
 
-from wfa_planning_evaluation_framework.data_generators import (
-    DataDesign, DataSet, DataDesignParameters)
-
+from typing import List
+from wfa_planning_evaluation_framework.data_generators.data_design import DataDesign
+from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
+from wfa_planning_evaluation_framework.data_generators.data_design_parameters import (
+    DataDesignParameters, DataSetParameters, OverlapModelParameters,
+    ImpressionGeneratorParameters, PricingGeneratorParameters)
+from wfa_planning_evaluation_framework.data_generators.pricing_generator import PricingGenerator
+from wfa_planning_evaluation_framework.data_generators.fixed_price_generator import  FixedPriceGenerator
+from wfa_planning_evaluation_framework.data_generators.impression_generator import ImpressionGenerator
+from wfa_planning_evaluation_framework.data_generators.homogeneous_impression_generator import HomogeneousImpressionGenerator
+from wfa_planning_evaluation_framework.data_generators.publisher_data import PublisherData
+from numpy.random import RandomState
 
 class SyntheticDataGenerator():
   """Generates a DataDesign with synthetic data derived from parameters.
@@ -27,36 +36,38 @@ class SyntheticDataGenerator():
 
   def __init__(self, params: DataDesignParameters):
     self._params = params
-    self.data_set_name = getName(params.data_set_parameters)
+    self.data_set_name = self.getName(params.data_set_parameters)
 
-  def getName(data_set_params: DataSetParameters):
+  def getName(self, data_set_params: DataSetParameters):
     #TODO(uakyol) : implement this after discussion.
     return "homog_p=10_rep=3"
 
   def __call__(self) -> DataDesign:
     data_design = DataDesign(dirpath=self._params.output_folder)
-    for rep in range(num_reps):
-      data_design.add(generateDataSet(self._params.data_set_parameters), rep)
+    for rep in range(self._params.num_reps):
+      data_design.add(
+          self.generateDataSet(self._params.data_set_parameters, rep))
     return data_design
 
-  def generateDataSet(params: DataSetParameters, seed: int) -> DataSet:
+  def generateDataSet(self, params: DataSetParameters, seed: int) -> DataSet:
     publishers = []
-    for publisher in range(data_set_parameters.num_publishers):
+    for publisher in range(params.num_publishers):
       publishers.append(
           PublisherData.generate_publisher_data(
-              getImpressionGenerator(params.impression_generator_params, seed),
-              getPricingGenerator(params.pricing_generator_paramsm, seed),
+              self.getImpressionGenerator(params.impression_generator_params,
+                                          seed),
+              self.getPricingGenerator(params.pricing_generator_params, seed),
               str(publisher)))
 
-    executeOverlap(publisher, params.overlap_model_params)
+    self.executeOverlap(publisher, params.overlap_model_params)
     return DataSet(publishers, self.data_set_name + str(seed))
 
-  def executeOverlap(publisher: List[PublisherDataSet],
-                     params: OverlapModelParams):
+  def executeOverlap(self, publisher: List[PublisherData],
+                     params: OverlapModelParameters):
     #TODO(uakyol) : Use overlap model here when that class is implemented.
     return
 
-  def getImpressionGenerator(params: ImpressionGeneratorParameters,
+  def getImpressionGenerator(self, params: ImpressionGeneratorParameters,
                              seed: int) -> ImpressionGenerator:
     if (params.impression_generator == "homogenous"):
       return HomogeneousImpressionGenerator(params.num_users,
@@ -66,9 +77,9 @@ class SyntheticDataGenerator():
       raise ValueError(
           f"Invalid impression generator {params.impression_generator}")
 
-  def getPriceGenerator(params: PriceGeneratorParameters,
-                        seed: int) -> PriceGenerator:
-    if (params.price_generator == "fixed"):
+  def getPricingGenerator(self, params: PricingGeneratorParameters,
+                          seed: int) -> PricingGenerator:
+    if (params.pricing_generator == "fixed"):
       return FixedPriceGenerator(params.fixed_price_cost)
     else:
-      raise ValueError(f"Invalid price generator {params.price_generator}")
+      raise ValueError(f"Invalid price generator {params.pricin_generator}")

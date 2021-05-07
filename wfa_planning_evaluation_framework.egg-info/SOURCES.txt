@@ -9,10 +9,11 @@ src/data_generators/heavy_tailed_impression_generator.py
 src/data_generators/heterogeneous_impression_generator.py
 src/data_generators/homogeneous_impression_generator.py
 src/data_generators/impression_generator.py
-src/data_generators/independent_publisher_data.py
+src/data_generators/independent_publisher_overlap_generator.py
 src/data_generators/pricing_generator.py
 src/data_generators/publisher_data.py
-src/data_generators/sequentially_correlated_publisher_data.py
+src/data_generators/publisher_overlap_generator.py
+src/data_generators/sequentially_correlated_publisher_overlap_generator.py
 src/driver/__init__.py
 src/models/__init__.py
 src/models/goerg_model.py
@@ -20,6 +21,12 @@ src/models/reach_curve.py
 src/models/reach_point.py
 src/models/reach_surface.py
 src/simulator/__init__.py
+src/simulator/halo_simulator.py
+src/simulator/modeling_strategy.py
+src/simulator/planner_simulator.py
+src/simulator/privacy_tracker.py
+src/simulator/publisher.py
+src/simulator/simulation_parameters.py
 wfa_planning_evaluation_framework.egg-info/PKG-INFO
 wfa_planning_evaluation_framework.egg-info/SOURCES.txt
 wfa_planning_evaluation_framework.egg-info/dependency_links.txt

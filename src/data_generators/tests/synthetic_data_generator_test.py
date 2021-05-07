@@ -14,6 +14,7 @@
 """Tests for synthetic_data_generator.py."""
 
 from absl.testing import absltest
+from tempfile import TemporaryDirectory
 
 from wfa_planning_evaluation_framework.data_generators.synthetic_data_generator import (
     SyntheticDataGenerator)
@@ -30,23 +31,25 @@ from wfa_planning_evaluation_framework.data_generators.publisher_data import Pub
 class SyntheticDataGeneratorTest(absltest.TestCase):
 
   def test_synthetic_data_generator(self):
-    generator = SyntheticDataGenerator(
-        DataDesignParameters(
-            num_reps=1,
-            data_set_parameters=DataSetParameters(
-                num_publishers=3,
-                largest_publisher_size=100,
-                publisher_size_decay_rate=0.9,
-                pricing_generator_params=PricingGeneratorParameters(
-                    pricing_generator="fixed", fixed_price_cost=0.5),
-                impression_generator_params=ImpressionGeneratorParameters(
-                    impression_generator="homogenous",
-                    num_users=10,
-                    homogenous_lambda=0.1),
-            overlap_model_params=OverlapModelParameters(overlap_model="test")),
-            output_folder="folder"))
-    data_design = generator()
-    self.assertEqual(5, 5)
+    with TemporaryDirectory() as d:
+      generator = SyntheticDataGenerator(
+          DataDesignParameters(
+              num_reps=2,
+              data_set_parameters=DataSetParameters(
+                  num_publishers=3,
+                  largest_publisher_size=100,
+                  publisher_size_decay_rate=0.9,
+                  pricing_generator_params=PricingGeneratorParameters(
+                      pricing_generator="fixed", fixed_price_cost=0.5),
+                  impression_generator_params=ImpressionGeneratorParameters(
+                      impression_generator="homogenous",
+                      num_users=10,
+                      homogenous_lambda=0.1),
+              overlap_model_params=OverlapModelParameters(overlap_model="test")),
+              output_folder=d))
+      data_design = generator()
+      self.assertEqual(data_design.count, 2)
+      self.assertEqual(data_design.names, ["homog_p=10_rep=3_rs=0", "homog_p=10_rep=3_rs=1"])
 
 
 if __name__ == "__main__":

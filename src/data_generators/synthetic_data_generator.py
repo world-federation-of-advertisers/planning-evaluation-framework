@@ -60,7 +60,7 @@ class SyntheticDataGenerator():
               str(publisher)))
 
     self.executeOverlap(publisher, params.overlap_model_params)
-    return DataSet(publishers, self.data_set_name + str(seed))
+    return DataSet(publishers, self.data_set_name +"_rs="+ str(seed))
 
   def executeOverlap(self, publisher: List[PublisherData],
                      params: OverlapModelParameters):

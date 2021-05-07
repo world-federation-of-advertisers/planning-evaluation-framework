@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Defines the execution environment of a simulation instance."""
+"""Defines the parameters for generating a DataDesign."""
 
 from numpy.random import Generator
 from typing import List
@@ -65,6 +65,13 @@ class ImpressionGeneratorParameters(NamedTuple):
   num_users: int
   homogenous_lambda: float
 
+class OverlapModelParameters(NamedTuple):
+  """Parameters to create one OverlapModel.
+
+    overlap_model:  Name of the overlap model
+    """
+
+  overlap_model: str
 
 class DataSetParameters(NamedTuple):
   """Parameters to create one DataSet.

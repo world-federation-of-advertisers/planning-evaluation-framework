@@ -89,7 +89,8 @@ class OverlapDataSet(DataSet):
       A labeled list of PublisherData.
     """
     new_publisher_data_list = []
-    for set_ids, pub_data in zip(set_ids_iter, publisher_data_iter):
+    for set_ids, pub_data in zip(labeled_set_ids_iter,
+                                 unlabeled_publisher_data_iter):
       assert len(set_ids) == pub_data.max_reach, 'single-pub reach does not match.'
       original_ids = set([oid for oid, _ in pub_data._data])
       id_map = dict(zip(original_ids, set_ids))

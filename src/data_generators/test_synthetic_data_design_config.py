@@ -30,8 +30,8 @@ class TestSyntheticDataDesignConfig(SyntheticDataDesignConfig):
     This class
     """
 
-  @staticmethod
-  def __call__(self) -> List[DataSetParameters]:
+  @classmethod
+  def get_data_set_params_list(cls) -> List[DataSetParameters]:
     """Generates data set parameters to create a data set from.
 
     Returns:
@@ -39,22 +39,23 @@ class TestSyntheticDataDesignConfig(SyntheticDataDesignConfig):
        constructed through some business logic.
     """
 
-    return [getDataSetParams(i) for i in range(3)]
+    return [cls.get_data_set_params(i) for i in range(3)]
 
-  def getDataSetParams(seed: int):
+  @classmethod
+  def get_data_set_params(cls, seed: int):
     return DataSetParameters(
         num_publishers=3,
         largest_publisher_size=100,
         publisher_size_decay_rate=0.9,
         pricing_generator_params=GeneratorParameters(
-            generator_type=FixedPriceGenerator, params={}),
+            generator=FixedPriceGenerator, params={'cost_per_impression':0.1}),
         impression_generator_params=GeneratorParameters(
-            generator_type=HomogeneousImpressionGenerator,
+            generator=HomogeneousImpressionGenerator,
             params={
                 "poisson_lambda": 0.1,
                 "random_state": RandomState(seed)
             }),
         overlap_generator_params=GeneratorParameters(
-            generator_type=SequentiallyCorrelatedPublisherOverlapGenerator,
+            generator=SequentiallyCorrelatedPublisherOverlapGenerator,
             params={}),
-        name="homog_p=10_pub=3_rs=" + str(seed))
+        name="homog_p=10_numpub=3_rs=" + str(seed))

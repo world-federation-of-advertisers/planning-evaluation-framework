@@ -19,37 +19,21 @@ from tempfile import TemporaryDirectory
 from wfa_planning_evaluation_framework.data_generators.synthetic_data_generator import (
     SyntheticDataGenerator)
 from wfa_planning_evaluation_framework.data_generators.data_design import DataDesign
-from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
-from wfa_planning_evaluation_framework.data_generators.data_design_parameters import (
-    DataDesignParameters, DataSetParameters, OverlapModelParameters,
-    ImpressionGeneratorParameters, PricingGeneratorParameters)
-from wfa_planning_evaluation_framework.data_generators.pricing_generator import PricingGenerator
-from wfa_planning_evaluation_framework.data_generators.impression_generator import ImpressionGenerator
-from wfa_planning_evaluation_framework.data_generators.publisher_data import PublisherData
+from wfa_planning_evaluation_framework.data_generators.test_synthetic_data_design_config import TestSyntheticDataDesignConfig
 
 
 class SyntheticDataGeneratorTest(absltest.TestCase):
 
   def test_synthetic_data_generator(self):
     with TemporaryDirectory() as d:
-      generator = SyntheticDataGenerator(
-          DataDesignParameters(
-              num_reps=2,
-              data_set_parameters=DataSetParameters(
-                  num_publishers=3,
-                  largest_publisher_size=100,
-                  publisher_size_decay_rate=0.9,
-                  pricing_generator_params=PricingGeneratorParameters(
-                      pricing_generator="fixed", fixed_price_cost=0.5),
-                  impression_generator_params=ImpressionGeneratorParameters(
-                      impression_generator="homogenous",
-                      num_users=10,
-                      homogenous_lambda=0.1),
-              overlap_model_params=OverlapModelParameters(overlap_model="test")),
-              output_folder=d))
+      generator = SyntheticDataGenerator(d, TestSyntheticDataDesignConfig)
       data_design = generator()
-      self.assertEqual(data_design.count, 2)
-      self.assertEqual(data_design.names, ["homog_p=10_rep=3_rs=0", "homog_p=10_rep=3_rs=1"])
+      self.assertEqual(data_design.count, 3)
+      self.assertEqual(data_design.names, [
+          "homog_p=10_numpub=3_rs=0",
+          "homog_p=10_numpub=3_rs=1",
+          "homog_p=10_numpub=3_rs=2"
+      ])
 
 
 if __name__ == "__main__":

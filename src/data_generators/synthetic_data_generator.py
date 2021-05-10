@@ -13,6 +13,9 @@
 # limitations under the License.
 """Generates a DataDesign from DataDesignParameters."""
 
+from absl import app
+from absl import flags
+import math
 from typing import List
 from wfa_planning_evaluation_framework.data_generators.data_design import DataDesign
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
@@ -27,12 +30,9 @@ from wfa_planning_evaluation_framework.data_generators.test_synthetic_data_desig
 from wfa_planning_evaluation_framework.data_generators.synthetic_data_design_config import SyntheticDataDesignConfig
 from numpy.random import RandomState
 
-from absl import app
-from absl import flags
-
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('output_folder', 'SomeFolder', 'Output Folder.')
+flags.DEFINE_string('output_folder', 'TestDataDesign', 'Output Folder.')
 flags.DEFINE_string('data_design_config', 'TestConfig', 'Data Desgin Config.')
 
 name_to_config_dict = {'test': TestSyntheticDataDesignConfig}
@@ -52,12 +52,12 @@ class SyntheticDataGenerator():
 
   def __call__(self) -> DataDesign:
     data_design = DataDesign(dirpath=self._output_folder)
-    data_set_parameters_list = self._config()
+    data_set_parameters_list = self._config.get_data_set_params_list()
     for data_set_parameters in data_set_parameters_list:
-      data_design.add(self.generateDataSet(data_set_parameters))
+      data_design.add(self.generate_data_set(data_set_parameters))
     return data_design
 
-  def generateDataSet(self, params: DataSetParameters) -> DataSet:
+  def generate_data_set(self, params: DataSetParameters) -> DataSet:
     publishers = []
     publisher_size = params.largest_publisher_size
     for publisher in range(params.num_publishers):
@@ -68,17 +68,20 @@ class SyntheticDataGenerator():
                   n=publisher_size),
               params.pricing_generator_params.generator(
                   **params.pricing_generator_params.params),
-              str(publisher)))
-      publisher_size = publisher_size * params.publisher_size_decay_rate
+              self.get_publisher_name(publisher)))
+      publisher_size = math.floor(publisher_size *
+                                  params.publisher_size_decay_rate)
 
     return DataSet(publishers, params.name)
+
+  def get_publisher_name(self, publisher_num: str) -> str:
+    return 'publisher_' + str(publisher_num + 1)
 
 
 def main(argv):
   data_generator = SyntheticDataGenerator(
       FLAGS.output_folder, name_to_config_dict[FLAGS.data_design_config])
-  data_design = data_generator()
-  print(data_design)
+  data_generator()
 
 
 if __name__ == '__main__':

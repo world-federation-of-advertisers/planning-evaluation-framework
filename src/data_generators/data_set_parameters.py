@@ -15,76 +15,42 @@
 
 from numpy.random import Generator
 from typing import NamedTuple
+from typing import Type
+from typing import Any
 
-class PricingGeneratorParameters(NamedTuple):
+
+class GeneratorParameters(NamedTuple):
   """Parameters to create one PricingGenerator.
 
-    pricing_generator:  Name of the pricing generator. Can be "fixed" or
-        "variable".
-    fixed_price_cost : Cost argument for the FixedPriceGenerator.
-    variable_price_prob : Probability Argument for VariablePriceGenerator.
-    variable_price_mean : Mean Argument for VariablePriceGenerator.
-    variable_price_std_dev : Standard Deviation Argument for
-        VariablePriceGenerator.
+    generator: Class of the generator (e.g. HomogeneousImpressionGenerator)
+    params : Parameters dict used to initialize that class.
     """
+  #  TODO(uakyol): create a Generator parent class for impression, pricing and
+  #  overlap generators and change this type.
+  generator: Type[Any]
+  params: dict
 
-  pricing_generator: str
-  fixed_price_cost: float = 0.0
-  variable_price_prob: float = 0.0
-  variable_price_mean: float = 0.0
-  variable_price_std_dev: float = 0.0
-
-
-class ImpressionGeneratorParameters(NamedTuple):
-  """Parameters to create one ImpressionGenerator.
-
-    impression_generator:  Name of the impression generator. Can be "homogenous"
-    num_users : Number of users for this impression generator.
-    homogenous_lambda : Lambda parameter for HomogenousImpressionGenerator.
-    """
-
-  impression_generator: str
-  num_users: int
-  homogenous_lambda: float
-
-class OverlapModelParameters(NamedTuple):
-  """Parameters to create one OverlapModel.
-
-    overlap_model:  Name of the overlap model
-    """
-
-  overlap_model: str
-  # TODO(uakyol) : Add overlap model params when that base class is implemented.
 
 class DataSetParameters(NamedTuple):
   """Parameters to create one DataSet.
 
   Does not include randomness
 
+    num_reps:  Number of repetitions for this DataSet to be randomly generated.
     num_publishers: Number of publishers in this DataSet.
     largest_publisher_size: Maximum possible reach of the largest publisher.
     publisher_size_decay_rate: Decay rate for calculating publisher sizes from
         the largest publisher size.
     pricing_generator_params: Parameters for the pricing generator.
     impression_generator_params: Parameters for the impression generator.
+    overlap_generator_params: Parameters for the overlap generator.
+    name: Filename of the data set to be generated when written to disk.
     """
 
   num_publishers: int
   largest_publisher_size: int
   publisher_size_decay_rate: int
-  pricing_generator_params: PricingGeneratorParameters
-  impression_generator_params: ImpressionGeneratorParameters
-  overlap_model_params: OverlapModelParameters
-
-class DataDesignParameters(NamedTuple):
-  """Parameters to create one DataDesign.
-
-    num_reps:  Number of repetitions of the DataSet for this DataDesign.
-    data_set_parameters:  Recepie of creating a DataSet. Each rep creates a new
-        DataSet from these parameters by introducing randomness to it.
-    output_folder:  Where this data design folder should be persisted.
-    """
-
-  num_reps: int
-  data_set_parameters: DataSetParameters
-  output_folder: str
+  pricing_generator_params: GeneratorParameters
+  impression_generator_params: GeneratorParameters
+  overlap_generator_params: GeneratorParameters
+  name: str

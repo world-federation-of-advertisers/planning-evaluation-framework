@@ -1,17 +1,3 @@
-"""Tests for google3.experimental.users.uakyol.planningEvalFrameworkDataDriver.planning-evaluation-framework.src.data_generators.tests.synthetic_data_generator."""
-
-from google3.experimental.users.uakyol.planningEvalFrameworkDataDriver.planning-evaluation-framework.src.data_generators.tests import synthetic_data_generator
-from google3.testing.pybase import googletest
-
-
-class SyntheticDataGeneratorTest(googletest.TestCase):
-
-  def test_give_me_a_name(self):
-    pass
-
-
-if __name__ == '__main__':
-  googletest.main()
 # Copyright 2021 The Private Cardinality Estimation Framework Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");

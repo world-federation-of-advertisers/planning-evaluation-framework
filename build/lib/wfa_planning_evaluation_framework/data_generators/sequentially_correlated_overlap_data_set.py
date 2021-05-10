@@ -13,20 +13,22 @@
 # limitations under the License.
 """Generate multi-pub data from single-pub data."""
 
-from numpy.random import RandomState
 from typing import Iterable
-from typing import List
 from enum import Enum
-from wfa_planning_evaluation_framework.data_generators.publisher_data import (
-    PublisherData,
-)
-from wfa_planning_evaluation_framework.data_generators.publisher_overlap_generator import (
-    PublisherOverlapGenerator,
-)
+from numpy.random import RandomState
 from wfa_cardinality_estimation_evaluation_framework.simulations.set_generator import (
     SequentiallyCorrelatedSetGenerator,
     ORDER_ORIGINAL, ORDER_REVERSED, ORDER_RANDOM,
     CORRELATED_SETS_ALL, CORRELATED_SETS_ONE,
+)
+from wfa_planning_evaluation_framework.data_generators.data_set import (
+    DataSet,
+)
+from wfa_planning_evaluation_framework.data_generators.overlap_data_set import (
+    OverlapDataSet,
+)
+from wfa_planning_evaluation_framework.data_generators.publisher_data import (
+    PublisherData,
 )
 
 
@@ -41,18 +43,19 @@ class CorrelatedSetsOptions(str, Enum):
   one = CORRELATED_SETS_ONE
 
 
-class SequentiallyCorrelatedPublisherOverlapGenerator(PublisherOverlapGenerator):
+class SequentiallyCorrelatedOverlapDataSet(OverlapDataSet):
 
-  def __init__(self):
-    super().__init__(SequentiallyCorrelatedSetGenerator)
-
-  def __call__(self, publisher_data_iter: Iterable[PublisherData],
+  def __init__(self,
+               unlabeled_publisher_data_list: Iterable[PublisherData],
                order: OrderOptions,
                correlated_sets: CorrelatedSetsOptions,
                shared_prop: float,
-               random_state: RandomState = None) -> List[PublisherData]:
-    return super().__call__(
-        publisher_data_iter,
-        {'order': order, 'correlated_sets': correlated_sets,
-         'shared_prop': shared_prop, 'random_state': random_state})
-
+               random_state: RandomState = None,
+               name: str = 'sequentially_correlated') -> DataSet:
+    super().__init__(
+        unlabeled_publisher_data_list=unlabeled_publisher_data_list,
+        overlap_generator=SequentiallyCorrelatedSetGenerator,
+        overlap_generator_kwargs={
+            'order': order, 'correlated_sets': correlated_sets,
+            'shared_prop': shared_prop, 'random_state': random_state},
+        name=name)

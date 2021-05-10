@@ -22,8 +22,7 @@ from wfa_planning_evaluation_framework.data_generators.impression_generator impo
 
 
 class HeavyTailedImpressionGenerator(ImpressionGenerator):
-  """Generate impressions with heavy tailed impressions.
-  """
+  """Generate impressions with heavy tailed impressions."""
 
   def __init__(self, n: int, zipf_s: float = 2,
                random_state: RandomState = None):
@@ -51,7 +50,7 @@ class HeavyTailedImpressionGenerator(ImpressionGenerator):
     """Generate a random sequence of impressions.
 
     Returns:
-      A list of randomly generated user id's.  An id may occur multiple
+      A list of randomly generated user id's. An id may occur multiple
       times in the output list, representing the fact that the user may
       see multiple ads from the publisher over the course of the campaign.
     """

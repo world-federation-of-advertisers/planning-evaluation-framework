@@ -22,8 +22,7 @@ from wfa_planning_evaluation_framework.data_generators.impression_generator impo
 
 
 class HeterogeneousImpressionGenerator(ImpressionGenerator):
-  """Generate impressions with heterogeneous impressions.
-  """
+  """Generate impressions with heterogeneous impressions."""
 
   def __init__(self, n: int, gamma_shape: float = 1, gamma_scale: float = 1,
                random_state: RandomState = None):

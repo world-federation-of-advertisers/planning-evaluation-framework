@@ -21,12 +21,15 @@ from typing import Any
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
 )
+from wfa_planning_evaluation_framework.data_generators.data_set import (
+    DataSet,
+)
 from wfa_cardinality_estimation_evaluation_framework.simulations.set_generator_base import (
     SetGeneratorBase,
 )
 
 
-class PublisherOverlapGenerator:
+class OverlapDataSet(DataSet):
   """Add overlap to a list of single-pub PublisherData.
 
   Once we have a list of PublisherData for each publsiher, this class
@@ -34,22 +37,21 @@ class PublisherOverlapGenerator:
   reflect the overlap, and finally generates a new list of PublisherData.
   """
 
-  def __init__(self, overlap_generator: SetGeneratorBase):
+  def __init__(self,
+               unlabeled_publisher_data_list: Iterable[PublisherData],
+               overlap_generator: SetGeneratorBase,
+               overlap_generator_kwargs: Dict[str, Any] = {},
+               name: str = None) -> DataSet:
     """Constructor for the PublisherOverlapGenerator.
-
-    This would typically be overridden with a method whose signature would
-    specify the various parameters of the publisher overlap to be generated.
     """
-    self.overlap_generator = overlap_generator
-
-  def __call__(self, publisher_data_iter: Iterable[PublisherData],
-               overlap_generator_kwargs: Dict[str, Any]) -> List[PublisherData]:
-    """Generate a list of PublisherData with overlap reach."""
-    set_sizes = [pub_data.max_reach for pub_data in publisher_data_iter]
-    set_ids_gen = self.overlap_generator(
+    set_sizes = [pub_data.max_reach
+                 for pub_data in unlabeled_publisher_data_list]
+    set_ids_gen = overlap_generator(
         set_sizes=set_sizes, **overlap_generator_kwargs)
-    a = PublisherOverlapGenerator._map_ids(set_ids_gen, publisher_data_iter)
-    return a
+    super().__init__(
+        publisher_data_list=OverlapDataSet._map_ids(
+            set_ids_gen, unlabeled_publisher_data_list),
+        name=name)
 
   @classmethod
   def _map_ids(cls,

@@ -9,11 +9,11 @@ src/data_generators/heavy_tailed_impression_generator.py
 src/data_generators/heterogeneous_impression_generator.py
 src/data_generators/homogeneous_impression_generator.py
 src/data_generators/impression_generator.py
-src/data_generators/independent_publisher_overlap_generator.py
+src/data_generators/independent_overlap_data_set.py
+src/data_generators/overlap_data_set.py
 src/data_generators/pricing_generator.py
 src/data_generators/publisher_data.py
-src/data_generators/publisher_overlap_generator.py
-src/data_generators/sequentially_correlated_publisher_overlap_generator.py
+src/data_generators/sequentially_correlated_overlap_data_set.py
 src/driver/__init__.py
 src/models/__init__.py
 src/models/goerg_model.py

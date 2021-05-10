@@ -19,7 +19,7 @@ from wfa_planning_evaluation_framework.data_generators.data_set_parameters impor
     DataSetParameters, GeneratorParameters)
 from wfa_planning_evaluation_framework.data_generators.fixed_price_generator import FixedPriceGenerator
 from wfa_planning_evaluation_framework.data_generators.homogeneous_impression_generator import HomogeneousImpressionGenerator
-from wfa_planning_evaluation_framework.data_generators.sequentially_correlated_publisher_overlap_generator import SequentiallyCorrelatedPublisherOverlapGenerator
+from wfa_planning_evaluation_framework.data_generators.independent_overlap_data_set import IndependentOverlapDataSet
 from wfa_planning_evaluation_framework.data_generators.synthetic_data_design_config import SyntheticDataDesignConfig
 from numpy.random import RandomState
 
@@ -46,9 +46,10 @@ class TestSyntheticDataDesignConfig(SyntheticDataDesignConfig):
     return DataSetParameters(
         num_publishers=3,
         largest_publisher_size=100,
+        relative_reach_of_largest_publisher=0.5,
         publisher_size_decay_rate=0.9,
         pricing_generator_params=GeneratorParameters(
-            generator=FixedPriceGenerator, params={'cost_per_impression':0.1}),
+            generator=FixedPriceGenerator, params={"cost_per_impression": 0.1}),
         impression_generator_params=GeneratorParameters(
             generator=HomogeneousImpressionGenerator,
             params={
@@ -56,6 +57,8 @@ class TestSyntheticDataDesignConfig(SyntheticDataDesignConfig):
                 "random_state": RandomState(seed)
             }),
         overlap_generator_params=GeneratorParameters(
-            generator=SequentiallyCorrelatedPublisherOverlapGenerator,
-            params={}),
-        name="homog_p=10_numpub=3_rs=" + str(seed))
+            generator=IndependentOverlapDataSet,
+            params={
+                "random_state": RandomState(seed),
+            }),
+        name="independent_homog_p=10_numpub=3_rs=" + str(seed))

@@ -49,6 +49,7 @@ class DataSetParameters(NamedTuple):
 
   num_publishers: int
   largest_publisher_size: int
+  relative_reach_of_largest_publisher: int
   publisher_size_decay_rate: int
   pricing_generator_params: GeneratorParameters
   impression_generator_params: GeneratorParameters

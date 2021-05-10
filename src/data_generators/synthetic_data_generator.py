@@ -72,7 +72,12 @@ class SyntheticDataGenerator():
       publisher_size = math.floor(publisher_size *
                                   params.publisher_size_decay_rate)
 
-    return DataSet(publishers, params.name)
+    return params.overlap_generator_params.generator(
+        unlabeled_publisher_data_list=publishers,
+        universe_size=math.floor(params.largest_publisher_size /
+        params.relative_reach_of_largest_publisher),
+        name=params.name,
+        **params.overlap_generator_params.params)
 
   def get_publisher_name(self, publisher_num: str) -> str:
     return 'publisher_' + str(publisher_num + 1)

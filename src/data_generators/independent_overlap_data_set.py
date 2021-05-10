@@ -51,6 +51,7 @@ class IndependentOverlapDataSet(OverlapDataSet):
     """
     super().__init__(
         unlabeled_publisher_data_list=unlabeled_publisher_data_list,
+        universe_size=universe_size,
         overlap_generator=IndependentSetGenerator,
         overlap_generator_kwargs={'universe_size': universe_size,
                                   'random_state': random_state},

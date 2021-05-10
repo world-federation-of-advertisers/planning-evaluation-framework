@@ -30,9 +30,9 @@ class SyntheticDataGeneratorTest(absltest.TestCase):
       data_design = generator()
       self.assertEqual(data_design.count, 3)
       self.assertEqual(data_design.names, [
-          "homog_p=10_numpub=3_rs=0",
-          "homog_p=10_numpub=3_rs=1",
-          "homog_p=10_numpub=3_rs=2"
+          "independent_homog_p=10_numpub=3_rs=0",
+          "independent_homog_p=10_numpub=3_rs=1",
+          "independent_homog_p=10_numpub=3_rs=2"
       ])
 
 

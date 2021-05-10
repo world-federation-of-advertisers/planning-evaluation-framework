@@ -25,8 +25,8 @@ class SyntheticDataDesignConfig():
     """
 
 
-  @staticmethod
-  def __call__(self) -> List[DataSetParameters]:
+  @classmethod
+  def get_data_set_params_list() -> List[DataSetParameters]:
     """Generates list of data set parameters to create a data design from.
 
     Returns:

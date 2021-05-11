@@ -16,21 +16,20 @@
 from typing import List
 from wfa_planning_evaluation_framework.data_generators.data_set_parameters import DataSetParameters
 
+
 class SyntheticDataDesignConfig():
-  """Generates a DataDesign with synthetic data derived from parameters.
+  """Encapculates with synthetic data config.
 
-    This class translates a DataDesignParameters object to a DataDesign by
-    constructing the underlying objects for a DataSet and duplicating the
-    DataSet with different random seeds.
+    This class geneerates DataSetParameters objects to be passed to
+    SyntheticDataGenerator.
     """
-
 
   @classmethod
   def get_data_set_params_list() -> List[DataSetParameters]:
     """Generates list of data set parameters to create a data design from.
 
     Returns:
-       List of DataSetParameters objects. These object can be hard coded or be 
+       List of DataSetParameters objects. These object can be hard coded or be
        consturucted through some business logic.
     """
     pass

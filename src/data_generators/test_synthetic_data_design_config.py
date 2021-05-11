@@ -25,29 +25,20 @@ from numpy.random import RandomState
 
 
 class TestSyntheticDataDesignConfig(SyntheticDataDesignConfig):
-  """Generates a DataDesign with synthetic data derived from parameters.
-
-    This class
-    """
+  """Generates an example DataDesign with synthetic data."""
 
   @classmethod
   def get_data_set_params_list(cls) -> List[DataSetParameters]:
-    """Generates data set parameters to create a data set from.
-
-    Returns:
-       DataSetParameters object. This object can be hard coded or can be
-       constructed through some business logic.
-    """
 
     return [cls.get_data_set_params(i) for i in range(3)]
 
   @classmethod
   def get_data_set_params(cls, seed: int):
+    largest_publisher_size = 1000
     return DataSetParameters(
         num_publishers=3,
-        largest_publisher_size=100,
-        relative_reach_of_largest_publisher=0.5,
-        publisher_size_decay_rate=0.9,
+        largest_publisher_size=largest_publisher_size,
+        largest_to_smallest_publisher_ratio=0.5,
         pricing_generator_params=GeneratorParameters(
             generator=FixedPriceGenerator, params={"cost_per_impression": 0.1}),
         impression_generator_params=GeneratorParameters(
@@ -60,5 +51,6 @@ class TestSyntheticDataDesignConfig(SyntheticDataDesignConfig):
             generator=IndependentOverlapDataSet,
             params={
                 "random_state": RandomState(seed),
+                "universe_size": largest_publisher_size * 10
             }),
         name="independent_homog_p=10_numpub=3_rs=" + str(seed))

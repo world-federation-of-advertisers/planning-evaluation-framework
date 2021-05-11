@@ -30,11 +30,11 @@ from wfa_planning_evaluation_framework.data_generators.publisher_data import (
 
 
 class OverlapDataSet(DataSet):
-  """Construct a multi-pub DataSet with from list of single-pub PublisherData.
+  """Construct a multi-pub DataSet from a list of single-pub PublisherData.
 
   Once we have a list of PublisherData for each publisher, this class
-  generates the cross-publisher reach overlap, relabel the reached ids to
-  reflect the overlap, and finally include these labeled ids to a DataSet.
+  generates the cross-publisher reach overlap, relabels the reached ids to
+  reflect the overlap, and finally includes these labeled ids to a DataSet.
   """
 
   def __init__(self,

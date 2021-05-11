@@ -36,6 +36,7 @@ class HeterogeneousImpressionGenerator(ImpressionGenerator):
     where shape and gamma are two parameters and Gamma is the Gamma function.
     In this way, lambda has a mean of shape * scale and a variance of
     shape * scale^2.
+    Note: this is equivalent to a negative binomial distribution.
 
     Args:
       n:  The number of users.

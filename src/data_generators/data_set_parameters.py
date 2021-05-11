@@ -20,7 +20,7 @@ from typing import Any
 
 
 class GeneratorParameters(NamedTuple):
-  """Parameters to create one PricingGenerator.
+  """Parameters to create one Generator.
 
     generator: Class of the generator (e.g. HomogeneousImpressionGenerator)
     params : Parameters dict used to initialize that class.
@@ -36,11 +36,10 @@ class DataSetParameters(NamedTuple):
 
   Does not include randomness
 
-    num_reps:  Number of repetitions for this DataSet to be randomly generated.
     num_publishers: Number of publishers in this DataSet.
     largest_publisher_size: Maximum possible reach of the largest publisher.
-    publisher_size_decay_rate: Decay rate for calculating publisher sizes from
-        the largest publisher size.
+    largest_to_smallest_publisher_ratio: Ratio of the size of largest publisher
+      to smallest size.
     pricing_generator_params: Parameters for the pricing generator.
     impression_generator_params: Parameters for the impression generator.
     overlap_generator_params: Parameters for the overlap generator.
@@ -49,8 +48,7 @@ class DataSetParameters(NamedTuple):
 
   num_publishers: int
   largest_publisher_size: int
-  relative_reach_of_largest_publisher: int
-  publisher_size_decay_rate: int
+  largest_to_smallest_publisher_ratio : float
   pricing_generator_params: GeneratorParameters
   impression_generator_params: GeneratorParameters
   overlap_generator_params: GeneratorParameters

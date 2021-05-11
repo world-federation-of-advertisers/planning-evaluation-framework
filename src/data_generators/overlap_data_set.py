@@ -49,7 +49,6 @@ class OverlapDataSet(DataSet):
 =======
   def __init__(self,
                unlabeled_publisher_data_list: Iterable[PublisherData],
-               universe_size: int,
                overlap_generator: SetGeneratorBase,
                overlap_generator_kwargs: Dict[str, Any] = {},
                name: str = None) -> DataSet:

@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Generates a DataDesign from DataDesignParameters."""
+"""Generates a DataDesign from SyntheticDataDesignConfig."""
 
 from absl import app
 from absl import flags
@@ -41,9 +41,8 @@ name_to_config_dict = {'test': TestSyntheticDataDesignConfig}
 class SyntheticDataGenerator():
   """Generates a DataDesign with synthetic data derived from parameters.
 
-    This class translates a DataDesignParameters object to a DataDesign by
-    constructing the underlying objects for a DataSet and duplicating the
-    DataSet with different random seeds.
+    This class translates a SyntheticDataDesignConfig object to a DataDesign by
+    constructing the underlying objects and managing the publisher sizes.
     """
 
   def __init__(self, output_folder: str, config: SyntheticDataDesignConfig):
@@ -60,6 +59,8 @@ class SyntheticDataGenerator():
   def generate_data_set(self, params: DataSetParameters) -> DataSet:
     publishers = []
     publisher_size = params.largest_publisher_size
+    publisher_size_decay_rate = params.largest_to_smallest_publisher_ratio**(
+        1 / float(params.num_publishers))
     for publisher in range(params.num_publishers):
       publishers.append(
           PublisherData.generate_publisher_data(
@@ -69,13 +70,10 @@ class SyntheticDataGenerator():
               params.pricing_generator_params.generator(
                   **params.pricing_generator_params.params),
               self.get_publisher_name(publisher)))
-      publisher_size = math.floor(publisher_size *
-                                  params.publisher_size_decay_rate)
+      publisher_size = math.floor(publisher_size * publisher_size_decay_rate)
 
     return params.overlap_generator_params.generator(
         unlabeled_publisher_data_list=publishers,
-        universe_size=math.floor(params.largest_publisher_size /
-        params.relative_reach_of_largest_publisher),
         name=params.name,
         **params.overlap_generator_params.params)
 

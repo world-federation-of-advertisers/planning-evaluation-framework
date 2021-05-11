@@ -34,6 +34,7 @@ from wfa_planning_evaluation_framework.simulator.simulation_parameters import (
     SimulationParameters,
 )
 
+
 class Publisher:
     def __init__(
         self,
@@ -87,7 +88,7 @@ class Publisher:
         sketch = ExponentialSameKeyAggregator(
             length=int(self._params.liquid_legions_m),
             decay_rate=self._params.liquid_legions_a,
-            random_seed=1
+            random_seed=1,
         )
         spend = min(spend, self._campaign_spend)
         for id, freq in self._publisher_data.user_counts_by_spend(spend).items():

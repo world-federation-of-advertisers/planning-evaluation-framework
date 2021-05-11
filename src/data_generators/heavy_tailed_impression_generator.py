@@ -22,42 +22,39 @@ from wfa_planning_evaluation_framework.data_generators.impression_generator impo
 
 
 class HeavyTailedImpressionGenerator(ImpressionGenerator):
-  """Generate impressions with heavy tailed impressions."""
+    """Generate impressions with heavy tailed impressions."""
 
-  def __init__(self, n: int, zeta_s: float = 2,
-               random_state: RandomState = None):
-    """Constructor for the HeavyTailedImpressionGenerator.
+    def __init__(self, n: int, zeta_s: float = 2, random_state: RandomState = None):
+        """Constructor for the HeavyTailedImpressionGenerator.
 
-    For each user, the number of impressions assigned to that user is
-    determined by drawing from a zeta distribution which has pmf
-    p(k) = k^{-s} / zeta(s), k = 1, 2, ..., zeta(s) being a normalizing factor.
+        For each user, the number of impressions assigned to that user is
+        determined by drawing from a zeta distribution which has pmf
+        p(k) = k^{-s} / zeta(s), k = 1, 2, ..., zeta(s) being a normalizing factor.
 
-    Args:
-      n:  The number of users.
-      zeta_s:  The parameter of the zeta distribution.
-      random_state:  An instance of numpy.random.RandomState that is
-        used for making draws from the Poisson distribution.
-    """
-    assert zeta_s > 1, 'Zeta distribution must have power parameter > 1.'
-    self._zeta_s = zeta_s
-    self._n = n
-    if random_state:
-      self._random_state = random_state
-    else:
-      self._random_state = RandomState()
+        Args:
+          n:  The number of users.
+          zeta_s:  The parameter of the zeta distribution.
+          random_state:  An instance of numpy.random.RandomState that is
+            used for making draws from the Poisson distribution.
+        """
+        assert zeta_s > 1, "Zeta distribution must have power parameter > 1."
+        self._zeta_s = zeta_s
+        self._n = n
+        if random_state:
+            self._random_state = random_state
+        else:
+            self._random_state = RandomState()
 
-  def __call__(self) -> List[int]:
-    """Generate a random sequence of impressions.
+    def __call__(self) -> List[int]:
+        """Generate a random sequence of impressions.
 
-    Returns:
-      A list of randomly generated user id's. An id may occur multiple
-      times in the output list, representing the fact that the user may
-      see multiple ads from the publisher over the course of the campaign.
-    """
-    impressions = []
-    for i in range(self._n):
-      impressions.extend(
-          [i] * self._random_state.zipf(self._zeta_s)
-      )
-    self._random_state.shuffle(impressions)
-    return impressions
+        Returns:
+          A list of randomly generated user id's. An id may occur multiple
+          times in the output list, representing the fact that the user may
+          see multiple ads from the publisher over the course of the campaign.
+        """
+        impressions = []
+        for i in range(self._n):
+            impressions.extend([i] * self._random_state.zipf(self._zeta_s))
+        self._random_state.shuffle(impressions)
+        return impressions

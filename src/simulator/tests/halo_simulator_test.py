@@ -60,9 +60,7 @@ class HaloSimulatorTest(absltest.TestCase):
     @patch(
         "wfa_planning_evaluation_framework.simulator.halo_simulator.LaplaceMechanism"
     )
-    def test_simulated_reach_by_spend_with_privacy(
-        self, mock_laplace_mechanism
-    ):
+    def test_simulated_reach_by_spend_with_privacy(self, mock_laplace_mechanism):
         mock_laplace_mechanism.return_value = FakeLaplaceMechanism()
         reach_point = self.halo.simulated_reach_by_spend([0.04, 0.04], 1.0, 0.0, 3)
         self.assertEqual(reach_point.reach(1), 8)

@@ -23,12 +23,20 @@ from wfa_planning_evaluation_framework.data_generators.impression_generator impo
 
 
 class HomogeneousImpressionGenerator(ImpressionGenerator):
+<<<<<<< HEAD
     """Generate a random sequence of viewer id's of ad impressions.
+=======
+<<<<<<< HEAD
+  """Generate a random sequence of viewer id's of ad impressions.
+>>>>>>> aa788cc (Updates in response to comments from Jiayu.)
 
     This class, along with PricingGenerator, assists in the generation of
     random PublisherDataFiles.  The ImpressionGenerator will generate a
     sequence of random impressions according to specified criteria.
     """
+=======
+    """Generate ad impressions using Poisson distribution with fixed lambda."""
+>>>>>>> af9a0ab (Updates in response to comments from Jiayu.)
 
     def __init__(
         self, n: int, poisson_lambda: float, random_generator: Generator = None
@@ -43,8 +51,14 @@ class HomogeneousImpressionGenerator(ImpressionGenerator):
           n:  The number of users.
           poisson_lambda:  The parameter of the Poisson distribution that
             determines viewing frequencies.
+<<<<<<< HEAD
           random_generator:  An instance of numpy.random.Generator that is used
+=======
+<<<<<<< HEAD
+          random_state:  An instance of numpy.random.RandomState that is used
+>>>>>>> 5eade58 (Updates in response to comments from Jiayu.)
             for making draws from the Poisson distribution.
+<<<<<<< HEAD
         """
         self._poisson_lambda = poisson_lambda
         self._n = n
@@ -52,6 +66,33 @@ class HomogeneousImpressionGenerator(ImpressionGenerator):
             self.random_generator = random_generator
         else:
             self.random_generator = default_rng()
+=======
+    """
+    self._poisson_lambda = poisson_lambda
+    self._n = n
+    if random_generator:
+      self.random_generator = random_generator
+    else:
+<<<<<<< HEAD
+      self.random_generator = default_rng()
+=======
+      self.random_generator = Generator()
+=======
+          random_state:  An instance of numpy.random.RandomState that is
+            used for making draws from the Poisson distribution.
+        """
+        self._poisson_lambda = poisson_lambda
+        self._n = n
+        if random_state:
+            self._random_state = random_state
+        else:
+            self._random_state = RandomState()
+
+    def __call__(self) -> List[int]:
+        """Generate impressions using Poisson distribution with fixed lambda.
+>>>>>>> af9a0ab (Updates in response to comments from Jiayu.)
+>>>>>>> 5eade58 (Updates in response to comments from Jiayu.)
+>>>>>>> aa788cc (Updates in response to comments from Jiayu.)
 
     def __call__(self) -> List[int]:
         """Generate a random sequence of impressions.

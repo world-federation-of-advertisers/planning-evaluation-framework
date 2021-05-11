@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Encapculates the config for a DataSet."""
+"""Encapculates the config for a DataDesign."""
 
 from typing import List
 from wfa_planning_evaluation_framework.data_generators.data_set_parameters import DataSetParameters
@@ -30,6 +30,6 @@ class SyntheticDataDesignConfig():
 
     Returns:
        List of DataSetParameters objects. These object can be hard coded or be
-       consturucted through some business logic.
+       constructed through some business logic.
     """
     pass

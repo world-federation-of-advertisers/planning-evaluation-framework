@@ -51,8 +51,7 @@ class SyntheticDataGenerator():
 
   def __call__(self) -> DataDesign:
     data_design = DataDesign(dirpath=self._output_folder)
-    data_set_parameters_list = self._config.get_data_set_params_list()
-    for data_set_parameters in data_set_parameters_list:
+    for data_set_parameters in self._config.get_data_set_params_list():
       data_design.add(self.generate_data_set(data_set_parameters))
     return data_design
 
@@ -60,7 +59,7 @@ class SyntheticDataGenerator():
     publishers = []
     publisher_size = params.largest_publisher_size
     publisher_size_decay_rate = params.largest_to_smallest_publisher_ratio**(
-        1 / float(params.num_publishers))
+        1 / float(params.num_publishers-1))
     for publisher in range(params.num_publishers):
       publishers.append(
           PublisherData.generate_publisher_data(

@@ -24,16 +24,27 @@ from wfa_planning_evaluation_framework.data_generators.test_synthetic_data_desig
 
 class SyntheticDataGeneratorTest(absltest.TestCase):
 
+  def validate_generated_test_data(self, generated_data_set):
+    self.assertEqual(generated_data_set.publisher_count, 3)
+    self.assertEqual(generated_data_set._data[0].max_reach, 1000)
+    self.assertEqual(generated_data_set._data[1].max_reach, 707)
+    # Because of rounding down we don't get exactly 500
+    self.assertEqual(generated_data_set._data[2].max_reach, 499)
+
   def test_synthetic_data_generator(self):
     with TemporaryDirectory() as d:
       generator = SyntheticDataGenerator(d, TestSyntheticDataDesignConfig)
       data_design = generator()
       self.assertEqual(data_design.count, 3)
-      self.assertEqual(data_design.names, [
+      expected_names = [
           "independent_homog_p=10_numpub=3_rs=0",
           "independent_homog_p=10_numpub=3_rs=1",
           "independent_homog_p=10_numpub=3_rs=2"
-      ])
+      ]
+      [
+          self.validate_generated_test_data(data_design.by_name(name))
+          for name in expected_names
+      ]
 
 
 if __name__ == "__main__":

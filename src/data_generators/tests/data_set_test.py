@@ -42,17 +42,17 @@ class DataSetTest(absltest.TestCase):
         self.assertEqual(self.data_set.name, "test")
 
     def test_spend_by_impressions(self):
-        self.assertEqual(self.data_set.spend_by_impressions([0,0]), [0,0])
-        self.assertEqual(self.data_set.spend_by_impressions([2,0]), [0.02,0])
-        self.assertEqual(self.data_set.spend_by_impressions([0,2]), [0,0.06])
-        self.assertEqual(self.data_set.spend_by_impressions([2,2]), [0.02,0.06])
+        self.assertEqual(self.data_set.spend_by_impressions([0, 0]), [0, 0])
+        self.assertEqual(self.data_set.spend_by_impressions([2, 0]), [0.02, 0])
+        self.assertEqual(self.data_set.spend_by_impressions([0, 2]), [0, 0.06])
+        self.assertEqual(self.data_set.spend_by_impressions([2, 2]), [0.02, 0.06])
 
     def test_impressions_by_spend(self):
-        self.assertEqual(self.data_set.impressions_by_spend([0,0]), [0, 0])
-        self.assertEqual(self.data_set.impressions_by_spend([0.02,0]), [2, 0])
-        self.assertEqual(self.data_set.impressions_by_spend([0,0.06]), [0, 2])
-        self.assertEqual(self.data_set.impressions_by_spend([0.02,0.06]), [2, 2])
-    
+        self.assertEqual(self.data_set.impressions_by_spend([0, 0]), [0, 0])
+        self.assertEqual(self.data_set.impressions_by_spend([0.02, 0]), [2, 0])
+        self.assertEqual(self.data_set.impressions_by_spend([0, 0.06]), [0, 2])
+        self.assertEqual(self.data_set.impressions_by_spend([0.02, 0.06]), [2, 2])
+
     def test_reach_by_impressions(self):
         self.assertEqual(self.data_set.reach_by_impressions([0, 0]).reach(), 0)
         self.assertEqual(self.data_set.reach_by_impressions([4, 0]).reach(), 3)

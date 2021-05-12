@@ -22,12 +22,7 @@ from wfa_planning_evaluation_framework.data_generators.impression_generator impo
 
 
 class HomogeneousImpressionGenerator(ImpressionGenerator):
-    """Generate a random sequence of viewer id's of ad impressions.
-
-    This class, along with PricingGenerator, assists in the generation of
-    random PublisherDataFiles.  The ImpressionGenerator will generate a
-    sequence of random impressions according to specified criteria.
-    """
+    """Generate ad impressions using Poisson distribution with fixed lambda."""
 
     def __init__(self, n: int, poisson_lambda: float, random_state: RandomState = None):
         """Constructor for the HomogeneousImpressionGenerator.
@@ -52,7 +47,7 @@ class HomogeneousImpressionGenerator(ImpressionGenerator):
             self._random_state = RandomState()
 
     def __call__(self) -> List[int]:
-        """Generate a random sequence of impressions.
+        """Generate impressions using Poisson distribution with fixed lambda.
 
         Returns:
           A list of randomly generated user id's.  An id may occur multiple

@@ -53,7 +53,7 @@ class PublisherDataTest(absltest.TestCase):
         self.assertEqual(pdf.impressions_by_spend(0.02), 3)
         self.assertEqual(pdf.impressions_by_spend(0.04), 4)
         self.assertEqual(pdf.impressions_by_spend(0.05), 4)
-    
+
     def test_user_counts_by_impressions(self):
         pdf = PublisherData([(1, 0.01), (1, 0.04), (2, 0.02)])
         self.assertEqual(pdf.user_counts_by_impressions(0), {})

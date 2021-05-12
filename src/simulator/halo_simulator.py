@@ -40,7 +40,7 @@ from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
-    DP_NOISE_MECHANISM_GAUSSIAN,
+    DP_NOISE_MECHANISM_DISCRETE_GAUSSIAN,
 )
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import NoisingEvent
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyBudget
@@ -58,7 +58,10 @@ class HaloSimulator:
     downwards.  In particular, it simulates the SMPC and the behavior of the
     publishers.  The Halo Simulator represents the functionality and interface
     that is assumed to exist by the modeling strategies that are examined as
-    part of this evaluation effort.
+    part of this evaluation effort.  Explicitly, HaloSimulator simulates
+    (i) the observable, DP data points and (ii) the DP single-pub reach curves
+    that will be later used for fitting the multi-pub reach surface in
+    PlannerSimulator.
     """
 
     def __init__(
@@ -109,7 +112,7 @@ class HaloSimulator:
         self,
         spends: List[float],
         budget: PrivacyBudget,
-        epsilon_split: float = 0.5,
+        privacy_budget_split: float = 0.5,
         max_frequency: int = 1,
     ) -> ReachPoint:
         """Returns a simulated differentially private reach estimate.
@@ -120,9 +123,9 @@ class HaloSimulator:
               spent with publisher i.
             budget:  The amount of privacy budget that can be consumed while
               satisfying the request.
-            epsilon_split:  Specifies the proportion of the privacy budget that
-              should be allocated to reach estimation.  The remainder is allocated
-              to frequency estimation.
+            privacy_budget_split:  Specifies the proportion of the privacy budget
+              that should be allocated to reach estimation.  The remainder is
+              allocated to frequency estimation.
             max_frequency:  The maximum frequency for which to report reach.
         Returns:
             A ReachPoint representing the differentially private estiamte of
@@ -133,7 +136,9 @@ class HaloSimulator:
         """
         combined_sketch = self._publishers[0].liquid_legions_sketch(spends[0])
         estimator = StandardizedHistogramEstimator(
-            max_freq=max_frequency, epsilon=budget.epsilon, epsilon_split=epsilon_split
+            max_freq=max_frequency,
+            epsilon=budget.epsilon,
+            epsilon_split=privacy_budget_split,
         )
         for i in range(1, len(spends)):
             sketch = self._publishers[i].liquid_legions_sketch(spends[i])
@@ -148,8 +153,8 @@ class HaloSimulator:
         self._privacy_tracker.append(
             NoisingEvent(
                 budget,
-                DP_NOISE_MECHANISM_GAUSSIAN,
-                {"epsilon": budget.epsilon, "epsilon_split": epsilon_split},
+                DP_NOISE_MECHANISM_DISCRETE_GAUSSIAN,
+                {"privacy_budget_split": privacy_budget_split},
             )
         )
 

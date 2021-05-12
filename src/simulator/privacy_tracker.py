@@ -67,11 +67,11 @@ class PrivacyTracker:
 
     TODO #2: Extend this code to allow for tracking of per-EDP privacy budgets.
 
-    TODO #3: Extend this code to track privacy usage by partition.  
-    In other words, if one noising event applied to the M25-34 demo group 
-    and a second noising event applied to the F35-44 demo group, then by 
-    using the parallel composition rule, the total noise applied would be 
-    the maximum of the two events.  Again, this is something that would be 
+    TODO #3: Extend this code to track privacy usage by partition.
+    In other words, if one noising event applied to the M25-34 demo group
+    and a second noising event applied to the F35-44 demo group, then by
+    using the parallel composition rule, the total noise applied would be
+    the maximum of the two events.  Again, this is something that would be
     useful for workflow evaluation but probably not for model evaluation.
     """
 
@@ -83,7 +83,12 @@ class PrivacyTracker:
 
     @property
     def privacy_consumption(self) -> PrivacyBudget:
-        """Returns the total privacy budget consumed so far."""
+        """Returns the total privacy budget consumed so far.
+
+        Total privacy consumption is currently computed using the
+        basic composition rule.  This will be expanded in the future
+        to support advanced composition (see TODO #1 above).
+        """
         return PrivacyBudget(self._epsilon_sum, self._delta_sum)
 
     @property

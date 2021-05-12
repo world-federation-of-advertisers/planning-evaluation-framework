@@ -26,6 +26,11 @@ from wfa_planning_evaluation_framework.driver.test_point_generator import (
     TestPointGenerator,
 )
 
+# The minimum number of test points that will be generated.
+# The value below was chosen heuristically on the belief that this would
+# give an acceptably small sampling variance for the modeling errors.
+MINIMUM_NUMBER_OF_TEST_POINTS = 100
+
 
 class UniformlyRandomTestPointGenerator(TestPointGenerator):
     """Generates a collection of test points for a given simulation."""
@@ -47,9 +52,8 @@ class UniformlyRandomTestPointGenerator(TestPointGenerator):
         Returns:
           An iterable of spend vectors representing locations where
           the true reach surface is to be compared to the modeled reach
-          surface.  A minimum of 100 points will be generated.  This value
-          was chosen heuristically on the belief that this would give an
-          acceptably small sampling variance for the modeling errors.
+          surface.  A minimum of MINIMUM_NUMBER_OF_TEST_POINTS will
+          be returned.
         """
-        for i in range(max(self._npublishers ** 2, 100)):
+        for i in range(max(self._npublishers ** 2, MINIMUM_NUMBER_OF_TEST_POINTS)):
             yield list(self._max_spends * self._rng.random(size=self._npublishers))

@@ -25,33 +25,33 @@ from wfa_planning_evaluation_framework.driver.test_point_generator import (
 
 
 class LatinHypercubeRandomTestPointGenerator(TestPointGenerator):
-  """Generates a collection of test points for a given simulation."""
+    """Generates a collection of test points for a given simulation."""
 
-  def __init__(self, dataset: DataSet, rng: np.random.Generator):
-    """Returns a LatinHypercubeRandomTestPointGenerator.
+    def __init__(self, dataset: DataSet, rng: np.random.Generator):
+        """Returns a LatinHypercubeRandomTestPointGenerator.
 
-    Args:
-      dataset:  The DataSet for which test points are to be generated.
-      rng:  A numpy Generator object that is used to seed the generation
-        of random test points.
-    """
-    super().__init__(dataset)
-    self._rng = rng
+        Args:
+          dataset:  The DataSet for which test points are to be generated.
+          rng:  A numpy Generator object that is used to seed the generation
+            of random test points.
+        """
+        super().__init__(dataset)
+        self._rng = rng
 
-  def test_points(self) -> Iterable[List[float]]:
-    """Returns a generator for generating a list of test points.
+    def test_points(self) -> Iterable[List[float]]:
+        """Returns a generator for generating a list of test points.
 
-    Returns:
-      An iterable of spend vectors representing locations where
-      the true reach surface is to be compared to the modeled reach
-      surface.  A minimum of 100 points will be generated.  This value
-      was chosen heuristically on the belief that this would give an
-      acceptably small sampling variance for the modeling errors.
-    """
-    num_points = max(self._npublishers ** 2, 100)
-    design = pyDOE.lhs(n=self._npublishers, samples=num_points,
-                       criterion='maximin')
-    design = (design[self._rng.permutation(num_points), :]
-              [:, self._rng.permutation(self._npublishers)])
-    for point in design:
-      yield list(self._max_spends * point)
+        Returns:
+          An iterable of spend vectors representing locations where
+          the true reach surface is to be compared to the modeled reach
+          surface.  A minimum of 100 points will be generated.  This value
+          was chosen heuristically on the belief that this would give an
+          acceptably small sampling variance for the modeling errors.
+        """
+        num_points = max(self._npublishers ** 2, 100)
+        design = pyDOE.lhs(n=self._npublishers, samples=num_points, criterion="maximin")
+        design = design[self._rng.permutation(num_points), :][
+            :, self._rng.permutation(self._npublishers)
+        ]
+        for point in design:
+            yield list(self._max_spends * point)

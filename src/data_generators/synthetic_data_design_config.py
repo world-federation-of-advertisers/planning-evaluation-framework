@@ -14,6 +14,7 @@
 """Encapculates the config for a DataDesign."""
 
 from typing import List
+from numpy.random import Generator
 from wfa_planning_evaluation_framework.data_generators.data_set_parameters import DataSetParameters
 
 
@@ -25,7 +26,8 @@ class SyntheticDataDesignConfig():
     """
 
   @classmethod
-  def get_data_set_params_list() -> List[DataSetParameters]:
+  def get_data_set_params_list(
+      random_generator: Generator) -> List[DataSetParameters]:
     """Generates list of data set parameters to create a data design from.
 
     Returns:

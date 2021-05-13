@@ -16,6 +16,7 @@
 from absl import app
 from absl import flags
 import math
+import numpy as np
 from typing import List
 from wfa_planning_evaluation_framework.data_generators.data_design import DataDesign
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
@@ -28,12 +29,12 @@ from wfa_planning_evaluation_framework.data_generators.homogeneous_impression_ge
 from wfa_planning_evaluation_framework.data_generators.publisher_data import PublisherData
 from wfa_planning_evaluation_framework.data_generators.test_synthetic_data_design_config import TestSyntheticDataDesignConfig
 from wfa_planning_evaluation_framework.data_generators.synthetic_data_design_config import SyntheticDataDesignConfig
-from numpy.random import RandomState
 
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('output_folder', 'TestDataDesign', 'Output Folder.')
 flags.DEFINE_string('data_design_config', 'TestConfig', 'Data Desgin Config.')
+flags.DEFINE_integer('random_seed', 1, 'Seed for the np.random.Generator.')
 
 name_to_config_dict = {'test': TestSyntheticDataDesignConfig}
 
@@ -45,13 +46,16 @@ class SyntheticDataGenerator():
     constructing the underlying objects and managing the publisher sizes.
     """
 
-  def __init__(self, output_folder: str, config: SyntheticDataDesignConfig):
+  def __init__(self, output_folder: str, random_seed: int,
+               config: SyntheticDataDesignConfig):
     self._config = config
+    self._random_seed = random_seed
     self._output_folder = output_folder
 
   def __call__(self) -> DataDesign:
     data_design = DataDesign(dirpath=self._output_folder)
-    for data_set_parameters in self._config.get_data_set_params_list():
+    for data_set_parameters in self._config.get_data_set_params_list(
+        self._random_seed):
       data_design.add(self.generate_data_set(data_set_parameters))
     return data_design
 
@@ -59,7 +63,7 @@ class SyntheticDataGenerator():
     publishers = []
     publisher_size = params.largest_publisher_size
     publisher_size_decay_rate = params.largest_to_smallest_publisher_ratio**(
-        1 / float(params.num_publishers-1))
+        1 / float(params.num_publishers - 1))
     for publisher in range(params.num_publishers):
       publishers.append(
           PublisherData.generate_publisher_data(
@@ -82,7 +86,8 @@ class SyntheticDataGenerator():
 
 def main(argv):
   data_generator = SyntheticDataGenerator(
-      FLAGS.output_folder, name_to_config_dict[FLAGS.data_design_config])
+      FLAGS.output_folder, FLAGS.random_seed,
+      name_to_config_dict[FLAGS.data_design_config])
   data_generator()
 
 

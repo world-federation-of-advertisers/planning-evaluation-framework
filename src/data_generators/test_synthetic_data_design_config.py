@@ -14,27 +14,30 @@
 """Encapculates the config for the test DataDesign."""
 
 from typing import List
-
+from numpy.random import RandomState
 from wfa_planning_evaluation_framework.data_generators.data_set_parameters import (
     DataSetParameters, GeneratorParameters)
 from wfa_planning_evaluation_framework.data_generators.fixed_price_generator import FixedPriceGenerator
 from wfa_planning_evaluation_framework.data_generators.homogeneous_impression_generator import HomogeneousImpressionGenerator
 from wfa_planning_evaluation_framework.data_generators.independent_overlap_data_set import IndependentOverlapDataSet
 from wfa_planning_evaluation_framework.data_generators.synthetic_data_design_config import SyntheticDataDesignConfig
-from numpy.random import RandomState
 
 
 class TestSyntheticDataDesignConfig(SyntheticDataDesignConfig):
   """Generates an example DataDesign with synthetic data."""
 
   @classmethod
-  def get_data_set_params_list(cls) -> List[DataSetParameters]:
-
-    return [cls.get_data_set_params(i) for i in range(3)]
+  def get_data_set_params_list(cls, seed: int) -> List[DataSetParameters]:
+    random_state = RandomState(seed=seed)
+    return [cls.get_data_set_params(random_state) for i in range(3)]
 
   @classmethod
-  def get_data_set_params(cls, seed: int):
+  def get_data_set_params(cls, random_state: RandomState):
     largest_publisher_size = 1000
+    # This signature is same for all runs with the same seed. It is
+    # deterministic, the same value will be generated for the same seed and the
+    # same DataSetParameters that construct the same underliying objects.
+    random_signature = str(random_state.randint(100000, size=1)[0])
     return DataSetParameters(
         num_publishers=3,
         largest_publisher_size=largest_publisher_size,
@@ -45,12 +48,12 @@ class TestSyntheticDataDesignConfig(SyntheticDataDesignConfig):
             generator=HomogeneousImpressionGenerator,
             params={
                 "poisson_lambda": 0.1,
-                "random_state": RandomState(seed)
+                "random_state": random_state
             }),
         overlap_generator_params=GeneratorParameters(
             generator=IndependentOverlapDataSet,
             params={
-                "random_state": RandomState(seed),
+                "random_state": random_state,
                 "universe_size": largest_publisher_size * 10
             }),
-        name="independent_homog_p=10_numpub=3_rs=" + str(seed))
+        name="independent_homog_p=10_numpub=3_rs=" + random_signature)

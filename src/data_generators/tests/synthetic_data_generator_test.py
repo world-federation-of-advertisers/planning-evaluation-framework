@@ -33,14 +33,19 @@ class SyntheticDataGeneratorTest(absltest.TestCase):
 
   def test_synthetic_data_generator(self):
     with TemporaryDirectory() as d:
-      generator = SyntheticDataGenerator(d, TestSyntheticDataDesignConfig)
+      generator = SyntheticDataGenerator(d, 1, TestSyntheticDataDesignConfig)
       data_design = generator()
       self.assertEqual(data_design.count, 3)
+      # Random signatures at rs=xxx will change when any underliying operation
+      # that uses a RandomState changes. Thus, this test will need update.
+      # However, it is necessary to set these values to ensure deterministic
+      # behavior.
       expected_names = [
-          "independent_homog_p=10_numpub=3_rs=0",
-          "independent_homog_p=10_numpub=3_rs=1",
-          "independent_homog_p=10_numpub=3_rs=2"
+          "independent_homog_p=10_numpub=3_rs=5192",
+          "independent_homog_p=10_numpub=3_rs=77708",
+          "independent_homog_p=10_numpub=3_rs=98539"
       ]
+      self.assertEqual(data_design.names, expected_names)
       [
           self.validate_generated_test_data(data_design.by_name(name))
           for name in expected_names

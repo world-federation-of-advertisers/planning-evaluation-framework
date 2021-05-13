@@ -34,7 +34,7 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_string('output_folder', 'TestDataDesign', 'Output Folder.')
 flags.DEFINE_string('data_design_config', 'TestConfig', 'Data Desgin Config.')
-flags.DEFINE_integer('random_seed', 1, 'Seed for the np.random.Generator.')
+flags.DEFINE_integer('random_seed', 1, 'Seed for the np.random.RandomState.')
 
 name_to_config_dict = {'test': TestSyntheticDataDesignConfig}
 

@@ -13,7 +13,6 @@
 # limitations under the License.
 """Defines the parameters for generating a DataSet."""
 
-from numpy.random import Generator
 from typing import NamedTuple
 from typing import Type
 from typing import Any

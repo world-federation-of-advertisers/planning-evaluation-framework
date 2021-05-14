@@ -59,7 +59,7 @@ class ReachPoint:
     def max_frequency(self) -> int:
         """Maximum frequency reported by this point."""
         return len(self._kplus_reaches)
-    
+
     def reach(self, k=1) -> int:
         """Returns the k+ reach associated with this point."""
         if not 0 < k <= len(self._kplus_reaches):

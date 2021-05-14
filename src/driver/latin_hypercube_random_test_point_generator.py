@@ -59,8 +59,9 @@ class LatinHypercubeRandomTestPointGenerator(TestPointGenerator):
           acceptably small sampling variance for the modeling errors.
         """
         num_points = min(
-          max(self._npublishers ** 2, MINIMUM_NUMBER_OF_TEST_POINTS),
-          MAXIMUM_NUMBER_OF_TEST_POINTS)
+            max(self._npublishers ** 2, MINIMUM_NUMBER_OF_TEST_POINTS),
+            MAXIMUM_NUMBER_OF_TEST_POINTS,
+        )
         design = pyDOE.lhs(n=self._npublishers, samples=num_points, criterion="maximin")
         design = design[self._rng.permutation(num_points), :][
             :, self._rng.permutation(self._npublishers)

@@ -22,6 +22,16 @@ from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.driver.test_point_generator import (
     TestPointGenerator,
 )
+from wfa_planning_evaluation_framework.driver.uniformly_random_test_point_generator import (
+    MINIMUM_NUMBER_OF_TEST_POINTS,
+)
+
+
+# The maximum number of test points that will be generated.
+# The value below was chosen to guarantee that a Latin Hypercube is generated
+# in a reasonable amount of time.
+MAXIMUM_NUMBER_OF_TEST_POINTS = 2000
+# A fact: 2000 points for 50 publishers were generated in 145 CPU seconds.
 
 
 class LatinHypercubeRandomTestPointGenerator(TestPointGenerator):
@@ -48,7 +58,9 @@ class LatinHypercubeRandomTestPointGenerator(TestPointGenerator):
           was chosen heuristically on the belief that this would give an
           acceptably small sampling variance for the modeling errors.
         """
-        num_points = max(self._npublishers ** 2, 100)
+        num_points = min(
+          max(self._npublishers ** 2, MINIMUM_NUMBER_OF_TEST_POINTS),
+          MAXIMUM_NUMBER_OF_TEST_POINTS)
         design = pyDOE.lhs(n=self._npublishers, samples=num_points, criterion="maximin")
         design = design[self._rng.permutation(num_points), :][
             :, self._rng.permutation(self._npublishers)

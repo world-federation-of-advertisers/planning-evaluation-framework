@@ -1,0 +1,126 @@
+# Copyright 2021 The Private Cardinality Estimation Framework Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Tests for test_point_aggregator.py."""
+
+from absl.testing import absltest
+import numpy as np
+import pandas as pd
+from wfa_planning_evaluation_framework.driver.test_point_aggregator import (
+    AGGREGATORS,
+    _reach,
+    _shuffle_distance,
+    aggregate
+)
+from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
+
+
+class TestPointAggregatorTest(absltest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.rp110 = ReachPoint([1000], [0., 0., 0.], [10.0])
+        cls.rp111 = ReachPoint([1000], [200., 100., 50.], [10.0])
+        cls.rp112 = ReachPoint([1000], [210., 110., 60.], [10.0])
+
+        cls.rp121 = ReachPoint([2000], [300., 150., 75.], [30.])
+        cls.rp122 = ReachPoint([2000], [320., 170., 95.], [30.])
+
+        cls.rp131 = ReachPoint([3000], [400., 200., 100.], [40.])
+        cls.rp132 = ReachPoint([3000], [430., 230., 130.], [40.])
+        cls.test_points1 = [cls.rp111, cls.rp121, cls.rp131]
+        cls.model_points1 = [cls.rp112, cls.rp122, cls.rp132]
+
+    def test_npoints(self):
+        self.assertEqual(AGGREGATORS['npoints'](self.test_points1, self.model_points1), 3)
+
+    def test_mean_error(self):
+        self.assertEqual(AGGREGATORS['mean_error'](self.test_points1, self.model_points1), -20)
+        self.assertEqual(AGGREGATORS['mean_error'](self.model_points1, self.test_points1), 20)
+
+    def test_mean_abs_error(self):
+        self.assertEqual(AGGREGATORS['mean_abs_error'](self.test_points1, self.model_points1), 20)
+        self.assertEqual(AGGREGATORS['mean_abs_error'](self.model_points1, self.test_points1), 20)
+
+    def test_mean_squared_error(self):
+        self.assertEqual(AGGREGATORS['mean_squared_error'](self.test_points1, self.model_points1), 1400/3)
+        self.assertEqual(AGGREGATORS['mean_squared_error'](self.model_points1, self.test_points1), 1400/3)
+
+    def test_mean_abs_relative_error(self):
+        self.assertEqual(AGGREGATORS['mean_abs_relative_error'](self.test_points1, self.model_points1),
+                         1./3 * (10./200. + 20./300. + 30./400.))
+
+    def test_mean_squared_relative_error(self):
+        self.assertEqual(AGGREGATORS['mean_squared_relative_error'](self.test_points1, self.model_points1),
+                         1./3 * (10.**2/200. + 20.**2/300. + 30.**2/400.))
+
+    def test_var_error(self):
+        self.assertEqual(AGGREGATORS['var_error'](self.test_points1, self.model_points1), 200./3)
+
+    def test_var_relative_error(self):
+        self.assertAlmostEqual(AGGREGATORS['var_relative_error'](self.test_points1, self.model_points1), 0.00010802)
+
+    def test_relative_error_quantiles(self):
+        xlist = []
+        ylist = []
+        for i in range(11):
+            xlist.append(ReachPoint([i], [1]))
+            ylist.append(ReachPoint([i], [i+1]))
+        self.assertEqual(AGGREGATORS['relative_error_q10'](xlist, ylist), 1.)
+        self.assertEqual(AGGREGATORS['relative_error_q20'](xlist, ylist), 2.)
+        self.assertEqual(AGGREGATORS['relative_error_q30'](xlist, ylist), 3.)
+        self.assertEqual(AGGREGATORS['relative_error_q40'](xlist, ylist), 4.)
+        self.assertEqual(AGGREGATORS['relative_error_q50'](xlist, ylist), 5.)
+        self.assertEqual(AGGREGATORS['relative_error_q60'](xlist, ylist), 6.)
+        self.assertEqual(AGGREGATORS['relative_error_q70'](xlist, ylist), 7.)
+        self.assertEqual(AGGREGATORS['relative_error_q80'](xlist, ylist), 8.)
+        self.assertEqual(AGGREGATORS['relative_error_q90'](xlist, ylist), 9.)
+
+    def test_mean_shuffle_distance(self):
+        self.assertEqual(AGGREGATORS['mean_shuffle_distance'](self.test_points1, self.model_points1), 1.)
+        xlist = [ReachPoint([1], [6, 5, 4, 3, 2, 1], [1])]
+        self.assertEqual(AGGREGATORS['mean_shuffle_distance'](xlist, xlist), 0.)
+        ylist = [ReachPoint([1], [7, 6, 6, 6, 6, 6], [1])]
+        self.assertAlmostEqual(AGGREGATORS['mean_shuffle_distance'](xlist, ylist), 0.8)
+
+    def test_mean_squared_shuffle_distance(self):
+        self.assertEqual(AGGREGATORS['mean_squared_shuffle_distance'](self.test_points1, self.model_points1), 1.)
+        xlist = [ReachPoint([1], [6, 5, 4, 3, 2, 1], [1])]
+        self.assertEqual(AGGREGATORS['mean_squared_shuffle_distance'](xlist, xlist), 0.)
+        ylist = [ReachPoint([1], [7, 6, 6, 6, 6, 6], [1])]
+        self.assertAlmostEqual(AGGREGATORS['mean_squared_shuffle_distance'](xlist, ylist), 0.64)
+
+    def test_var_shuffle_distance(self):
+        xlist = [ReachPoint([1], [6, 5, 4, 3, 2, 1], [1])] * 2
+        ylist = [ReachPoint([1], [7, 6, 6, 6, 6, 6], [1]),
+                 ReachPoint([1], [6, 5, 4, 3, 2, 1], [1])]
+        self.assertAlmostEqual(AGGREGATORS['var_shuffle_distance'](xlist, ylist), 0.16, places=3)
+
+    def test__reach(self):
+        np.testing.assert_array_equal(_reach([]), np.array([]))
+        np.testing.assert_array_equal(_reach([self.rp111]), np.array([200.]))
+        np.testing.assert_array_equal(_reach([self.rp111, self.rp112]), np.array([200., 210.]))
+        np.testing.assert_array_equal(_reach([self.rp111, self.rp112], 2), np.array([100., 110.]))
+
+    def test__shuffle_distance(self):
+        self.assertEqual(_shuffle_distance(ReachPoint([1], [1]), ReachPoint([1], [2])), 1.0)
+        self.assertEqual(_shuffle_distance(ReachPoint([1], [6,5,4,3,2,1]), ReachPoint([1], [5,5,5,5,5,5])), 0.5)
+        self.assertEqual(_shuffle_distance(ReachPoint([1], [5,4,3,2,2,2]), ReachPoint([1], [5,5,4,3,2,2])), 1.0/3.0)
+
+    def test_aggregate(self):
+        pd = aggregate(self.test_points1, self.model_points1)
+        self.assertEqual(pd['npoints'][0], 3)
+        self.assertEqual(len(pd.columns), len(AGGREGATORS))
+    
+
+if __name__ == "__main__":
+    absltest.main()

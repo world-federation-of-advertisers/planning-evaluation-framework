@@ -34,7 +34,7 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_string('output_folder', 'TestDataDesign', 'Output Folder.')
 flags.DEFINE_string('data_design_config', 'TestConfig', 'Data Desgin Config.')
-flags.DEFINE_integer('random_seed', 1, 'Seed for the np.random.RandomState.')
+flags.DEFINE_integer('random_seed', 1, 'Seed for the np.random.Generator.')
 
 name_to_config_dict = {'test': TestSyntheticDataDesignConfig}
 
@@ -49,13 +49,13 @@ class SyntheticDataGenerator():
   def __init__(self, output_folder: str, random_seed: int,
                config: SyntheticDataDesignConfig):
     self._config = config
-    self._random_seed = random_seed
+    self._random_generator = np.random.default_rng(random_seed)
     self._output_folder = output_folder
 
   def __call__(self) -> DataDesign:
     data_design = DataDesign(dirpath=self._output_folder)
     for data_set_parameters in self._config.get_data_set_params_list(
-        self._random_seed):
+        self._random_generator):
       data_design.add(self.generate_data_set(data_set_parameters))
     return data_design
 
@@ -77,7 +77,7 @@ class SyntheticDataGenerator():
 
     return params.overlap_generator_params.generator(
         unlabeled_publisher_data_list=publishers,
-        name=params.name,
+        name=self._config.get_data_set_name(params, self._random_generator),
         **params.overlap_generator_params.params)
 
   def get_publisher_name(self, publisher_num: str) -> str:

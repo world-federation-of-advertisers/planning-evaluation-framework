@@ -13,20 +13,18 @@
 # limitations under the License.
 """Generate independent multi-pub data from single-pub data."""
 
+import math
 from typing import Iterable
+from numpy.random import Generator
 from numpy.random import RandomState
 from wfa_cardinality_estimation_evaluation_framework.simulations.set_generator import (
-    IndependentSetGenerator,
-)
+    IndependentSetGenerator,)
 from wfa_planning_evaluation_framework.data_generators.data_set import (
-    DataSet,
-)
+    DataSet,)
 from wfa_planning_evaluation_framework.data_generators.overlap_data_set import (
-    OverlapDataSet,
-)
+    OverlapDataSet,)
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
-    PublisherData,
-)
+    PublisherData,)
 
 
 class IndependentOverlapDataSet(OverlapDataSet):
@@ -35,7 +33,7 @@ class IndependentOverlapDataSet(OverlapDataSet):
   def __init__(self,
                unlabeled_publisher_data_list: Iterable[PublisherData],
                universe_size: int,
-               random_state: RandomState = None,
+               random_generator: Generator = None,
                name: str = 'independent') -> DataSet:
     """Constructor for IndependentOverlapDataSet.
 
@@ -52,6 +50,10 @@ class IndependentOverlapDataSet(OverlapDataSet):
     super().__init__(
         unlabeled_publisher_data_list=unlabeled_publisher_data_list,
         overlap_generator=IndependentSetGenerator,
-        overlap_generator_kwargs={'universe_size': universe_size,
-                                  'random_state': random_state},
+        overlap_generator_kwargs={
+            'universe_size':
+                universe_size,
+            'random_state':
+                RandomState(seed=random_generator.integers(100000, size=1)[0])
+        },
         name=name)

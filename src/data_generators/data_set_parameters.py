@@ -42,7 +42,6 @@ class DataSetParameters(NamedTuple):
     pricing_generator_params: Parameters for the pricing generator.
     impression_generator_params: Parameters for the impression generator.
     overlap_generator_params: Parameters for the overlap generator.
-    name: Filename of the data set to be generated when written to disk.
     """
 
   num_publishers: int
@@ -51,4 +50,3 @@ class DataSetParameters(NamedTuple):
   pricing_generator_params: GeneratorParameters
   impression_generator_params: GeneratorParameters
   overlap_generator_params: GeneratorParameters
-  name: str

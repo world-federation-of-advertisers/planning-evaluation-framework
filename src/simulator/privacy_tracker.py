@@ -83,7 +83,12 @@ class PrivacyTracker:
 
     @property
     def privacy_consumption(self) -> PrivacyBudget:
-        """Returns the total privacy budget consumed so far."""
+        """Returns the total privacy budget consumed so far.
+
+        Total privacy consumption is currently computed using the
+        basic composition rule.  This will be expanded in the future
+        to support advanced composition (see TODO #1 above).
+        """
         return PrivacyBudget(self._epsilon_sum, self._delta_sum)
 
     @property

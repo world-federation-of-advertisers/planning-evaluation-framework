@@ -79,7 +79,7 @@ class HaloSimulatorTest(absltest.TestCase):
         reach_point = self.halo.simulated_reach_by_spend(
             [0.04, 0.04], PrivacyBudget(1.0, 0.0), 0.5, 3
         )
-        self.assertEqual(self.halo.privacy_tracker.mechanisms, ["Gaussian"])
+        self.assertEqual(self.halo.privacy_tracker.mechanisms, ["Discrete Gaussian"])
 
 
 if __name__ == "__main__":

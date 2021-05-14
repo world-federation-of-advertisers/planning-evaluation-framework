@@ -41,9 +41,9 @@ class SyntheticDataGeneratorTest(absltest.TestCase):
       # However, it is necessary to set these values to ensure deterministic
       # behavior.
       expected_names = [
-          "independent_homog_p=10_numpub=3_rs=5192",
-          "independent_homog_p=10_numpub=3_rs=77708",
-          "independent_homog_p=10_numpub=3_rs=98539"
+          'num_publishers=3_largest_publisher_size=1000_largest_to_smallest_publisher_ratio=0.5_rs=34865',
+          'num_publishers=3_largest_publisher_size=1000_largest_to_smallest_publisher_ratio=0.5_rs=46756',
+          'num_publishers=3_largest_publisher_size=1000_largest_to_smallest_publisher_ratio=0.5_rs=62066'
       ]
       self.assertEqual(data_design.names, expected_names)
       [
@@ -52,5 +52,5 @@ class SyntheticDataGeneratorTest(absltest.TestCase):
       ]
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   absltest.main()

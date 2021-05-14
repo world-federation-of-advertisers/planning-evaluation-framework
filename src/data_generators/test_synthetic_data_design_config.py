@@ -14,7 +14,8 @@
 """Encapculates the config for the test DataDesign."""
 
 from typing import List
-from numpy.random import RandomState
+import numpy as np
+from numpy.random import Generator
 from wfa_planning_evaluation_framework.data_generators.data_set_parameters import (
     DataSetParameters, GeneratorParameters)
 from wfa_planning_evaluation_framework.data_generators.fixed_price_generator import FixedPriceGenerator
@@ -27,17 +28,14 @@ class TestSyntheticDataDesignConfig(SyntheticDataDesignConfig):
   """Generates an example DataDesign with synthetic data."""
 
   @classmethod
-  def get_data_set_params_list(cls, seed: int) -> List[DataSetParameters]:
-    random_state = RandomState(seed=seed)
-    return [cls.get_data_set_params(random_state) for i in range(3)]
+  def get_data_set_params_list(
+      cls, random_generator: Generator) -> List[DataSetParameters]:
+    return [cls.get_data_set_params(random_generator) for i in range(3)]
 
   @classmethod
-  def get_data_set_params(cls, random_state: RandomState):
+  def get_data_set_params(cls,
+                          random_generator: Generator) -> DataSetParameters:
     largest_publisher_size = 1000
-    # This signature is same for all runs with the same seed. It is
-    # deterministic, the same value will be generated for the same seed and the
-    # same DataSetParameters that construct the same underliying objects.
-    random_signature = str(random_state.randint(100000, size=1)[0])
     return DataSetParameters(
         num_publishers=3,
         largest_publisher_size=largest_publisher_size,
@@ -48,12 +46,11 @@ class TestSyntheticDataDesignConfig(SyntheticDataDesignConfig):
             generator=HomogeneousImpressionGenerator,
             params={
                 "poisson_lambda": 0.1,
-                "random_state": random_state
+                "random_generator": random_generator
             }),
         overlap_generator_params=GeneratorParameters(
             generator=IndependentOverlapDataSet,
             params={
-                "random_state": random_state,
+                "random_generator": random_generator,
                 "universe_size": largest_publisher_size * 10
-            }),
-        name="independent_homog_p=10_numpub=3_rs=" + random_signature)
+            }))

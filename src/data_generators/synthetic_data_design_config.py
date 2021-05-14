@@ -14,7 +14,13 @@
 """Encapculates the config for a DataDesign."""
 
 from typing import List
+from numpy.random import Generator
 from wfa_planning_evaluation_framework.data_generators.data_set_parameters import DataSetParameters
+
+NAMING_FIELDS = [
+    'num_publishers', 'largest_publisher_size',
+    'largest_to_smallest_publisher_ratio'
+]
 
 
 class SyntheticDataDesignConfig():
@@ -25,7 +31,22 @@ class SyntheticDataDesignConfig():
     """
 
   @classmethod
-  def get_data_set_params_list(seed: int) -> List[DataSetParameters]:
+  def get_data_set_name(cls, data_set_parameters: DataSetParameters,
+                        random_generator: Generator):
+    # This signature is same for all runs with the same seed. It is
+    # deterministic, the same value will be generated for the same seed and the
+    # same DataSetParameters that construct the same underliying objects.
+    random_signature = str(random_generator.integers(100000, size=1)[0])
+    parameter_signature = '_'.join([
+        x + '=' + str(getattr(data_set_parameters, x))
+        for x in data_set_parameters._fields
+        if x in NAMING_FIELDS
+    ])
+    return parameter_signature + '_rs=' + random_signature
+
+  @classmethod
+  def get_data_set_params_list(
+      random_generator: Generator) -> List[DataSetParameters]:
     """Generates list of data set parameters to create a data design from.
 
     Returns:

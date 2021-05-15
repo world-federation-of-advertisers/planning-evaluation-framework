@@ -62,7 +62,7 @@ class SyntheticDataGenerator():
   def generate_data_set(self, params: DataSetParameters) -> DataSet:
     publishers = []
     publisher_size = params.largest_publisher_size
-    publisher_size_decay_rate = params.largest_to_smallest_publisher_ratio**(
+    publisher_size_decay_rate = 1 if params.num_publishers == 1 else params.largest_to_smallest_publisher_ratio**(
         1 / float(params.num_publishers - 1))
     for publisher in range(params.num_publishers):
       publishers.append(

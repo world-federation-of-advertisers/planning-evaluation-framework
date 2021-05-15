@@ -35,7 +35,9 @@ from wfa_cardinality_estimation_evaluation_framework.common.noisers import (
 from wfa_cardinality_estimation_evaluation_framework.estimators.vector_of_counts import (
     VectorOfCounts,
 )
-from wfa_cardinality_estimation_evaluation_framework.estimators.estimator_noisers import GeometricEstimateNoiser
+from wfa_cardinality_estimation_evaluation_framework.estimators.estimator_noisers import (
+    GeometricEstimateNoiser,
+)
 
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
@@ -140,12 +142,20 @@ class HaloSimulator:
             max_freq=max_frequency,
             reach_noiser_class=GeometricEstimateNoiser,
             frequency_noiser_class=GeometricEstimateNoiser,
-            reach_epsilon = budget.epsilon * privacy_budget_split,
-            frequency_epsilon = budget.epsilon * (1 - privacy_budget_split),
-            reach_delta = budget.delta * privacy_budget_split,
-            frequency_delta = budget.delta * (1 - privacy_budget_split),
-            reach_noiser_kwargs = {'random_state': np.random.RandomState(seed=self._params.generator.integers(low=0,high=1e9))},
-            frequency_noiser_kwargs = {'random_state': np.random.RandomState(seed=self._params.generator.integers(low=0, high=1e9))}
+            reach_epsilon=budget.epsilon * privacy_budget_split,
+            frequency_epsilon=budget.epsilon * (1 - privacy_budget_split),
+            reach_delta=budget.delta * privacy_budget_split,
+            frequency_delta=budget.delta * (1 - privacy_budget_split),
+            reach_noiser_kwargs={
+                "random_state": np.random.RandomState(
+                    seed=self._params.generator.integers(low=0, high=1e9)
+                )
+            },
+            frequency_noiser_kwargs={
+                "random_state": np.random.RandomState(
+                    seed=self._params.generator.integers(low=0, high=1e9)
+                )
+            },
         )
         for i in range(1, len(spends)):
             sketch = self._publishers[i].liquid_legions_sketch(spends[i])

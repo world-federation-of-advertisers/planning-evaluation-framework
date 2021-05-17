@@ -22,10 +22,9 @@ from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.driver.test_point_generator import (
     TestPointGenerator,
 )
-from wfa_planning_evaluation_framework.driver.uniformly_random_test_point_generator import (
+from wfa_planning_evaluation_framework.driver.test_point_generator import (
     MINIMUM_NUMBER_OF_TEST_POINTS,
 )
-
 
 # The maximum number of test points that will be generated.
 # The value below was chosen to guarantee that a Latin Hypercube is generated

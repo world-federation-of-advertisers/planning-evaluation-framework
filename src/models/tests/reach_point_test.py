@@ -24,6 +24,7 @@ class ReachPointTest(absltest.TestCase):
         self.assertEqual(point.impressions[0], 200)
         self.assertEqual(point.impressions[1], 300)
 
+      
     def test_reach(self):
         point = ReachPoint([200, 300], [100, 50])
         self.assertEqual(point.reach(1), 100)

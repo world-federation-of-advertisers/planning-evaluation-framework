@@ -32,11 +32,6 @@ from typing import Iterable
 from typing import List
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 
-# The minimum number of test points that will be generated.
-# The value below was chosen heuristically on the belief that this would
-# give an acceptably small sampling variance for the modeling errors.
-MINIMUM_NUMBER_OF_TEST_POINTS = 100
-
 
 class TestPointGenerator:
     """Generates a collection of test points for a given simulation."""

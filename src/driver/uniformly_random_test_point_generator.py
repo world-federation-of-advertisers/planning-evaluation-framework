@@ -25,9 +25,11 @@ from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.driver.test_point_generator import (
     TestPointGenerator,
 )
-from wfa_planning_evaluation_framework.driver.test_point_generator import (
-    MINIMUM_NUMBER_OF_TEST_POINTS,
-)
+
+# The minimum number of test points that will be generated.
+# The value below was chosen heuristically on the belief that this would
+# give an acceptably small sampling variance for the modeling errors.
+MINIMUM_NUMBER_OF_TEST_POINTS = 100
 
 
 class UniformlyRandomTestPointGenerator(TestPointGenerator):

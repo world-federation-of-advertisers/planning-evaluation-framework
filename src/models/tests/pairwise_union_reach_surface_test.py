@@ -71,7 +71,7 @@ class PairwiseUnionReachSurfaceTest(absltest.TestCase):
         for max_reach in max_reaches
     ]
 
-  def genereate_sample_matrix_a(self, num_publishers):
+  def generate_sample_matrix_a(self, num_publishers):
     true_a = np.array([
         np.random.dirichlet(np.ones(num_publishers)) * np.random.uniform()
         for _ in range(num_publishers)
@@ -99,7 +99,7 @@ class PairwiseUnionReachSurfaceTest(absltest.TestCase):
 
     reach_curves = self.generate_sample_reach_curves(num_publishers, decay_rate,
                                                      universe_size)
-    true_a = self.genereate_sample_matrix_a(num_publishers)
+    true_a = self.generate_sample_matrix_a(num_publishers)
     training_reach_points = self.generate_sample_reach_points(
         true_a, reach_curves, training_size, universe_size)
 

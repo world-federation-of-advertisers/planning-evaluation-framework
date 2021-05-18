@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Encapculates the config for the test DataDesign."""
+"""Encapsulates the config for the test DataDesign."""
 
 from typing import List
 import numpy as np
@@ -25,7 +25,7 @@ from wfa_planning_evaluation_framework.data_generators.synthetic_data_design_con
 
 
 class TestSyntheticDataDesignConfig2(SyntheticDataDesignConfig):
-  """Generates an example DataDesign with synthetic data."""
+  """Generates synthetic DataDesign for testing when npublishers=1"""
 
   @classmethod
   def get_data_set_params_list(

@@ -58,14 +58,14 @@ class PairwiseUnionReachSurface(ReachSurface):
                      max_frequency: int = 1) -> ReachPoint:
 
     reach_vector = self.get_reach_vector(impressions)
-    overlapped_reach = sum(reach_vector)
+    reach_sum = sum(reach_vector)
     overlap = sum([
         (self._a[i * self._p + j] * reach_vector[i] * reach_vector[j]) /
         (max(self._reach_curves[i].max_reach, self._reach_curves[j].max_reach) *
          2) for i in range(self._p) for j in range(self._p)
     ])
 
-    return ReachPoint(impressions, [overlapped_reach - overlap])
+    return ReachPoint(impressions, [reach_sum - overlap])
 
   def get_constraints(self):
     G1 = -matrix(np.eye(self._p * self._p))

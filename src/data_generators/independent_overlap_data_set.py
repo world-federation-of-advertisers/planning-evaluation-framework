@@ -28,7 +28,7 @@ from wfa_planning_evaluation_framework.data_generators.publisher_data import (
 
 
 class IndependentOverlapDataSet(OverlapDataSet):
-  """Construct a multi-pub DataSet with independent overlap."""
+    """Construct a multi-pub DataSet with independent overlap."""
 
   def __init__(self,
                unlabeled_publisher_data_list: Iterable[PublisherData],

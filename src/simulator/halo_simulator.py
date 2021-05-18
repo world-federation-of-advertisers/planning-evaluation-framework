@@ -106,11 +106,14 @@ class HaloSimulator:
             adding differentially private noise to the result.
         """
         combined_sketch = self._publishers[0].liquid_legions_sketch(spends[0])
-        estimator = StandardizedHistogramEstimator(max_freq=max_frequency,
-                                                   epsilon=np.Inf)
+        estimator = StandardizedHistogramEstimator(
+            max_freq=max_frequency, epsilon=np.Inf
+        )
         for i in range(1, len(spends)):
             sketch = self._publishers[i].liquid_legions_sketch(spends[i])
-            combined_sketch = StandardizedHistogramEstimator.merge_two_sketches(combined_sketch, sketch)
+            combined_sketch = StandardizedHistogramEstimator.merge_two_sketches(
+                combined_sketch, sketch
+            )
         frequencies = estimator.estimate_cardinality(combined_sketch)
 
         # TODO(jiayu?): Determine what is the appropriate noise to add.  For now, we just

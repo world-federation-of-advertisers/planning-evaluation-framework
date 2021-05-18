@@ -42,9 +42,7 @@ class DataSet:
     have an IndependentDataSet, a SequentiallyCorrelatedDataSet, etc.
     """
 
-    def __init__(
-        self, publisher_data_list: Iterable[PublisherData], name: str = None
-    ):
+    def __init__(self, publisher_data_list: Iterable[PublisherData], name: str = None):
         """Constructor
 
         Args:
@@ -84,8 +82,10 @@ class DataSet:
           that would need to be spent with the k-th publisher to obtain
           I[k] impressions.
         """
-        return [self._data[i].spend_by_impressions(impressions[i])
-                for i in range(len(self._data))]
+        return [
+            self._data[i].spend_by_impressions(impressions[i])
+            for i in range(len(self._data))
+        ]
 
     def impressions_by_spend(self, spends: Iterable[float]) -> List[int]:
         """Returns impression vector corresponding to a given spend vector.
@@ -99,9 +99,11 @@ class DataSet:
           I[k] is the number of impressions that would be obtained for
           a spend of S[k] with publisher k.
         """
-        return [self._data[i].impressions_by_spend(spends[i])
-                for i in range(len(self._data))]
-    
+        return [
+            self._data[i].impressions_by_spend(spends[i])
+            for i in range(len(self._data))
+        ]
+
     def reach_by_impressions(
         self, impressions: Iterable[int], max_frequency: int = 10
     ) -> ReachPoint:
@@ -221,6 +223,8 @@ class DataSet:
                         pdf.name = f
                         pdf_list.append(pdf)
                     except (ValueError, RuntimeError) as e:
-                        raise RuntimeError("In publisher file {}".format(filepath)) from e
+                        raise RuntimeError(
+                            "In publisher file {}".format(filepath)
+                        ) from e
         name = dirpath.split("/")[-1]
         return cls(pdf_list, name)

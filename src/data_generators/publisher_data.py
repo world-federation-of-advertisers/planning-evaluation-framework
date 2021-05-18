@@ -131,7 +131,7 @@ class PublisherData:
           that spend.
         """
         return bisect_right(self._spends, spend)
-    
+
     def user_counts_by_impressions(self, impressions: int) -> Dict[int, int]:
         """Number of times each user is reached for a given impression buy.
 

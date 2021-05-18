@@ -22,12 +22,12 @@ from wfa_planning_evaluation_framework.data_generators.heterogeneous_impression_
 
 
 class ImpressionGeneratorTest(absltest.TestCase):
+    def test_heterogeneous_impression_generator(self):
+        generator = HeterogeneousImpressionGenerator(3, 2, 1.5, RandomState(1))
+        generated_ids = generator()
+        self.assertEqual(set(generated_ids), set([0, 1, 2]))
+        self.assertLen(generated_ids, 13)
 
-  def test_heterogeneous_impression_generator(self):
-    generator = HeterogeneousImpressionGenerator(3, 2, 1.5, RandomState(1))
-    generated_ids = generator()
-    self.assertEqual(set(generated_ids), set([0, 1, 2]))
-    self.assertLen(generated_ids, 13)
 
 if __name__ == "__main__":
-  absltest.main()
+    absltest.main()

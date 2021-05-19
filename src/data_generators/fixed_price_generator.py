@@ -15,6 +15,7 @@
 
 from typing import List
 from typing import Tuple
+from numpy.random import Generator
 from wfa_planning_evaluation_framework.data_generators.pricing_generator import (
     PricingGenerator,
 )
@@ -27,7 +28,7 @@ class FixedPriceGenerator(PricingGenerator):
     This is mainly included as an example of how to write a PricingGenerator.
     """
 
-    def __init__(self, cost_per_impression: float):
+    def __init__(self, cost_per_impression: float, random_generator: Generator = None):
         """Constructor for the FixedPriceGenerator.
 
         Args:

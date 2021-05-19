@@ -21,6 +21,7 @@ from wfa_planning_evaluation_framework.data_generators.synthetic_data_generator 
 from wfa_planning_evaluation_framework.data_generators.data_design import DataDesign
 from wfa_planning_evaluation_framework.data_generators.test_synthetic_data_design_config import TestSyntheticDataDesignConfig
 from wfa_planning_evaluation_framework.data_generators.test_synthetic_data_design_config2 import TestSyntheticDataDesignConfig2
+from wfa_planning_evaluation_framework.data_generators.test_lhs_synthetic_data_design_config import TestLHSSyntheticDataDesignConfig
 
 
 class SyntheticDataGeneratorTest(absltest.TestCase):
@@ -31,6 +32,16 @@ class SyntheticDataGeneratorTest(absltest.TestCase):
     self.assertEqual(generated_data_set._data[1].max_reach, 707)
     # Because of rounding down we don't get exactly 500
     self.assertEqual(generated_data_set._data[2].max_reach, 499)
+
+  def test_synthetic_data_generator_lhs_dataset(self):
+    with TemporaryDirectory() as d:
+      generator = SyntheticDataGenerator(d, 1, TestLHSSyntheticDataDesignConfig)
+      data_design = generator()
+      self.assertEqual(data_design.count, 6)
+      # self.assertEqual(data_design.names, expected_names)
+      # generated_data_set = data_design.by_name(expected_names[0])
+      # self.assertEqual(generated_data_set.publisher_count, 1)
+      # self.assertEqual(generated_data_set._data[0].max_reach, 1000)
 
   def test_synthetic_data_generator_single_dataset_single_publisher(self):
     with TemporaryDirectory() as d:

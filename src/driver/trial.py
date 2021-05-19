@@ -83,32 +83,52 @@ class Trial:
         if os.path.isfile(trial_results_path):
             return pd.read_csv(trial_results_path)
 
-        dataset = self._data_design.by_name(self._data_set_name)
-        privacy_tracker = PrivacyTracker()
-        halo = HaloSimulator(dataset, self._simulation_params, privacy_tracker)
+        self._dataset = self._data_design.by_name(self._data_set_name)
+        self._privacy_tracker = PrivacyTracker()
+        halo = HaloSimulator(self._dataset, self._simulation_params, self._privacy_tracker)
         privacy_budget = self._experiment_params.privacy_budget
         modeling_strategy = self._modeling_strategy_descriptor.get_strategy()
         modeling_strategy.fit(halo, privacy_budget)
 
-        test_points = modeling_strategy.generate_test_points()
-        true_reach = [halo.true_reach_by_spend(t, modeling_strategy.max_frequency)
+        test_points = self._modeling_strategy_descriptor.generate_test_points()
+        true_reach = [halo.true_reach_by_spend(t, self._modeling_strategy_descriptor.max_frequency)
                       for t in test_points]
-        simulated_reach = [halo.simulated_reach_by_spend(t, modeling_strategy.max_frequency)
+        simulated_reach = [halo.simulated_reach_by_spend(t, self._modeling_strategy_descriptor.max_frequency)
                            for t in test_points]
 
         independent_vars = self._make_independent_vars_dataframe()
-        privacy_tracking_vars = self._make_privacy_tracking_vars_dataframe(privacy_tracker)
+        privacy_tracking_vars = self._make_privacy_tracking_vars_dataframe()
         metrics = aggregate(true_reach, simulated_reach)
         result = pd.concat([independent_vars, privacy_tracking_vars, metrics], axis=1)
         result.to_csv(trial_results_path)
         return result
     
     def _compute_trial_results_path(self):
-        pass
-
+        """Returns path of file where the results of this trial are stored."""
+        trial_name = (str(self._modeling_strategy_descriptor) +
+                      str(self._simulation_params) +
+                      str(self._experiment_params))
+        return "{}/{}/{}".format(self._experiment_dir, self._data_set_name, trial_name)
+        
     def _make_independent_vars_dataframe(self):
-        pass
+        """Returns a 1-row DataFrame of independent variables for this trial."""
+        independent_vars = pd.DataFrame({
+            'dataset': self._data_set_name,
+            'replica': self._experiment_params.replica,
+            'single_pub_model': self._modeling_strategy_descriptor.single_pub_model,
+            'pricing_model': self._modeling_strategy_descriptor.pricing_model,
+            'multi_pub_model': self._modeling_strategy_descriptor.multi_pub_model,
+            'strategy': self._modeling_strategy_descriptor.name,
+            'liquid_legions_sketch_size': self._simulation_params.liquid_legions.sketch_size,
+            'liquid_legions_decay_rate': self._simulation_params.liquid_legions.decay_rate,
+            'maximum_reach': self._dataset.maximum_reach,
+            'ncampaigns': self._dataset.publisher_count,
+            'largest_pub_reach': max([p.reach for p in self._dataset._data]),
+            'max_frequency': self._modeling_strategy_descriptor.max_frequency,
+        })
+        return independent_vars
 
     def _make_privacy_tracking_vars_dataframe(self, privacy_tracker: PrivacyTracker):
-        pass
+        """Returns a 1-row DataFrame of privacy-related data for this trial."""
+        
     

@@ -28,7 +28,7 @@ from wfa_planning_evaluation_framework.data_generators.publisher_data import (
 
 
 class IndependentOverlapDataSet(OverlapDataSet):
-    """Construct a multi-pub DataSet with independent overlap."""
+  """Construct a multi-pub DataSet with independent overlap."""
 
   def __init__(self,
                unlabeled_publisher_data_list: Iterable[PublisherData],
@@ -37,15 +37,16 @@ class IndependentOverlapDataSet(OverlapDataSet):
                name: str = 'independent') -> DataSet:
     """Constructor for IndependentOverlapDataSet.
 
-    Args:
-      unlabeled_publisher_data_list:  a list of PublisherDataSet indicating the
-        reach curve of a publisher.
-      universe_size:  the universe size for applying the independent model of
-        overlap. Explicitly, for any two pubs 1 and 2, the overlap reach between
-        these two pubs 1 equals <pub 1 reach> * <pub 2 reach> / universe_size.
-      random_state: a random state for generating the independent reached ids.
-      name:  If specified, a human-readable name that will be associated to this
-        DataSet.
+      Args:
+        unlabeled_publisher_data_list:  a list of PublisherDataSet indicating
+          the reach curve of a publisher.
+        universe_size:  the universe size for applying the independent model of
+          overlap. Explicitly, for any two pubs 1 and 2, the overlap reach
+          between these two pubs 1 equals <pub 1 reach> * <pub 2 reach> /
+          universe_size.
+        random_state: a random state for generating the independent reached ids.
+        name:  If specified, a human-readable name that will be associated to
+          this DataSet.
     """
     super().__init__(
         unlabeled_publisher_data_list=unlabeled_publisher_data_list,

@@ -38,10 +38,6 @@ class SyntheticDataGeneratorTest(absltest.TestCase):
       generator = SyntheticDataGenerator(d, 1, TestLHSSyntheticDataDesignConfig)
       data_design = generator()
       self.assertEqual(data_design.count, 6)
-      # self.assertEqual(data_design.names, expected_names)
-      # generated_data_set = data_design.by_name(expected_names[0])
-      # self.assertEqual(generated_data_set.publisher_count, 1)
-      # self.assertEqual(generated_data_set._data[0].max_reach, 1000)
 
   def test_synthetic_data_generator_single_dataset_single_publisher(self):
     with TemporaryDirectory() as d:

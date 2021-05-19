@@ -83,7 +83,6 @@ class SyntheticDataDesignGenerator():
                   **params.pricing_generator_params.params),
               self.get_publisher_name(publisher)))
       publisher_size = math.floor(publisher_size * publisher_size_decay_rate)
-
     return params.overlap_generator_params.generator(
         unlabeled_publisher_data_list=publishers,
         name=self._config.get_data_set_name(params, self._random_generator),

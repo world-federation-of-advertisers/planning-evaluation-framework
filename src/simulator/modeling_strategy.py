@@ -18,25 +18,24 @@ from wfa_planning_evaluation_framework.simulator.halo_simulator import HaloSimul
 from wfa_planning_evaluation_framework.simulator.simulation_parameters import (
     SimulationParameters,
 )
+from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
+    PrivacyBudget,
+)
 
 
 class ModelingStrategy:
     def fit(
         self,
         halo: HaloSimulator,
-        params: SimulationParameters,
-        epsilon: float,
-        delta: float,
+        privacy_budget: PrivacyBudget
     ) -> ReachSurface:
         """Returns the reach surface using this Halo instance.
 
         Args:
             halo: A Halo object for simulating the behavior of the Halo system.
             params:  Simulation parameters.
-            epsilon: The epsilon component of the privacy budget allocated to
-              this request.
-            delta:  The delta component of the privacy budget allocated to this
-              requiest.
+            privacy_budget:  The amount of privacy budget to allocate to this
+              model fit.
         Returns:
             A differentially private ReachSurface model which can be queried
             for reach and frequency estimates for arbitrary spend allocations.

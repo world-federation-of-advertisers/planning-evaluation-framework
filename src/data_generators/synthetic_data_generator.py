@@ -25,26 +25,19 @@ from wfa_planning_evaluation_framework.data_generators.data_set_parameters impor
     GeneratorParameters,
 )
 from wfa_planning_evaluation_framework.data_generators.pricing_generator import (
-    PricingGenerator,
-)
+    PricingGenerator,)
 from wfa_planning_evaluation_framework.data_generators.fixed_price_generator import (
-    FixedPriceGenerator,
-)
+    FixedPriceGenerator,)
 from wfa_planning_evaluation_framework.data_generators.impression_generator import (
-    ImpressionGenerator,
-)
+    ImpressionGenerator,)
 from wfa_planning_evaluation_framework.data_generators.homogeneous_impression_generator import (
-    HomogeneousImpressionGenerator,
-)
+    HomogeneousImpressionGenerator,)
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
-    PublisherData,
-)
+    PublisherData,)
 from wfa_planning_evaluation_framework.data_generators.test_synthetic_data_design_config import (
-    TestSyntheticDataDesignConfig,
-)
+    TestSyntheticDataDesignConfig,)
 from wfa_planning_evaluation_framework.data_generators.synthetic_data_design_config import (
-    SyntheticDataDesignConfig,
-)
+    SyntheticDataDesignConfig,)
 
 FLAGS = flags.FLAGS
 
@@ -56,68 +49,57 @@ name_to_config_dict = {"test": TestSyntheticDataDesignConfig}
 
 
 class SyntheticDataGenerator:
-    """Generates a DataDesign with synthetic data derived from parameters.
+  """Generates a DataDesign with synthetic data derived from parameters.
 
     This class translates a SyntheticDataDesignConfig object to a DataDesign by
     constructing the underlying objects and managing the publisher sizes.
     """
 
-    def __init__(
-        self, output_folder: str, random_seed: int, config: SyntheticDataDesignConfig
-    ):
-        self._config = config
-        self._random_generator = np.random.default_rng(random_seed)
-        self._output_folder = output_folder
+  def __init__(self, output_folder: str, random_seed: int,
+               config: SyntheticDataDesignConfig):
+    self._config = config
+    self._random_generator = np.random.default_rng(random_seed)
+    self._output_folder = output_folder
 
-    def __call__(self) -> DataDesign:
-        data_design = DataDesign(dirpath=self._output_folder)
-        for data_set_parameters in self._config.get_data_set_params_list(
-            self._random_generator
-        ):
-            data_design.add(self.generate_data_set(data_set_parameters))
-        return data_design
+  def __call__(self) -> DataDesign:
+    data_design = DataDesign(dirpath=self._output_folder)
+    for data_set_parameters in self._config.get_data_set_params_list(
+        self._random_generator):
+      data_design.add(self.generate_data_set(data_set_parameters))
+    return data_design
 
-    def generate_data_set(self, params: DataSetParameters) -> DataSet:
-        publishers = []
-        publisher_size = params.largest_publisher_size
-        publisher_size_decay_rate = (
-            1
-            if params.num_publishers == 1
-            else params.largest_to_smallest_publisher_ratio
-            ** (1 / float(params.num_publishers - 1))
-        )
-        for publisher in range(params.num_publishers):
-            publishers.append(
-                PublisherData.generate_publisher_data(
-                    params.impression_generator_params.generator(
-                        **params.impression_generator_params.params, n=publisher_size
-                    ),
-                    params.pricing_generator_params.generator(
-                        **params.pricing_generator_params.params
-                    ),
-                    self.get_publisher_name(publisher),
-                )
-            )
-            publisher_size = math.floor(publisher_size * publisher_size_decay_rate)
+  def generate_data_set(self, params: DataSetParameters) -> DataSet:
+    publishers = []
+    publisher_size = params.largest_publisher_size
+    publisher_size_decay_rate = 1 if params.num_publishers == 1 else params.largest_to_smallest_publisher_ratio**(
+        1 / float(params.num_publishers - 1))
+    for publisher in range(params.num_publishers):
+      publishers.append(
+          PublisherData.generate_publisher_data(
+              params.impression_generator_params.generator(
+                  **params.impression_generator_params.params,
+                  n=publisher_size),
+              params.pricing_generator_params.generator(
+                  **params.pricing_generator_params.params),
+              self.get_publisher_name(publisher)))
+      publisher_size = math.floor(publisher_size * publisher_size_decay_rate)
+    return params.overlap_generator_params.generator(
+        unlabeled_publisher_data_list=publishers,
+        name=self._config.get_data_set_name(params, self._random_generator),
+        **params.overlap_generator_params.params)
 
-        return params.overlap_generator_params.generator(
-            unlabeled_publisher_data_list=publishers,
-            name=self._config.get_data_set_name(params, self._random_generator),
-            **params.overlap_generator_params.params
-        )
-
-    def get_publisher_name(self, publisher_num: str) -> str:
-        return "publisher_" + str(publisher_num + 1)
+  def get_publisher_name(self, publisher_num: str) -> str:
+    return "publisher_" + str(publisher_num + 1)
 
 
 def main(argv):
-    data_generator = SyntheticDataGenerator(
-        FLAGS.output_folder,
-        FLAGS.random_seed,
-        name_to_config_dict[FLAGS.data_design_config],
-    )
-    data_generator()
+  data_generator = SyntheticDataGenerator(
+      FLAGS.output_folder,
+      FLAGS.random_seed,
+      name_to_config_dict[FLAGS.data_design_config],
+  )
+  data_generator()
 
 
 if __name__ == "__main__":
-    app.run(main)
+  app.run(main)

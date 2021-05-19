@@ -13,8 +13,27 @@
 # limitations under the License.
 """Defines the execution environment of a simulation instance."""
 
+from numpy.random import Generator
 from typing import List
 from typing import NamedTuple
+
+
+class LiquidLegionsParameters(NamedTuple):
+    """Simulation parameters specific to Liquid Legions.
+
+    decay_rate:  Decay rate parameter of Liquid Legions
+        sketch (often abbreviated as a).
+    sketch_size:  Size of Liquid Legions sketch (often
+        abbreviated as m).
+    random_seed:  A common random seed that is used for
+        creating all Liquid Legions sketches.  This determines the hash
+        function.  Any two sketches that might need to be combined need
+        to be created with the same seed.
+    """
+
+    decay_rate: int = 12
+    sketch_size: int = int(1e5)
+    random_seed: int = 1
 
 
 class SimulationParameters(NamedTuple):
@@ -23,11 +42,12 @@ class SimulationParameters(NamedTuple):
     Attributes:
         campaign_spend:  A list of spend values, one per campaign,
             representing the total actual spend for each campaign.
-        liquid_legions_a:  Decay rate parameter of Liquid Legions
-            sketch.
-        liquid_legions_m:  Size of Liquid Legions sketch.
+        liquid_legions:  Parameters specific to constructing Liquid Legions
+            sketches.
+        generator:  The single source of randomness that will be used
+            for this modeling run.
     """
 
     campaign_spend: List[float]
-    liquid_legions_a: int
-    liquid_legions_m: int
+    liquid_legions: LiquidLegionsParameters
+    generator: Generator

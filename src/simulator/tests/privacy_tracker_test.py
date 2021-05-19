@@ -21,22 +21,21 @@ from wfa_planning_evaluation_framework.simulator import privacy_tracker
 class PrivacyTrackerTest(absltest.TestCase):
     def test_empty_object(self):
         tracker = privacy_tracker.PrivacyTracker()
-        self.assertEqual(tracker.epsilon, 0)
-        self.assertEqual(tracker.delta, 0)
+        self.assertEqual(tracker.privacy_consumption.epsilon, 0)
+        self.assertEqual(tracker.privacy_consumption.delta, 0)
         self.assertEqual(tracker.mechanisms, [])
 
     def test_single_event(self):
         tracker = privacy_tracker.PrivacyTracker()
         tracker.append(
             privacy_tracker.NoisingEvent(
-                0.1,
-                0.01,
+                privacy_tracker.PrivacyBudget(0.1, 0.01),
                 privacy_tracker.DP_NOISE_MECHANISM_LAPLACE,
                 {"sensitivity": 1},
             )
         )
-        self.assertEqual(tracker.epsilon, 0.1)
-        self.assertEqual(tracker.delta, 0.01)
+        self.assertEqual(tracker.privacy_consumption.epsilon, 0.1)
+        self.assertEqual(tracker.privacy_consumption.delta, 0.01)
         self.assertEqual(
             tracker.mechanisms, [privacy_tracker.DP_NOISE_MECHANISM_LAPLACE]
         )
@@ -45,22 +44,20 @@ class PrivacyTrackerTest(absltest.TestCase):
         tracker = privacy_tracker.PrivacyTracker()
         tracker.append(
             privacy_tracker.NoisingEvent(
-                0.1,
-                0.01,
+                privacy_tracker.PrivacyBudget(0.1, 0.01),
                 privacy_tracker.DP_NOISE_MECHANISM_LAPLACE,
                 {"sensitivity": 1},
             )
         )
         tracker.append(
             privacy_tracker.NoisingEvent(
-                0.2,
-                0.015,
+                privacy_tracker.PrivacyBudget(0.2, 0.015),
                 privacy_tracker.DP_NOISE_MECHANISM_GAUSSIAN,
                 {},
             )
         )
-        self.assertAlmostEqual(tracker.epsilon, 0.3)
-        self.assertAlmostEqual(tracker.delta, 0.025)
+        self.assertAlmostEqual(tracker.privacy_consumption.epsilon, 0.3)
+        self.assertAlmostEqual(tracker.privacy_consumption.delta, 0.025)
         self.assertEqual(
             tracker.mechanisms,
             [

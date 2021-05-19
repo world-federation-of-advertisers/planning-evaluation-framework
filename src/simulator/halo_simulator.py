@@ -11,7 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Simulates the Halo system."""
+"""Simulates the Halo system.
+
+This code simulates the part of the Halo system from the Measurement
+Coordinator downwards.  This includes the SMPC and the publishers.
+The Halo Simulator represents the functionality and interface
+that is assumed to exist by the modeling strategies that are examined as
+part of this evaluation effort.
+"""
 
 from typing import List
 from typing import Set
@@ -33,9 +40,10 @@ from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
-    DP_NOISE_MECHANISM_LAPLACE,
+    DP_NOISE_MECHANISM_DISCRETE_GAUSSIAN,
 )
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import NoisingEvent
+from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyBudget
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyTracker
 from wfa_planning_evaluation_framework.simulator.publisher import Publisher
 from wfa_planning_evaluation_framework.simulator.simulation_parameters import (
@@ -44,6 +52,18 @@ from wfa_planning_evaluation_framework.simulator.simulation_parameters import (
 
 
 class HaloSimulator:
+    """Simulator for the Halo System.
+
+    A Halo Simulator simulates the Halo System from the Measurement Coordinator
+    downwards.  In particular, it simulates the SMPC and the behavior of the
+    publishers.  The Halo Simulator represents the functionality and interface
+    that is assumed to exist by the modeling strategies that are examined as
+    part of this evaluation effort.  Explicitly, HaloSimulator simulates
+    (i) the observable, DP data points and (ii) the DP single-pub reach curves
+    that will be later used for fitting the multi-pub reach surface in
+    PlannerSimulator.
+    """
+
     def __init__(
         self,
         data_set: DataSet,
@@ -73,6 +93,10 @@ class HaloSimulator:
     ) -> ReachPoint:
         """Returns the true reach obtained for a given spend vector.
 
+        The true reach is the reach that would have actually been obtained
+        for a given spend vector.  This is in contrast to the simulated
+        reach, which is the noised reach estimated by SMPC.
+
         Args:
             spends:  The hypothetical amount spend vector, equal in length to
               the number of publishers.  spends[i] is the amount that is
@@ -85,7 +109,11 @@ class HaloSimulator:
         return self._data_set.reach_by_spend(spends, max_frequency)
 
     def simulated_reach_by_spend(
-        self, spends: List[float], epsilon: float, delta: float, max_frequency: int = 1
+        self,
+        spends: List[float],
+        budget: PrivacyBudget,
+        privacy_budget_split: float = 0.5,
+        max_frequency: int = 1,
     ) -> ReachPoint:
         """Returns a simulated differentially private reach estimate.
 
@@ -93,10 +121,11 @@ class HaloSimulator:
             spends:  The hypothetical amount spend vector, equal in length to
               the number of publishers.  spends[i] is the amount that is
               spent with publisher i.
-            epsilon: The epsilon component of the privacy budget allocated to
-              this request.
-            delta:  The delta component of the privacy budget allocated to this
-              requiest.
+            budget:  The amount of privacy budget that can be consumed while
+              satisfying the request.
+            privacy_budget_split:  Specifies the proportion of the privacy budget
+              that should be allocated to reach estimation.  The remainder is
+              allocated to frequency estimation.
             max_frequency:  The maximum frequency for which to report reach.
         Returns:
             A ReachPoint representing the differentially private estiamte of
@@ -107,33 +136,37 @@ class HaloSimulator:
         """
         combined_sketch = self._publishers[0].liquid_legions_sketch(spends[0])
         estimator = StandardizedHistogramEstimator(
-            max_freq=max_frequency, epsilon=np.Inf
+            max_freq=max_frequency,
+            epsilon=budget.epsilon,
+            epsilon_split=privacy_budget_split,
         )
         for i in range(1, len(spends)):
             sketch = self._publishers[i].liquid_legions_sketch(spends[i])
             combined_sketch = StandardizedHistogramEstimator.merge_two_sketches(
                 combined_sketch, sketch
             )
-        frequencies = estimator.estimate_cardinality(combined_sketch)
+        frequencies = [
+            round(x) for x in estimator.estimate_cardinality(combined_sketch)
+        ]
 
-        # TODO(jiayu?): Determine what is the appropriate noise to add.  For now, we just
-        # show how Laplace noise would be added.
-        laplace = LaplaceMechanism(lambda x: x, 1, epsilon)
-        noised_frequencies = [round(x) for x in laplace(np.array(frequencies))]
+        # TODO(jiayu,pasin): Does this look right?
         self._privacy_tracker.append(
-            NoisingEvent(epsilon, 0, DP_NOISE_MECHANISM_LAPLACE, {"epsilon": epsilon})
+            NoisingEvent(
+                budget,
+                DP_NOISE_MECHANISM_DISCRETE_GAUSSIAN,
+                {"privacy_budget_split": privacy_budget_split},
+            )
         )
 
         # convert result to a ReachPoint
         impressions = self._data_set.impressions_by_spend(spends)
-        kplus_reaches = ReachPoint.frequencies_to_kplus_reaches(noised_frequencies)
+        kplus_reaches = ReachPoint.frequencies_to_kplus_reaches(frequencies)
         return ReachPoint(impressions, kplus_reaches, spends)
 
     def simulated_venn_diagram_reach_by_spend(
         self,
         spends: List[float],
-        epsilon: float,
-        delta: float,
+        budget: PrivacyBudget,
         max_frequency: int = 1,
     ) -> List[Tuple[Set, ReachPoint]]:
         """Returns a simulated differentially private Venn diagram reach estimate.
@@ -146,11 +179,9 @@ class HaloSimulator:
             spends:  The hypothetical spend vector, equal in length to
               the number of publishers.  spends[i] is the amount that is
               spent with publisher i.
+            budget:  The amount of privacy budget that can be consumed while
+              satisfying the request.
             max_frequency:  The maximum frequency for which to report reach.
-            epsilon: The epsilon component of the privacy budget allocated to
-              this request.
-            delta:  The delta component of the privacy budget allocated to this
-              request.
         Returns:
             A list of pairs (S, R), where S specifies a subset of publishers
             and R is a ReachPoint representing the differentially private
@@ -161,36 +192,28 @@ class HaloSimulator:
         raise NotImplementedError()
 
     def simulated_reach_curve(
-        self, publisher_index: int, epsilon: float, delta: float
+        self, publisher_index: int, budget: PrivacyBudget
     ) -> ReachCurve:
         """Returns a simulated differentially private reach curve model.
 
         Args:
           publisher_index: The index of the publisher for which the reach
             curve is to be returned.
-          epsilon: The epsilon component of the privacy budget allocated to
-            this request.
-          delta:  The delta component of the privacy budget allocated to this
-            request.
+          budget:  The amount of privacy budget that can be consumed while
+            satisfying the request.
         """
         raise NotImplementedError()
 
     def simulated_vector_of_counts(
-        self,
-        publisher_index: int,
-        epsilon: float,
-        delta: float,
-        privacy_tracker: PrivacyTracker,
+        self, publisher_index: int, budget: PrivacyBudget
     ) -> VectorOfCounts:
         """Returns a simulated differentially private VectorOfCounts for a campaign.
 
         Args:
           publisher_index: The index of the publisher for which the reach
             curve is to be returned.
-          epsilon: The epsilon component of the privacy budget allocated to
-            this request.
-          delta:  The delta component of the privacy budget allocated to this
-            request.
+          budget:  The amount of privacy budget that can be consumed while
+            satisfying the request.
         """
         raise NotImplementedError()
 

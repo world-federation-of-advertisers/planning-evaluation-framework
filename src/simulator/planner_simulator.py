@@ -25,6 +25,7 @@ from wfa_planning_evaluation_framework.simulator.halo_simulator import HaloSimul
 from wfa_planning_evaluation_framework.simulator.modeling_strategy import (
     ModelingStrategy,
 )
+from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyBudget
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyTracker
 from wfa_planning_evaluation_framework.simulator.simulation_parameters import (
     SimulationParameters,
@@ -53,17 +54,13 @@ class PlannerSimulator:
         self._privacy_tracker = privacy_tracker
         self._modeling_strategy = modeling_strategy
 
-    def fit_model(self, epsilon: float, delta: float) -> None:
+    def fit_model(self, budget: PrivacyBudget) -> None:
         """Fits a model using data_set, parameters and modeling_strategy.
 
-        epsilon: The epsilon component of the privacy budget allocated to
-          this request.
-        delta:  The delta component of the privacy budget allocated to this
-          requiest.
+        budget:  A PrivacyBudget object specifying how much privacy budget
+          is to be consumed when fitting this model.
         """
-        self._model = self._modeling_strategy.fit(
-            self._halo, self._params, epsilon, delta
-        )
+        self._model = self._modeling_strategy.fit(self._halo, self._params, budget)
 
     def true_reach_by_spend(
         self, spends: List[float], max_frequency: int = 1

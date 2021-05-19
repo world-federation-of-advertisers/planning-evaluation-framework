@@ -31,7 +31,8 @@ PUB_RATIO = "largest_to_smallest_publisher_ratio"
 IMG_GEN_PARAMS = "impression_generator_params"
 PRICE_GEN_PARAMS = "pricing_generator_params"
 OVERLAP_GEN_PARAMS = "overlap_generator_params"
-GEN_PARAMS = [IMG_GEN_PARAMS, PRICE_GEN_PARAMS, OVERLAP_GEN_PARAMS]
+
+RANDOMIZATION_NEEDED_GEN_PARAMS = [IMG_GEN_PARAMS, OVERLAP_GEN_PARAMS]
 
 NUM_SAMPLES_FOR_LHS = 3
 NUM_RANDOM_REPLICAS = 2
@@ -97,7 +98,7 @@ class TestLHSSyntheticDataDesignConfig(SyntheticDataDesignConfig):
   @classmethod
   def get_data_set_params(cls, params_dict,
                           random_generator: Generator) -> DataSetParameters:
-    for gen_param in GEN_PARAMS:
+    for gen_param in RANDOMIZATION_NEEDED_GEN_PARAMS:
       params_dict[gen_param].params["random_generator"] = random_generator
     params_dict[OVERLAP_GEN_PARAMS].params[
         "universe_size"] = params_dict[LARGEST_PUB_SIZE] * 10

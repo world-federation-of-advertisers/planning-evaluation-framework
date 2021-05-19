@@ -15,7 +15,6 @@
 
 from typing import List
 from typing import Tuple
-from numpy.random import Generator
 
 
 class PricingGenerator:

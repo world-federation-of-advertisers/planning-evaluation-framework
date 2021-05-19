@@ -49,11 +49,11 @@ class HomogeneousImpressionGenerator(ImpressionGenerator):
   def __call__(self) -> List[int]:
     """Generate impressions using Poisson distribution with fixed lambda.
 
-        Returns:
-          A list of randomly generated user id's.  An id may occur multiple
-          times in the output list, representing the fact that the user may
-          see multiple ads from the publisher over the course of the campaign.
-        """
+       Returns:
+         A list of randomly generated user id's.  An id may occur multiple
+         times in the output list, representing the fact that the user may
+         see multiple ads from the publisher over the course of the campaign.
+    """
     impressions = []
     for i in range(self._n):
       impressions.extend([i] *

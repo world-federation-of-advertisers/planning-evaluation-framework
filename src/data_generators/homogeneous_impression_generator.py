@@ -21,42 +21,11 @@ from wfa_planning_evaluation_framework.data_generators.impression_generator impo
 
 
 class HomogeneousImpressionGenerator(ImpressionGenerator):
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-    """Generate ad impressions using Poisson distribution with fixed lambda."""
-=======
-=======
->>>>>>> 8e0f9fc (Updates in response to comments from Jiayu.)
   """Generate a random sequence of viewer id's of ad impressions.
-
-=======
-  """Generate a random sequence of viewer id's of ad impressions.
->>>>>>> 7d0faf0 (generator)
     This class, along with PricingGenerator, assists in the generation of
     random PublisherDataFiles.  The ImpressionGenerator will generate a
     sequence of random impressions according to specified criteria.
     """
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> 79e8ddd (addressed comments)
-=======
-=======
-    """Generate ad impressions using Poisson distribution with fixed lambda."""
->>>>>>> af9a0ab (Updates in response to comments from Jiayu.)
->>>>>>> 8e0f9fc (Updates in response to comments from Jiayu.)
-
-  def __init__(self,
-               n: int,
-               poisson_lambda: float,
-               random_generator: Generator = None):
-    """Constructor for the HomogeneousImpressionGenerator.
-=======
-    """Generate ad impressions using Poisson distribution with fixed lambda."""
->>>>>>> b7ab06e (cleaning up rebase)
-=======
->>>>>>> 7d0faf0 (generator)
 
   def __init__(self,
                n: int,
@@ -81,33 +50,8 @@ class HomogeneousImpressionGenerator(ImpressionGenerator):
     else:
       self.random_generator = Generator()
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-    def __call__(self) -> List[int]:
-        """Generate impressions using Poisson distribution with fixed lambda.
-=======
   def __call__(self) -> List[int]:
     """Generate a random sequence of impressions.
->>>>>>> 79e8ddd (addressed comments)
-=======
-  def __call__(self) -> List[int]:
-    """Generate a random sequence of impressions.
-=======
-    def __call__(self) -> List[int]:
-        """Generate impressions using Poisson distribution with fixed lambda.
->>>>>>> af9a0ab (Updates in response to comments from Jiayu.)
->>>>>>> 8e0f9fc (Updates in response to comments from Jiayu.)
-
-=======
-    def __call__(self) -> List[int]:
-        """Generate impressions using Poisson distribution with fixed lambda.
->>>>>>> b7ab06e (cleaning up rebase)
-=======
-  def __call__(self) -> List[int]:
-    """Generate a random sequence of impressions.
->>>>>>> 7d0faf0 (generator)
         Returns:
           A list of randomly generated user id's.  An id may occur multiple
           times in the output list, representing the fact that the user may

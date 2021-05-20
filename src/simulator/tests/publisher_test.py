@@ -25,6 +25,7 @@ from wfa_planning_evaluation_framework.data_generators.publisher_data import (
 from wfa_planning_evaluation_framework.simulator.publisher import Publisher
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyTracker
 from wfa_planning_evaluation_framework.simulator.simulation_parameters import (
+    LiquidLegionsParameters,
     SimulationParameters,
 )
 
@@ -33,7 +34,9 @@ class PublisherTest(absltest.TestCase):
     @classmethod
     def setUpClass(cls):
         pdf = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
-        cls.params = SimulationParameters([1.0, 0.05, 3.0], 12, 1e5)
+        cls.params = SimulationParameters(
+            [1.0, 0.05, 3.0], LiquidLegionsParameters(), np.random.default_rng(1)
+        )
         cls.privacy_tracker = PrivacyTracker()
         cls.publisher = Publisher(pdf, 1, cls.params, cls.privacy_tracker)
 

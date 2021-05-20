@@ -46,7 +46,7 @@ class Publisher:
         """Constructs a model for a single publisher and campaign.
 
         Args:
-          publisher_data_file:  The source of impression data for
+          publisher_data:  The source of impression data for
             this publisher.
           publisher_index:  The index of this publisher within
             the list of all publishers known to Halo.
@@ -79,16 +79,15 @@ class Publisher:
         impressions = sum(user_counts.values())
         reach = ReachPoint.user_counts_to_kplus_reaches(user_counts, max_frequency)
         return ReachPoint([impressions], reach, [spend])
-        return self._publisher_data.reach_by_spend(spend, max_frequency)
 
     def liquid_legions_sketch(self, spend: float) -> ExponentialSameKeyAggregator:
         """Returns the LiquidLegions sketch associated with a given spend.
         Note that the returned data structure is not differentially private.
         """
         sketch = ExponentialSameKeyAggregator(
-            length=int(self._params.liquid_legions_m),
-            decay_rate=self._params.liquid_legions_a,
-            random_seed=1,
+            length=int(self._params.liquid_legions.sketch_size),
+            decay_rate=self._params.liquid_legions.decay_rate,
+            random_seed=self._params.liquid_legions.random_seed,
         )
         spend = min(spend, self._campaign_spend)
         for id, freq in self._publisher_data.user_counts_by_spend(spend).items():

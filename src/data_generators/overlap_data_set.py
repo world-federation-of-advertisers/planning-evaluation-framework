@@ -37,7 +37,6 @@ class OverlapDataSet(DataSet):
     reflect the overlap, and finally includes these labeled ids to a DataSet.
     """
 
-<<<<<<< HEAD
     def __init__(
         self,
         unlabeled_publisher_data_list: Iterable[PublisherData],
@@ -46,14 +45,6 @@ class OverlapDataSet(DataSet):
         name: str = None,
     ) -> DataSet:
         """Constructor for OverlapDataSet.
-=======
-  def __init__(self,
-               unlabeled_publisher_data_list: Iterable[PublisherData],
-               overlap_generator: SetGeneratorBase,
-               overlap_generator_kwargs: Dict[str, Any] = {},
-               name: str = None) -> DataSet:
-    """Constructor for OverlapDataSet.
->>>>>>> 4dc6a3c (rebased)
 
         Args:
           unlabeled_publisher_data_list:  a list of PublisherDataSet. Each

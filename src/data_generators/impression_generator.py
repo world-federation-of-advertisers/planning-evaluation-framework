@@ -39,9 +39,9 @@ class ImpressionGenerator:
   def __call__(self) -> List[int]:
     """Generate a random sequence of impressions.
 
-        Returns:
-          A list of randomly generated user id's.  An id may occur multiple
-          times in the output list, representing the fact that the user may
-          see multiple ads from the publisher over the course of the campaign.
-        """
+       Returns:
+         A list of randomly generated user id's.  An id may occur multiple
+         times in the output list, representing the fact that the user may
+         see multiple ads from the publisher over the course of the campaign.
+    """
     pass

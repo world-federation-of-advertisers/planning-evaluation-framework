@@ -87,7 +87,7 @@ class Trial:
         self._privacy_tracker = PrivacyTracker()
         halo = HaloSimulator(self._dataset, self._simulation_params, self._privacy_tracker)
         privacy_budget = self._experiment_params.privacy_budget
-        modeling_strategy = self._modeling_strategy_descriptor.get_strategy()
+        modeling_strategy = self._modeling_strategy_descriptor.instantiate_strategy()
         modeling_strategy.fit(halo, privacy_budget)
 
         test_points = self._modeling_strategy_descriptor.generate_test_points()

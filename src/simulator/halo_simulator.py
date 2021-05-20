@@ -145,6 +145,7 @@ class HaloSimulator:
             combined_sketch = StandardizedHistogramEstimator.merge_two_sketches(
                 combined_sketch, sketch
             )
+
         frequencies = [
             round(x) for x in estimator.estimate_cardinality(combined_sketch)
         ]

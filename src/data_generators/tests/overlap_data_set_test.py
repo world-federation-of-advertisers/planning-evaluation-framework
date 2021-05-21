@@ -43,7 +43,7 @@ class OverlapDatSetTest(absltest.TestCase):
             self.assertEqual(set(res[i]._data), set(expected_data_list[i]))
             self.assertEqual(res[i].name, expected_name_list[i])
 
-    def test_map_ids(self):
+    def test_label_ids(self):
         set_ids_list = [np.array([3, 4, 5]), np.array([4, 6, 8]), np.array([6, 8, 10])]
         pdf1 = PublisherData([(2, 0.02), (1, 0.01), (1, 0.03), (3, 0.04)], "a")
         pdf2 = PublisherData([(3, 0.04), (1, 0.02), (2, 0.01)], "b")
@@ -57,9 +57,9 @@ class OverlapDatSetTest(absltest.TestCase):
             [(6, 0.01), (6, 0.01), (6, 0.04), (8, 0.02), (10, 0.05)],
         ]
         expected_name_list = ["a", "b", "c"]
-        res = OverlapDataSet._map_ids(set_ids_list, pdf_list)
+        res = OverlapDataSet._label_ids(set_ids_list, pdf_list)
         self.assert_equal_pub_data_list(res, 3, expected_data_list, expected_name_list)
-        res = OverlapDataSet._map_ids(iter(set_ids_list), iter(pdf_list))
+        res = OverlapDataSet._label_ids(iter(set_ids_list), iter(pdf_list))
         self.assert_equal_pub_data_list(res, 3, expected_data_list, expected_name_list)
 
     def test_disjoint_overlap_data_set(self):

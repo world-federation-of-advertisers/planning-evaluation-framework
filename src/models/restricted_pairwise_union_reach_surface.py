@@ -15,12 +15,13 @@
 
 import copy
 import numpy as np
-from cvxopt import matrix
+from scipy.optimize import minimize
+import cvxpy as cp
 from cvxopt import solvers
 from typing import Iterable
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
-from wfa_planning_evaluation_framework.models.reach_surface import ReachSurface
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
+from wfa_planning_evaluation_framework.models.pairwise_union_reach_surface import PairwiseUnionReachSurface
 
 
 class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
@@ -37,11 +38,7 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
         is parallel to the reach_curves list. The reach point at ith poisition
         is drawn from ith reach curve.
     """
-
-    self._reach_curves = copy.deepcopy(reach_curves)
-    self._n = len(reach_points)
-    self._p = len(reach_points[0].impressions)
-    super().__init__(data=reach_points, max_reach=0)
+    super().__init__(reach_curves=reach_curves, reach_points=reach_points)
 
   def _fit(self) -> None:
     self._reach_vectors = np.array([

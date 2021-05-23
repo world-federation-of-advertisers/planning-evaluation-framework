@@ -66,7 +66,7 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
     self._a = np.ones(self._p * self._p)
     for i in range(self._p):
       for j in range(self._p):
-        self._a[i * self._p + j] = lbd[i] * lbd[j]
+        self._a[i * self._p + j] = lbd[i] * lbd[j] if i != j else 0
 
   def get_constraints(self):
     """Get constraints to be used in optimization.
@@ -90,7 +90,6 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
       lbd: a length p vector indicating lambda_i for each pub.
       reach_vector: a length p vector indicating the single-pub reach of each
         pub at a single data point.
-      u: a length p vector indicating the universe size of each pub.
 
     Returns:
       the value of union reach at the given point.

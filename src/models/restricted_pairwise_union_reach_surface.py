@@ -44,6 +44,10 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
     super().__init__(data=reach_points, max_reach=0)
 
   def _fit(self) -> None:
+    self._reach_vectors = np.array([
+        self.get_reach_vector(reach_point.impressions)
+        for reach_point in self._data
+    ])
     res = minimize(
         fun=lambda x: self.loss(x),
         x0=np.array([0] * self._p),
@@ -65,11 +69,12 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
         self._a[i * self._p + j] = lbd[i] * lbd[j]
 
   def get_constraints(self):
-   """Get constraints to be used in optimization.
+    """Get constraints to be used in optimization.
 
     Returns:
       the list of constraint functions
     """
+
     cons = []
     for i in range(self._p):
       # All lambdas are non negative : lbd[i] >= 0
@@ -107,9 +112,6 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
     Returns:
       the value of fitted union reach.
     """
-    reach_vectors = np.array([
-        self.get_reach_vector(reach_point.impressions)
-        for reach_point in self._data
-    ])
-    return sum([(self._data[k] - self.evaluate_point(lbd, reach_vectors[k]))**2
-               for k in range(self._n)])
+    return sum([(self._data[k].reach() -
+                 self.evaluate_point(lbd, self._reach_vectors[k]))**2
+                for k in range(self._n)])

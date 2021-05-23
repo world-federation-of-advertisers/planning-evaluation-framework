@@ -51,12 +51,25 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
     self.construct_a_from_lambda(res['x'])
 
   def construct_a_from_lambda(self, lbd):
-    a = [1] * self._p * self._p
+    """Get value of flattened a matrix from lamdas.
+
+    Args:
+      lbd: a length p vector indicating lambda_i for each pub.
+
+    Returns:
+      the value of flattened a matrix.
+    """
+    self._a = np.ones(self._p * self._p)
     for i in range(self._p):
       for j in range(self._p):
         self._a[i * self._p + j] = lbd[i] * lbd[j]
 
   def get_constraints(self):
+   """Get constraints to be used in optimization.
+
+    Returns:
+      the list of constraint functions
+    """
     cons = []
     for i in range(self._p):
       # All lambdas are non negative : lbd[i] >= 0
@@ -98,6 +111,5 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
         self.get_reach_vector(reach_point.impressions)
         for reach_point in self._data
     ])
-    val = sum([(self._data[k] - fitted(lbd, reach_vectors[k]))**2
+    return sum([(self._data[k] - fitted(lbd, reach_vectors[k]))**2
                for k in range(self._n)])
-    return val

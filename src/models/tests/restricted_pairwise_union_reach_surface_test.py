@@ -72,12 +72,15 @@ class RestrictedPairwiseUnionReachSurfaceTest(absltest.TestCase):
     ]
 
   def generate_sample_matrix_a(self, num_publishers):
-    true_a = np.array([
-        np.random.dirichlet(np.ones(num_publishers)) * np.random.uniform()
-        for _ in range(num_publishers)
-    ]).flatten()
+    lbd = np.array([np.random.uniform() for _ in range(num_publishers)])
+    true_a = []
+
+    true_a = np.ones(num_publishers * num_publishers)
     for i in range(num_publishers):
-      true_a[i * num_publishers + i] = 0
+      for j in range(num_publishers):
+        true_a[i * num_publishers + j] = lbd[i] * lbd[j] if i != j else 0
+    # for i in range(num_publishers):
+    #   true_a[i * num_publishers + i] = 0
     return true_a
 
   def generate_sample_reach_points(self, true_a, reach_curves, size,

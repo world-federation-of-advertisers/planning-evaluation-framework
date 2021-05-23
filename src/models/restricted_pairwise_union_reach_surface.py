@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Class for modeling Pairwise union reach surface."""
+"""Class for modeling Restricted Pairwise union reach surface."""
 
 import copy
 import numpy as np
@@ -78,8 +78,8 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
       cons.append({'type': 'ineq', 'fun': lambda x: 1 - x[i] * sum(x)})
     return cons
 
-  def fitted(self, lbd, reach_vector):
-    """Get value of fitted union reach.
+  def evaluate_point(self, lbd, reach_vector):
+    """Evaluate reach at a point.
 
     Args:
       lbd: a length p vector indicating lambda_i for each pub.
@@ -88,7 +88,7 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
       u: a length p vector indicating the universe size of each pub.
 
     Returns:
-      the value of fitted union reach.
+      the value of union reach at the given point.
     """
     reach_sum = sum(reach_vector)
     overlap = sum([
@@ -111,5 +111,5 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
         self.get_reach_vector(reach_point.impressions)
         for reach_point in self._data
     ])
-    return sum([(self._data[k] - fitted(lbd, reach_vectors[k]))**2
+    return sum([(self._data[k] - self.evaluate_point(lbd, reach_vectors[k]))**2
                for k in range(self._n)])

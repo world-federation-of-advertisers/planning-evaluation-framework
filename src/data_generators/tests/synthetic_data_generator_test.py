@@ -45,6 +45,12 @@ class SyntheticDataGeneratorTest(absltest.TestCase):
             data_design = generator()
             self.assertEqual(data_design.count, 6)
 
+    def test_synthetic_data_generator_lhs_dataset(self):
+        with TemporaryDirectory() as d:
+            generator = SyntheticDataGenerator(d, 1, TestLHSSyntheticDataDesignConfig)
+            data_design = generator()
+            self.assertEqual(data_design.count, 6)
+
     def test_synthetic_data_generator_single_dataset_single_publisher(self):
         with TemporaryDirectory() as d:
             generator = SyntheticDataGenerator(d, 1, TestSyntheticDataDesignConfig2)
@@ -62,25 +68,25 @@ class SyntheticDataGeneratorTest(absltest.TestCase):
             self.assertEqual(generated_data_set.publisher_count, 1)
             self.assertEqual(generated_data_set._data[0].max_reach, 1000)
 
-    def test_synthetic_data_generator_multiple_publishers(self):
-        with TemporaryDirectory() as d:
-            generator = SyntheticDataGenerator(d, 1, TestSyntheticDataDesignConfig)
-            data_design = generator()
-            self.assertEqual(data_design.count, 3)
-            # Random signatures at rs=xxx will change when any underliying operation
-            # that uses a RandomState changes. Thus, this test will need update.
-            # However, it is necessary to set these values to ensure deterministic
-            # behavior.
-            expected_names = [
-                "num_publishers=3_largest_publisher_size=1000_largest_to_smallest_publisher_ratio=0.5_rs=34865",
-                "num_publishers=3_largest_publisher_size=1000_largest_to_smallest_publisher_ratio=0.5_rs=46756",
-                "num_publishers=3_largest_publisher_size=1000_largest_to_smallest_publisher_ratio=0.5_rs=62066",
-            ]
-            self.assertEqual(data_design.names, expected_names)
-            [
-                self.validate_generated_test_data(data_design.by_name(name))
-                for name in expected_names
-            ]
+        def test_synthetic_data_generator_multiple_publishers(self):
+            with TemporaryDirectory() as d:
+                generator = SyntheticDataGenerator(d, 1, TestSyntheticDataDesignConfig)
+                data_design = generator()
+                self.assertEqual(data_design.count, 3)
+                # Random signatures at rs=xxx will change when any underliying operation
+                # that uses a RandomState changes. Thus, this test will need update.
+                # However, it is necessary to set these values to ensure deterministic
+                # behavior.
+                expected_names = [
+                    "num_publishers=3_largest_publisher_size=1000_largest_to_smallest_publisher_ratio=0.5_rs=34865",
+                    "num_publishers=3_largest_publisher_size=1000_largest_to_smallest_publisher_ratio=0.5_rs=46756",
+                    "num_publishers=3_largest_publisher_size=1000_largest_to_smallest_publisher_ratio=0.5_rs=62066",
+                ]
+                self.assertEqual(data_design.names, expected_names)
+                [
+                    self.validate_generated_test_data(data_design.by_name(name))
+                    for name in expected_names
+                ]
 
 
 if __name__ == "__main__":

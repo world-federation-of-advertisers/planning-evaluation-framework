@@ -15,6 +15,7 @@
 
 from typing import List
 from numpy.random import Generator
+from numpy.random import default_rng
 
 from wfa_planning_evaluation_framework.data_generators.impression_generator import (
     ImpressionGenerator,
@@ -41,12 +42,13 @@ class HomogeneousImpressionGenerator(ImpressionGenerator):
           random_generator:  An instance of numpy.random.Generator that is used
             for making draws from the Poisson distribution.
         """
+
         self._poisson_lambda = poisson_lambda
         self._n = n
         if random_generator:
             self.random_generator = random_generator
         else:
-            self.random_generator = Generator()
+            self.random_generator = default_rng()
 
     def __call__(self) -> List[int]:
         """Generate a random sequence of impressions.
@@ -56,6 +58,7 @@ class HomogeneousImpressionGenerator(ImpressionGenerator):
           times in the output list, representing the fact that the user may
           see multiple ads from the publisher over the course of the campaign.
         """
+
         impressions = []
         for i in range(self._n):
             impressions.extend(

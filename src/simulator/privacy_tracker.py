@@ -77,8 +77,8 @@ class PrivacyTracker:
 
     def __init__(self):
         """Returns an object for recording and tracking privacy budget usage."""
-        self._epsilon_sum = 0
-        self._delta_sum = 0
+        self._epsilon_sum = 0.0
+        self._delta_sum = 0.0
         self._noising_events = []  # A list of NoisingEvents
 
     @property

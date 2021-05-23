@@ -30,17 +30,19 @@ from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
 
 class ModelingStrategy:
     # TODO: Add args for pricing model when these are introduced.
-    def __init__(self,
-                 single_pub_model: Type[ReachCurve],
-                 single_pub_model_kwargs: Dict,
-                 multi_pub_model: Type[ReachSurface],
-                 multi_pub_model_kwargs: Dict):
+    def __init__(
+        self,
+        single_pub_model: Type[ReachCurve],
+        single_pub_model_kwargs: Dict,
+        multi_pub_model: Type[ReachSurface],
+        multi_pub_model_kwargs: Dict,
+    ):
         """Initializes a modeling strategy object."""
         self._single_pub_model = single_pub_model
         self._single_pub_model_kwargs = single_pub_model_kwargs
         self._multi_pub_model = multi_pub_model
         self._multi_pub_model_kwargs = multi_pub_model_kwargs
-        
+
     def fit(
         self, halo: HaloSimulator, params: SimulationParameters, budget: PrivacyBudget
     ) -> ReachSurface:

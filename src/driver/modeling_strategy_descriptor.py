@@ -34,22 +34,23 @@ from wfa_planning_evaluation_framework.simulator.modeling_strategy import (
 # A dictionary mapping names of single publisher models to the
 # corresponding classes that implement them.
 SINGLE_PUB_MODELS = {
-    'goerg': GoergModel,
+    "goerg": GoergModel,
 }
 
 # A dictionary mapping names of multipublisher models to the
 # corresponding classes that implement them.
 MULTI_PUB_MODELS = {
-    'pairwise_union': PairwiseUnionReachSurface,
-    'restricted_pairwise_union': RestrictedPairwiseUnionReachSurface,
+    "pairwise_union": PairwiseUnionReachSurface,
+    "restricted_pairwise_union": RestrictedPairwiseUnionReachSurface,
 }
 
 # A dictionary mapping names of modeling strategies to the
 # corresponding classes that implement them.
 MODELING_STRATEGIES = {
-# TODO: Uncomment the following after the M3 Proposal is implemented.
-#    'm3proposal': M3Proposal,
+    # TODO: Uncomment the following after the M3 Proposal is implemented.
+    #    'm3proposal': M3Proposal,
 }
+
 
 class ModelingStrategyDescriptor(NamedTuple):
     """Parameters defining a modeling strategy.
@@ -83,6 +84,19 @@ class ModelingStrategyDescriptor(NamedTuple):
             self.single_pub_model_kwargs,
             MULTI_PUB_MODELS[self.multi_pub_model],
             self.multi_pub_model_kwargs,
-            **self.strategy_kwargs)
+            **self.strategy_kwargs
+        )
 
-    
+    def _dict_to_string(self, s: str, d: Dict) -> str:
+        if not d:
+            return s
+        return s + ":" + ",".join(["{}={}".format(k, v) for (k, v) in d.items()])
+
+    def __str__(self) -> str:
+        return (
+            self._dict_to_string(self.strategy, self.strategy_kwargs)
+            + ":"
+            + self._dict_to_string(self.single_pub_model, self.single_pub_model_kwargs)
+            + ":"
+            + self._dict_to_string(self.multi_pub_model, self.multi_pub_model_kwargs)
+        )

@@ -40,6 +40,7 @@ class DataSetTest(absltest.TestCase):
     def test_properties(self):
         self.assertEqual(self.data_set.publisher_count, 2)
         self.assertEqual(self.data_set.name, "test")
+        self.assertEqual(self.data_set.maximum_reach, 4)
 
     def test_spend_by_impressions(self):
         self.assertEqual(self.data_set.spend_by_impressions([0, 0]), [0, 0])

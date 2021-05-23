@@ -55,6 +55,12 @@ class DataSet:
             digit string is assigned as the name.
         """
         self._data = deepcopy(publisher_data_list)
+
+        total_audience = set()
+        for pub in self._data:
+            total_audience.update([id for id, _ in pub._data])
+        self._maximum_reach = len(total_audience)
+
         if name:
             self._name = name
         else:
@@ -64,6 +70,11 @@ class DataSet:
     def publisher_count(self):
         """Number of publishers represented in this DataSet."""
         return len(self._data)
+
+    @property
+    def maximum_reach(self):
+        """Total number of reachable people across all publishers."""
+        return self._maximum_reach
 
     @property
     def name(self):

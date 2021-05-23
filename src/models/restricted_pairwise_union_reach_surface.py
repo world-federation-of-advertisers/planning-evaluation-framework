@@ -23,7 +23,7 @@ from wfa_planning_evaluation_framework.models.reach_surface import ReachSurface
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 
 
-class RestrictedPairwiseUnionReachSurface(ReachSurface):
+class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
   """Models reach with the pairwise union overlap model."""
 
   def __init__(self, reach_curves: Iterable[ReachCurve],
@@ -43,16 +43,61 @@ class RestrictedPairwiseUnionReachSurface(ReachSurface):
     self._p = len(reach_points[0].impressions)
     super().__init__(data=reach_points, max_reach=0)
 
-  def by_impressions(self,
-                     impressions: Iterable[int],
-                     max_frequency: int = 1) -> ReachPoint:
+  def _fit(self) -> None:
+    res = minimize(
+        fun=lambda x: self.loss(x),
+        x0=np.array([0] * self._p),
+        constraints=self.get_constraints())
+    self.construct_a_from_lambda(res['x'])
 
-    reach_vector = self.get_reach_vector(impressions)
+  def construct_a_from_lambda(self, lbd):
+    a = [1] * self._p * self._p
+    for i in range(self._p):
+      for j in range(self._p):
+        self._a[i * self._p + j] = lbd[i] * lbd[j]
+
+  def get_constraints(self):
+    cons = []
+    for i in range(self._p):
+      # All lambdas are non negative : lbd[i] >= 0
+      cons.append({'type': 'ineq', 'fun': lambda x: x[i]})
+      # Lambda j sum times Lambda i is less than 1 : 1 - lbd[i] * sum(lbd) >= 0
+      cons.append({'type': 'ineq', 'fun': lambda x: 1 - x[i] * sum(x)})
+    return cons
+
+  def fitted(self, lbd, reach_vector):
+    """Get value of fitted union reach.
+
+    Args:
+      lbd: a length p vector indicating lambda_i for each pub.
+      reach_vector: a length p vector indicating the single-pub reach of each
+        pub at a single data point.
+      u: a length p vector indicating the universe size of each pub.
+
+    Returns:
+      the value of fitted union reach.
+    """
     reach_sum = sum(reach_vector)
     overlap = sum([
-        (self._a[i * self._p + j] * reach_vector[i] * reach_vector[j]) /
+        (lbd[i] * lbd[j] * reach_vector[i] * reach_vector[j]) /
         (max(self._reach_curves[i].max_reach, self._reach_curves[j].max_reach) *
-         2) for i in range(self._p) for j in range(self._p)
+         2) for i in range(self._p - 1) for j in range(i, self._p)
     ])
+    return reach_sum - overlap
 
-    return ReachPoint(impressions, [reach_sum - overlap])
+  def loss(self, lbd):
+    """Get value of loss function.
+
+    Args:
+      lbd: a length p vector indicating lambda_i for each pub.
+
+    Returns:
+      the value of fitted union reach.
+    """
+    reach_vectors = np.array([
+        self.get_reach_vector(reach_point.impressions)
+        for reach_point in self._data
+    ])
+    val = sum([(self._data[k] - fitted(lbd, reach_vectors[k]))**2
+               for k in range(self._n)])
+    return val

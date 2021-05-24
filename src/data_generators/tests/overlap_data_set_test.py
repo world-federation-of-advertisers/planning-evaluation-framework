@@ -57,9 +57,9 @@ class OverlapDatSetTest(absltest.TestCase):
             [(6, 0.01), (6, 0.01), (6, 0.04), (8, 0.02), (10, 0.05)],
         ]
         expected_name_list = ["a", "b", "c"]
-        res = OverlapDataSet._map_ids(set_ids_list, pdf_list)
+        res = OverlapDataSet._label_ids(set_ids_list, pdf_list)
         self.assert_equal_pub_data_list(res, 3, expected_data_list, expected_name_list)
-        res = OverlapDataSet._map_ids(iter(set_ids_list), iter(pdf_list))
+        res = OverlapDataSet._label_ids(iter(set_ids_list), iter(pdf_list))
         self.assert_equal_pub_data_list(res, 3, expected_data_list, expected_name_list)
 
     def test_disjoint_overlap_data_set(self):

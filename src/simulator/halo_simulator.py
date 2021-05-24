@@ -131,7 +131,7 @@ class HaloSimulator:
               allocated to frequency estimation.
             max_frequency:  The maximum frequency for which to report reach.
         Returns:
-            A ReachPoint representing the differentially private estiamte of
+            A ReachPoint representing the differentially private estimate of
             the reach that would have been obtained for this spend allocation.
             This estimate is obtained by simulating the construction of
             Liquid Legions sketches, one per publisher, combining them, and

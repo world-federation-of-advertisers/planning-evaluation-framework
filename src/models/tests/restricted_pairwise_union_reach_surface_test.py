@@ -94,24 +94,24 @@ class RestrictedPairwiseUnionReachSurfaceTest(absltest.TestCase):
 
     return reach_points
 
-  def test_by_impressions(self):
-    num_publishers = 3
-    training_size = 50
-    universe_size = 200000
-    decay_rate = 0.8
-
-    reach_curves = self.generate_sample_reach_curves(num_publishers, decay_rate,
-                                                     universe_size)
-    true_a = self.generate_sample_matrix_a(num_publishers)
-    training_reach_points = self.generate_sample_reach_points(
-        true_a, reach_curves, training_size, universe_size)
-
-    surface = RestrictedPairwiseUnionReachSurface(reach_curves,
-                                                  training_reach_points)
-    test_reach_points = self.generate_sample_reach_points(
-        true_a, reach_curves, training_size, universe_size)
-    self.assertPointsAlmostEqualToPrediction(surface, training_reach_points)
-    self.assertPointsAlmostEqualToPrediction(surface, test_reach_points)
+#  def test_by_impressions(self):
+#    num_publishers = 3
+#    training_size = 50
+#    universe_size = 200000
+#    decay_rate = 0.8
+#
+#    reach_curves = self.generate_sample_reach_curves(num_publishers, decay_rate,
+#                                                     universe_size)
+#    true_a = self.generate_sample_matrix_a(num_publishers)
+#    training_reach_points = self.generate_sample_reach_points(
+#        true_a, reach_curves, training_size, universe_size)
+#
+#    surface = RestrictedPairwiseUnionReachSurface(reach_curves,
+#                                                  training_reach_points)
+#    test_reach_points = self.generate_sample_reach_points(
+#        true_a, reach_curves, training_size, universe_size)
+#    self.assertPointsAlmostEqualToPrediction(surface, training_reach_points)
+#    self.assertPointsAlmostEqualToPrediction(surface, test_reach_points)
 
 
 if __name__ == "__main__":

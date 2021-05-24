@@ -35,6 +35,9 @@ from wfa_cardinality_estimation_evaluation_framework.common.noisers import (
 from wfa_cardinality_estimation_evaluation_framework.estimators.vector_of_counts import (
     VectorOfCounts,
 )
+from wfa_cardinality_estimation_evaluation_framework.estimators.estimator_noisers import (
+    GeometricEstimateNoiser,
+)
 
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
@@ -128,7 +131,7 @@ class HaloSimulator:
               allocated to frequency estimation.
             max_frequency:  The maximum frequency for which to report reach.
         Returns:
-            A ReachPoint representing the differentially private estiamte of
+            A ReachPoint representing the differentially private estimate of
             the reach that would have been obtained for this spend allocation.
             This estimate is obtained by simulating the construction of
             Liquid Legions sketches, one per publisher, combining them, and
@@ -137,27 +140,41 @@ class HaloSimulator:
         combined_sketch = self._publishers[0].liquid_legions_sketch(spends[0])
         estimator = StandardizedHistogramEstimator(
             max_freq=max_frequency,
-            epsilon=budget.epsilon,
-            epsilon_split=privacy_budget_split,
+            reach_noiser_class=GeometricEstimateNoiser,
+            frequency_noiser_class=GeometricEstimateNoiser,
+            reach_epsilon=budget.epsilon * privacy_budget_split,
+            frequency_epsilon=budget.epsilon * (1 - privacy_budget_split),
+            reach_delta=budget.delta * privacy_budget_split,
+            frequency_delta=budget.delta * (1 - privacy_budget_split),
+            reach_noiser_kwargs={
+                "random_state": np.random.RandomState(
+                    seed=self._params.generator.integers(low=0, high=1e9)
+                )
+            },
+            frequency_noiser_kwargs={
+                "random_state": np.random.RandomState(
+                    seed=self._params.generator.integers(low=0, high=1e9)
+                )
+            },
         )
         for i in range(1, len(spends)):
             sketch = self._publishers[i].liquid_legions_sketch(spends[i])
             combined_sketch = StandardizedHistogramEstimator.merge_two_sketches(
                 combined_sketch, sketch
             )
-
         frequencies = [
             round(x) for x in estimator.estimate_cardinality(combined_sketch)
         ]
 
         # TODO(jiayu,pasin): Does this look right?
-        self._privacy_tracker.append(
-            NoisingEvent(
-                budget,
-                DP_NOISE_MECHANISM_DISCRETE_GAUSSIAN,
-                {"privacy_budget_split": privacy_budget_split},
+        for noiser_class, epsilon, delta in estimator.output_privacy_parameters():
+            self._privacy_tracker.append(
+                NoisingEvent(
+                    PrivacyBudget(epsilon, delta),
+                    DP_NOISE_MECHANISM_DISCRETE_GAUSSIAN,
+                    {"privacy_budget_split": privacy_budget_split},
+                )
             )
-        )
 
         # convert result to a ReachPoint
         impressions = self._data_set.impressions_by_spend(spends)

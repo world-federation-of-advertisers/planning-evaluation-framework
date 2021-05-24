@@ -50,7 +50,7 @@ class PublisherTest(absltest.TestCase):
 
     def test_liquid_legions_sketch(self):
         sketch = self.publisher.liquid_legions_sketch(0.04)
-        estimator = StandardizedHistogramEstimator(epsilon=np.Inf)
+        estimator = StandardizedHistogramEstimator()
         cardinality = estimator.estimate_cardinality(sketch)[0]
         self.assertAlmostEqual(cardinality, 2, places=3)
 

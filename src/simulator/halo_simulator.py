@@ -46,8 +46,8 @@ from wfa_planning_evaluation_framework.simulator.privacy_tracker import NoisingE
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyBudget
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyTracker
 from wfa_planning_evaluation_framework.simulator.publisher import Publisher
-from wfa_planning_evaluation_framework.simulator.simulation_parameters import (
-    SimulationParameters,
+from wfa_planning_evaluation_framework.simulator.system_parameters import (
+    SystemParameters,
 )
 
 
@@ -67,7 +67,7 @@ class HaloSimulator:
     def __init__(
         self,
         data_set: DataSet,
-        params: SimulationParameters,
+        params: SystemParameters,
         privacy_tracker: PrivacyTracker,
     ):
         """Halo simulator.

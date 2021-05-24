@@ -55,9 +55,9 @@ from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
     PrivacyBudget,
     PrivacyTracker,
 )
-from wfa_planning_evaluation_framework.simulator.simulation_parameters import (
+from wfa_planning_evaluation_framework.simulator.system_parameters import (
     LiquidLegionsParameters,
-    SimulationParameters,
+    SystemParameters,
 )
 from wfa_planning_evaluation_framework.driver.experiment_parameters import (
     TEST_POINT_STRATEGIES,
@@ -107,7 +107,7 @@ class FakeModelingStrategy(ModelingStrategy):
         )
 
     def fit(
-        self, halo: HaloSimulator, params: SimulationParameters, budget: PrivacyBudget
+        self, halo: HaloSimulator, params: SystemParameters, budget: PrivacyBudget
     ) -> ReachSurface:
         return FakeReachSurface()
 
@@ -181,7 +181,7 @@ class ExperimentalTrialTest(absltest.TestCase):
             msd = ModelingStrategyDescriptor(
                 "strategy", {}, "single_pub_model", {}, "multi_pub_model", {}
             )
-            sparams = SimulationParameters(
+            sparams = SystemParameters(
                 [0.03, 0.05],
                 LiquidLegionsParameters(13, 1e6, 1),
                 np.random.default_rng(),
@@ -222,7 +222,7 @@ class ExperimentalTrialTest(absltest.TestCase):
             msd = ModelingStrategyDescriptor(
                 "strategy", {}, "single_pub_model", {}, "multi_pub_model", {}
             )
-            sparams = SimulationParameters(
+            sparams = SystemParameters(
                 [0.03, 0.05],
                 LiquidLegionsParameters(13, 1e6, 1),
                 np.random.default_rng(),
@@ -261,7 +261,7 @@ class ExperimentalTrialTest(absltest.TestCase):
             msd = ModelingStrategyDescriptor(
                 "fake", {"x": 1}, "goerg", {}, "pairwise_union", {}
             )
-            sparams = SimulationParameters(
+            sparams = SystemParameters(
                 [0.03, 0.05],
                 LiquidLegionsParameters(13, 1e6, 1),
                 np.random.default_rng(),

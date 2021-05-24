@@ -14,7 +14,7 @@
 """Defines one experimental trial.
 
 An experimental trial represents running a specific ModelingStrategy
-against a specific DataSet, with specific SimulationParameters.
+against a specific DataSet, with specific SystemParameters.
 """
 
 import numpy as np
@@ -36,8 +36,8 @@ from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
 from wfa_planning_evaluation_framework.simulator.halo_simulator import (
     HaloSimulator,
 )
-from wfa_planning_evaluation_framework.simulator.simulation_parameters import (
-    SimulationParameters,
+from wfa_planning_evaluation_framework.simulator.system_parameters import (
+    SystemParameters,
 )
 from wfa_planning_evaluation_framework.driver.experiment_parameters import (
     ExperimentParameters,
@@ -59,20 +59,20 @@ class ExperimentalTrial:
         data_design: DataDesign,
         data_set_name: str,
         modeling_strategy_descriptor: ModelingStrategyDescriptor,
-        simulation_params: SimulationParameters,
+        simulation_params: SystemParameters,
         experiment_params: ExperimentParameters,
     ):
         """Constructs an object representing a trial.
 
         A trial represents a run of a specific ModelingStrategy against a
-        specific DataSet, with specific SimulationParameters.
+        specific DataSet, with specific SystemParameters and ExperimentParameters.
 
         Args:
           experiment_dir:  The name of a directory where intermediate results
             are stored.  The results for this specific trial will be stored in
             the file {experiment_dir}/{data_set_name}/{trial_name}.  The
             trial_name is constructed from the ModelingStrategyDescriptor and the
-            SimulationParameters.
+            SystemParameters.
           data_design:  A DataDesign object specifying the source of the data
             that will be used for this trial.
           data_set_name:  The name of the specific DataSet within the DataDesign

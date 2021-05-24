@@ -20,8 +20,8 @@ from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 from wfa_planning_evaluation_framework.models.reach_surface import ReachSurface
 from wfa_planning_evaluation_framework.simulator.halo_simulator import HaloSimulator
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyBudget
-from wfa_planning_evaluation_framework.simulator.simulation_parameters import (
-    SimulationParameters,
+from wfa_planning_evaluation_framework.simulator.system_parameters import (
+    SystemParameters,
 )
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
     PrivacyBudget,
@@ -44,7 +44,7 @@ class ModelingStrategy:
         self._multi_pub_model_kwargs = multi_pub_model_kwargs
 
     def fit(
-        self, halo: HaloSimulator, params: SimulationParameters, budget: PrivacyBudget
+        self, halo: HaloSimulator, params: SystemParameters, budget: PrivacyBudget
     ) -> ReachSurface:
         """Returns the reach surface using this Halo instance.
 

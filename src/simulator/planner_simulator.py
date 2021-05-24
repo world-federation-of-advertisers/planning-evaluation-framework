@@ -27,8 +27,8 @@ from wfa_planning_evaluation_framework.simulator.modeling_strategy import (
 )
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyBudget
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyTracker
-from wfa_planning_evaluation_framework.simulator.simulation_parameters import (
-    SimulationParameters,
+from wfa_planning_evaluation_framework.simulator.system_parameters import (
+    SystemParameters,
 )
 
 
@@ -37,7 +37,7 @@ class PlannerSimulator:
         self,
         halo: HaloSimulator,
         modeling_strategy: ModelingStrategy,
-        params: SimulationParameters,
+        params: SystemParameters,
         privacy_tracker: PrivacyTracker,
     ):
         """Simulator for the planner.

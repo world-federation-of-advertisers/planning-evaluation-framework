@@ -26,9 +26,9 @@ from wfa_planning_evaluation_framework.simulator.halo_simulator import HaloSimul
 from wfa_planning_evaluation_framework.simulator.publisher import Publisher
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyBudget
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyTracker
-from wfa_planning_evaluation_framework.simulator.simulation_parameters import (
+from wfa_planning_evaluation_framework.simulator.system_parameters import (
     LiquidLegionsParameters,
-    SimulationParameters,
+    SystemParameters,
 )
 
 
@@ -44,7 +44,7 @@ class HaloSimulatorTest(absltest.TestCase):
         pdf2 = PublisherData([(2, 0.03), (4, 0.06)], "pdf2")
         data_set = DataSet([pdf1, pdf2], "test")
 
-        cls.params = SimulationParameters(
+        cls.params = SystemParameters(
             [0.04, 0.05], LiquidLegionsParameters(), np.random.default_rng(1)
         )
         cls.privacy_tracker = PrivacyTracker()

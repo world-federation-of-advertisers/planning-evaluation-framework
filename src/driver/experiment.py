@@ -49,7 +49,7 @@ class Experiment:
             Tuple[ModelingStrategyDescriptor, SystemParameters, ExperimentParameters]
         ],
     ):
-        """Constructs an ExperimentalDesign object.
+        """Constructs an Experiment object.
 
         Args:
           experiment_dir:  A string specifying a directory where intermediate

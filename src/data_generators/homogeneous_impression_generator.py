@@ -18,22 +18,22 @@ from numpy.random import Generator
 from numpy.random import default_rng
 
 from wfa_planning_evaluation_framework.data_generators.impression_generator import (
-    ImpressionGenerator,)
+    ImpressionGenerator,
+)
 
 
 class HomogeneousImpressionGenerator(ImpressionGenerator):
-  """Generate a random sequence of viewer id's of ad impressions.
+    """Generate a random sequence of viewer id's of ad impressions.
 
     This class, along with PricingGenerator, assists in the generation of
     random PublisherDataFiles.  The ImpressionGenerator will generate a
     sequence of random impressions according to specified criteria.
     """
 
-  def __init__(self,
-               n: int,
-               poisson_lambda: float,
-               random_generator: Generator = None):
-    """Constructor for the HomogeneousImpressionGenerator.
+    def __init__(
+        self, n: int, poisson_lambda: float, random_generator: Generator = None
+    ):
+        """Constructor for the HomogeneousImpressionGenerator.
 
         For each user, the number of impressions assigned to that user is
         determined by drawing from a shifted Poisson distribution with fixed
@@ -45,25 +45,26 @@ class HomogeneousImpressionGenerator(ImpressionGenerator):
             determines viewing frequencies.
           random_generator:  An instance of numpy.random.Generator that is used
             for making draws from the Poisson distribution.
-    """
-    self._poisson_lambda = poisson_lambda
-    self._n = n
-    if random_generator:
-      self.random_generator = random_generator
-    else:
-      self.random_generator = default_rng()
+        """
+        self._poisson_lambda = poisson_lambda
+        self._n = n
+        if random_generator:
+            self.random_generator = random_generator
+        else:
+            self.random_generator = default_rng()
 
-  def __call__(self) -> List[int]:
-    """Generate a random sequence of impressions.
+    def __call__(self) -> List[int]:
+        """Generate a random sequence of impressions.
 
         Returns:
           A list of randomly generated user id's.  An id may occur multiple
           times in the output list, representing the fact that the user may
           see multiple ads from the publisher over the course of the campaign.
         """
-    impressions = []
-    for i in range(self._n):
-      impressions.extend(
-          [i] * (1 + self.random_generator.poisson(self._poisson_lambda)))
-    self.random_generator.shuffle(impressions)
-    return impressions
+        impressions = []
+        for i in range(self._n):
+            impressions.extend(
+                [i] * (1 + self.random_generator.poisson(self._poisson_lambda))
+            )
+        self.random_generator.shuffle(impressions)
+        return impressions

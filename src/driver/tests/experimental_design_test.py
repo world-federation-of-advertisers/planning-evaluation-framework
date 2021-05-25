@@ -116,7 +116,7 @@ class FakeTestPointGenerator(TestPointGenerator):
         return [[1.0]]
 
 
-class ExperimentTest(absltest.TestCase):
+class ExperimentalDesignTest(absltest.TestCase):
     def test_evaluate(self):
         with TemporaryDirectory() as d:
             pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")

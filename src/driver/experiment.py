@@ -62,8 +62,6 @@ class Experiment:
             (ModelingStrategyDescriptor, SystemParameters, ExperimentParameters).
             Each such tuple specifies one configuration of a modeling strategy
             and parameters that is to be tried against each data set.
-          rng:  The source of randomness that will be used in this
-            ExperimentalDesign.
         """
         self._experiment_dir = experiment_dir
         self._data_design = data_design

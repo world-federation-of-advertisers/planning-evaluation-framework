@@ -10,4 +10,4 @@ tqdm==4.47.0
 lxml==4.5.2
 dp-accounting==0.0.1
 git+git://github.com/world-federation-of-advertisers/cardinality_estimation_evaluation_framework/@master#egg=wfa_cardinality_estimation_evaluation_framework
-
+pyDOE==0.3.8

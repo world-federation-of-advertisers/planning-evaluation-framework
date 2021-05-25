@@ -14,7 +14,7 @@
 """Defines an ExperimentalDesign
 
 An experimental design consists of running a collection of ModelingStrategies,
-SimulationParameters and ExperimentParameters against a collection of DataSets.
+SystemParameters and ExperimentParameters against a collection of DataSets.
 """
 
 import numpy as np

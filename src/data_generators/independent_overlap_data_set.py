@@ -46,11 +46,12 @@ class IndependentOverlapDataSet(OverlapDataSet):
         Args:
           unlabeled_publisher_data_list:  a list of PublisherDataSet indicating
             the reach curve of a publisher.
-          universe_size:  the universe size for applying the independent model of
-            overlap. Explicitly, for any two pubs 1 and 2, the overlap reach
+          universe_size:  the universe size for applying the independent model
+            of overlap. Explicitly, for any two pubs 1 and 2, the overlap reach
             between these two pubs 1 equals <pub 1 reach> * <pub 2 reach> /
             universe_size.
-          random_state: a random state for generating the independent reached ids.
+          random_generator: a random generator for generating the independent
+            reached ids.
           name:  If specified, a human-readable name that will be associated to
             this DataSet.
         """

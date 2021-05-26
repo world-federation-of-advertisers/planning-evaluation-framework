@@ -29,7 +29,7 @@ NAMING_FIELDS = [
 class SyntheticDataDesignConfig:
     """Encapsulates with synthetic data config.
 
-    This class geneerates DataSetParameters objects to be passed to
+    This class generates DataSetParameters objects to be passed to
     SyntheticDataGenerator.
     """
 

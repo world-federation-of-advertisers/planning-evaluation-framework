@@ -43,7 +43,7 @@ class OverlapDatSetTest(absltest.TestCase):
             self.assertEqual(set(res[i]._data), set(expected_data_list[i]))
             self.assertEqual(res[i].name, expected_name_list[i])
 
-    def test_label_ids(self):
+    def test_map_ids(self):
         set_ids_list = [np.array([3, 4, 5]), np.array([4, 6, 8]), np.array([6, 8, 10])]
         pdf1 = PublisherData([(2, 0.02), (1, 0.01), (1, 0.03), (3, 0.04)], "a")
         pdf2 = PublisherData([(3, 0.04), (1, 0.02), (2, 0.01)], "b")

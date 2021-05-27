@@ -18,24 +18,23 @@ from typing import List
 
 class ImpressionGenerator:
     """Generate a random sequence of viewer id's of ad impressions.
-
     This class, along with PricingGenerator, assists in the generation of
     random PublisherDataFiles.  The ImpressionGenerator will generate a
     sequence of random impressions according to specified criteria.
     """
 
-    def __init__(self):
+    def __init__(self, n: int):
         """Constructor for the ImpressionGenerator.
-
         This would typically be overridden with a method whose signature
         would specify the various parameters of the impression distribution
         to be generated.
+        Args:
+          n:  The number of users.
         """
         pass
 
     def __call__(self) -> List[int]:
         """Generate a random sequence of impressions.
-
         Returns:
           A list of randomly generated user id's.  An id may occur multiple
           times in the output list, representing the fact that the user may

@@ -14,7 +14,8 @@
 """Generate a stream of impressions from a poisson distr with fixed lambda."""
 
 from typing import List
-from numpy.random import RandomState
+from numpy.random import Generator
+from numpy.random import default_rng
 
 from wfa_planning_evaluation_framework.data_generators.impression_generator import (
     ImpressionGenerator,
@@ -22,32 +23,38 @@ from wfa_planning_evaluation_framework.data_generators.impression_generator impo
 
 
 class HomogeneousImpressionGenerator(ImpressionGenerator):
-    """Generate ad impressions using Poisson distribution with fixed lambda."""
+    """Generate a random sequence of viewer id's of ad impressions.
 
-    def __init__(self, n: int, poisson_lambda: float, random_state: RandomState = None):
+    This class, along with PricingGenerator, assists in the generation of
+    random PublisherDataFiles.  The ImpressionGenerator will generate a
+    sequence of random impressions according to specified criteria.
+    """
+
+    def __init__(
+        self, n: int, poisson_lambda: float, random_generator: Generator = None
+    ):
         """Constructor for the HomogeneousImpressionGenerator.
 
         For each user, the number of impressions assigned to that user is
         determined by drawing from a shifted Poisson distribution with fixed
         parameter lambda.  The Poisson distribution is shifted by one.  E.g.,
         the PMF is given by Pr(X=k) = lambda^{k-1} e^{-lambda} / (k-1)!.
-
         Args:
           n:  The number of users.
           poisson_lambda:  The parameter of the Poisson distribution that
             determines viewing frequencies.
-          random_state:  An instance of numpy.random.RandomState that is
-            used for making draws from the Poisson distribution.
+          random_generator:  An instance of numpy.random.Generator that is used
+            for making draws from the Poisson distribution.
         """
         self._poisson_lambda = poisson_lambda
         self._n = n
-        if random_state:
-            self._random_state = random_state
+        if random_generator:
+            self.random_generator = random_generator
         else:
-            self._random_state = RandomState()
+            self.random_generator = default_rng()
 
     def __call__(self) -> List[int]:
-        """Generate impressions using Poisson distribution with fixed lambda.
+        """Generate a random sequence of impressions.
 
         Returns:
           A list of randomly generated user id's.  An id may occur multiple
@@ -57,7 +64,7 @@ class HomogeneousImpressionGenerator(ImpressionGenerator):
         impressions = []
         for i in range(self._n):
             impressions.extend(
-                [i] * (1 + self._random_state.poisson(self._poisson_lambda))
+                [i] * (1 + self.random_generator.poisson(self._poisson_lambda))
             )
-        self._random_state.shuffle(impressions)
+        self.random_generator.shuffle(impressions)
         return impressions

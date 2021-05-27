@@ -36,7 +36,7 @@ class IndependentOverlapDataSetTest(absltest.TestCase):
         expected_name_list: Iterable[str],
     ):
         self.assertLen(res, 3)
-        for i in range(expected_len):
+        for i in range(3):
             self.assertEqual(set(res[i]._data), set(expected_data_list[i]))
             self.assertEqual(res[i].name, expected_name_list[i])
 
@@ -49,12 +49,12 @@ class IndependentOverlapDataSetTest(absltest.TestCase):
         res = IndependentOverlapDataSet(
             unlabeled_publisher_data_list=[pdf1, pdf2, pdf3],
             universe_size=5,
-            random_state=np.random.RandomState(1),
+            random_generator=np.random.default_rng(1),
         )
         expected_data_list = [
-            [(0, 0.01), (0, 0.03), (1, 0.02), (2, 0.04)],
-            [(0, 0.02), (3, 0.01), (4, 0.04)],
-            [(0, 0.01), (0, 0.01), (0, 0.04), (1, 0.02), (4, 0.05)],
+            [(0, 0.01), (0, 0.03), (2, 0.02), (3, 0.04)],
+            [(0, 0.02), (1, 0.01), (2, 0.04)],
+            [(2, 0.02), (1, 0.04), (3, 0.05), (1, 0.01)],
         ]
         expected_name_list = ["a", "b", "c"]
         self.assert_equal_pub_data_list(

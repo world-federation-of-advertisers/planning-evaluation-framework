@@ -14,6 +14,7 @@
 """Class for modeling Pairwise union reach surface."""
 
 import copy
+from typing import List
 import numpy as np
 from cvxopt import matrix
 from cvxopt import solvers
@@ -82,7 +83,8 @@ class PairwiseUnionReachSurface(ReachSurface):
       A[i, i * self._p + i] = 1
     return matrix(A)
 
-  def solve_a_given_z_and_alpha(self, z, alpha):
+  def solve_a_given_z_and_alpha(self, z: List[List[int]],
+                                alpha: List[List[int]]):
     """Optimize for matrix a given z and alpha.
 
     Args:
@@ -115,7 +117,7 @@ class PairwiseUnionReachSurface(ReachSurface):
     Returns:
       Tuple of z and alpha.
       z: Length-n list of length-(p * p) vectors. Each vector is flattened
-      version of the matrix that denotes pairwise overlap regions.
+      version of the matrix that denotes pairwise non-overlapped regions.
       alpha: Length-n list of scalars. Each scalar denotes the overlapped reach
       for that reach point.
     """

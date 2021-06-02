@@ -40,12 +40,15 @@ class LinearCappedReachCurve(ReachCurve):
 
 class PairwiseUnionReachSurfaceTest(absltest.TestCase):
 
-  def assertPointsAlmostEqualToPrediction(self, surface, reach_points):
+  def assertPointsAlmostEqualToPrediction(self,
+                                          surface,
+                                          reach_points,
+                                          tolerance=0.0001):
     for reach_point in reach_points:
       self.assertAlmostEqual(
           surface.by_impressions(reach_point.impressions).reach(),
           reach_point.reach(),
-          delta=reach_point.reach() * 0.00001)
+          delta=reach_point.reach() * tolerance)
 
   def generate_true_reach(self, a, reach_curves, impressions):
     p = len(reach_curves)

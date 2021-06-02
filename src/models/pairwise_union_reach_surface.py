@@ -134,17 +134,17 @@ class PairwiseUnionReachSurface(ReachSurface):
     def solve_a_given_z_and_alpha(self, z: List[List[int]], alpha: List[List[int]]):
         """Optimize for matrix a given z and alpha using Quadratic Programming.
 
-        argmin_a \sum_{k=1..n} [y^{k} - alpha^{k} - a^T z^{k}]^2 =
-                  sum (a^T z^{k})^2 - 2 \sum [y^{k} - z^{k}] a^T z^{k} + ...
+        argmin_a sum_{k=1..n} [y^{k} - alpha^{k} - a^T z^{k}]^2 =
+                 sum (a^T z^{k})^2 - 2 \sum [y^{k} - z^{k}] a^T z^{k} + ...
 
         expanded,
           P = sum_{k=1..n} z^{k} [z^{k}]^T,
           and
           q = - sum_{k=1..n} [y^{k} - alpha^{k}] z^{k},
 
-        and we minimize
+        and we solve
 
-          argmin_a (1/2) x^T P a + q^T x$
+          argmin_a (1/2) x^T P a + q^T x
 
           s.t. Gx <= h
                and

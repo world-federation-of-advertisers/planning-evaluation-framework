@@ -31,7 +31,7 @@ class PairwiseUnionReachSurface(ReachSurface):
 
      r_1(imp_1)+r_2(imp_2)+...+r_p(imp_p) -
        1/2 sum_{j=1..p} sum_{k=1..p}
-       (a_{j,k} {r_j(imp_j)r_k(imp_k)} * {max\{m_j,m_k}})
+       (a_{j,k} * {r_j(imp_j)r_k(imp_k)} / {max\{m_j,m_k}})
 
      where:
            p is the number of publishers
@@ -93,12 +93,12 @@ class PairwiseUnionReachSurface(ReachSurface):
     return ReachPoint(impressions, [reach_sum - overlap])
 
   def get_inequality_constraints(self):
-    """Returns the equality constraint for the Cone Programming solver.
+    """Returns the inequality constraint for the Cone Programming solver.
        3 types of inequality constraints are stacked in matrix G and vector h:
 
          G1: a_i_j >= 0 for all i,j -> all parameters are non negative
-         G2: sum_{j=1..p} a_i_j <= 1 -> row sums are no more than one
-         G3: sum_{i=1..p} a_i_j <= 1 -> column sums are no more than one 
+         G2: sum_{j=1..p} a_i_j <= 1 for all i -> row sums are no more than one
+         G3: sum_{i=1..p} a_i_j <= 1 for all j -> col sums are no more than one
     """
     G1 = -matrix(np.eye(self._p * self._p))
     G2 = np.kron(np.eye(self._p), np.ones(self._p))
@@ -110,7 +110,9 @@ class PairwiseUnionReachSurface(ReachSurface):
 
   def get_equality_constraints(self):
     """Returns the equality constraint for the Cone Programming solver.
-       a_i_i = 0 for all i
+       1 type of equality constraint is described by matrix A and vector b:
+
+         a_i_i = 0 for all i -> publishers don't have overlap with themselves.
     """
     A = np.zeros(shape=(self._p, self._p * self._p))
     for i in range(self._p):

@@ -86,8 +86,9 @@ class PairwiseUnionReachSurfaceTest(absltest.TestCase):
   def generate_sample_reach_points(self, true_a, reach_curves, size,
                                    universe_size):
     reach_points = []
+    random_generator = np.random.default_rng(1)
     for _ in range(size):
-      impressions = [[np.random.uniform(0, universe_size / 2)]
+      impressions = [[random_generator.uniform(0, universe_size / 2)]
                      for _ in range(len(reach_curves))]
       reach_points.append(
           self.generate_true_reach(true_a, reach_curves, impressions))

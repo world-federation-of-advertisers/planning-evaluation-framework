@@ -25,7 +25,23 @@ from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 
 
 class PairwiseUnionReachSurface(ReachSurface):
-  """Models reach with the pairwise union overlap model."""
+  """Models reach with the pairwise union overlap model.
+
+     PairwiseUnionReachSurface models the combined reach with the formula
+
+     r_1(imp_1)+r_2(imp_2)+...+r_p(imp_p) -
+       1/2 sum_{j=1..p} sum_{k=1..p}
+       (a_{j,k} {r_j(imp_j)r_k(imp_k)} * {max\{m_j,m_k}})
+
+     where:
+           p is the number of publishers
+           a_i_j are the model parameters we want to estimate
+           imp_i is the numnber of impressions for ith publisher
+           r_j(imp_j) is the reach of the jth publisher for imp_j impressions.
+
+
+  """
+
 
   def __init__(self, reach_curves: Iterable[ReachCurve],
                reach_points: Iterable[ReachPoint]):
@@ -49,6 +65,14 @@ class PairwiseUnionReachSurface(ReachSurface):
     self._a = self.solve_a_given_z_and_alpha(z, alpha)
 
   def get_reach_vector(self, impressions: Iterable[int]) -> Iterable[int]:
+    """Calculates single publisher reaches for a given impression vector.
+
+    Args:
+      impressions: A list of impressions per publisher.
+        prediction.
+    Returns:
+      Reach for each publisher.
+    """
     return [
         reach_curve.by_impressions(impression).reach()
         for reach_curve, impression in zip(self._reach_curves, impressions)
@@ -68,7 +92,14 @@ class PairwiseUnionReachSurface(ReachSurface):
 
     return ReachPoint(impressions, [reach_sum - overlap])
 
-  def get_constraints(self):
+  def get_inequality_constraints(self):
+    """Returns the equality constraint for the Cone Programming solver.
+       3 types of inequality constraints are stacked in matrix G and vector h:
+
+         G1: a_i_j >= 0 for all i,j -> all parameters are non negative
+         G2: sum_{j=1..p} a_i_j <= 1 -> row sums are no more than one
+         G3: sum_{i=1..p} a_i_j <= 1 -> column sums are no more than one 
+    """
     G1 = -matrix(np.eye(self._p * self._p))
     G2 = np.kron(np.eye(self._p), np.ones(self._p))
     G3 = np.kron(np.ones(self._p), np.eye(self._p))
@@ -77,11 +108,14 @@ class PairwiseUnionReachSurface(ReachSurface):
                        axis=None))
     return matrix(np.vstack((G1, G2, G3))), h
 
-  def construct_matrix_a(self):
+  def get_equality_constraints(self):
+    """Returns the equality constraint for the Cone Programming solver.
+       a_i_i = 0 for all i
+    """
     A = np.zeros(shape=(self._p, self._p * self._p))
     for i in range(self._p):
       A[i, i * self._p + i] = 1
-    return matrix(A)
+    return matrix(A),  matrix(np.zeros(self._p))
 
   def solve_a_given_z_and_alpha(self, z: List[List[int]],
                                 alpha: List[List[int]]):
@@ -104,9 +138,8 @@ class PairwiseUnionReachSurface(ReachSurface):
     q = -matrix(
         sum((self._data[k].reach() - alpha[k]) * z[k] for k in range(self._n)))
 
-    G, h = self.get_constraints()
-    A = self.construct_matrix_a()
-    b = matrix(np.zeros(self._p))
+    G, h = self.get_inequality_constraints()
+    A, b = self.get_equality_constraints()
     res = solvers.qp(P, q, G, h, A, b)
 
     return np.array(res['x']).flatten()

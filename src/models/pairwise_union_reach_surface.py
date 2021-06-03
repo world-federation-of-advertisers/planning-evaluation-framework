@@ -40,6 +40,8 @@ class PairwiseUnionReachSurface(ReachSurface):
           imp_i is the numnber of impressions for ith publisher
           r_j(imp_j) is the reach of the jth publisher for imp_j impressions.
 
+    reference doc: https://docs.google.com/document/d/1YEEXv8xLBOZ69dWCdyVgyRkmCKu5Wa3AwFfFSFqKFBg/edit?resourcekey=0-NpbIK7OYXgWQCJgG3YAgYA#heading=h.cg5r5tr0crku
+
 
     """
 

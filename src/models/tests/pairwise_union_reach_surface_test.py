@@ -79,8 +79,15 @@ class PairwiseUnionReachSurfaceTest(absltest.TestCase):
         np.random.dirichlet(np.ones(num_publishers)) * np.random.uniform()
         for _ in range(num_publishers)
     ]).flatten()
+
+    # satisfy the constraint a_i_i = 0
     for i in range(num_publishers):
       true_a[i * num_publishers + i] = 0
+
+    # satisfy the constraint a_i_j = a_j_i by copying top half to bottom half.
+    for i in range(num_publishers):
+      for j in range(i+1, num_publishers):
+        true_a[j * num_publishers + i] = true_a[i * num_publishers + j]
     return true_a
 
   def generate_sample_reach_points(self, true_a, reach_curves, size,

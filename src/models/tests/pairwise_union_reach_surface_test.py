@@ -14,7 +14,9 @@
 """Tests for pairwise_union_reach_surface.py."""
 
 from absl.testing import absltest
+from functools import reduce
 import numpy as np
+import operator
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.models.reach_surface import ReachSurface
 from wfa_planning_evaluation_framework.models.pairwise_union_reach_surface import PairwiseUnionReachSurface
@@ -63,6 +65,17 @@ class PairwiseUnionReachSurfaceTest(absltest.TestCase):
             max(reach_curves[i].max_reach, reach_curves[j].max_reach) * 2)
     return ReachPoint(impressions, [reach])
 
+  def generate_true_reach_independent(self, universe_size, reach_curves,
+                                      impressions):
+    p = len(reach_curves)
+    reach_vector = [
+        reach_curve.by_impressions(impression).reach()
+        for reach_curve, impression in zip(reach_curves, impressions)
+    ]
+    reach = sum(reach_vector) - (
+        reduce(operator.mul, reach_vector) / universe_size)
+    return ReachPoint(impressions, [reach])
+
   def generate_sample_reach_curves(self, num_publishers, decay_rate,
                                    universe_size):
     max_reaches = [
@@ -86,19 +99,32 @@ class PairwiseUnionReachSurfaceTest(absltest.TestCase):
 
     # satisfy the constraint a_i_j = a_j_i by copying top half to bottom half.
     for i in range(num_publishers):
-      for j in range(i+1, num_publishers):
+      for j in range(i + 1, num_publishers):
         true_a[j * num_publishers + i] = true_a[i * num_publishers + j]
     return true_a
 
-  def generate_sample_reach_points(self, true_a, reach_curves, size,
-                                   universe_size):
+  def generate_reach_points(self, true_a, reach_curves, size, universe_size,
+                            random_seed):
     reach_points = []
-    random_generator = np.random.default_rng(1)
+    random_generator = np.random.default_rng(random_seed)
     for _ in range(size):
       impressions = [[random_generator.uniform(0, universe_size / 2)]
                      for _ in range(len(reach_curves))]
       reach_points.append(
           self.generate_true_reach(true_a, reach_curves, impressions))
+
+    return reach_points
+
+  def generate_reach_points_independent(self, reach_curves, size, universe_size,
+                                        random_seed):
+    reach_points = []
+    random_generator = np.random.default_rng(random_seed)
+    for _ in range(size):
+      impressions = [[random_generator.uniform(0, universe_size / 2)]
+                     for _ in range(len(reach_curves))]
+      reach_points.append(
+          self.generate_true_reach_independent(universe_size, reach_curves,
+                                               impressions))
 
     return reach_points
 
@@ -111,12 +137,66 @@ class PairwiseUnionReachSurfaceTest(absltest.TestCase):
     reach_curves = self.generate_sample_reach_curves(num_publishers, decay_rate,
                                                      universe_size)
     true_a = self.generate_sample_matrix_a(num_publishers)
-    training_reach_points = self.generate_sample_reach_points(
-        true_a, reach_curves, training_size, universe_size)
+    training_reach_points = self.generate_reach_points(true_a, reach_curves,
+                                                       training_size,
+                                                       universe_size, 1)
 
     surface = PairwiseUnionReachSurface(reach_curves, training_reach_points)
-    test_reach_points = self.generate_sample_reach_points(
-        true_a, reach_curves, training_size, universe_size)
+    test_reach_points = self.generate_reach_points(true_a, reach_curves,
+                                                   training_size, universe_size,
+                                                   2)
+    self.assertPointsAlmostEqualToPrediction(surface, training_reach_points)
+    self.assertPointsAlmostEqualToPrediction(surface, test_reach_points)
+
+  def test_no_overlap_reach_curves(self):
+    num_publishers = 2
+    training_size = 50
+    universe_size = 200000
+    decay_rate = 0.8
+
+    reach_curves = self.generate_sample_reach_curves(num_publishers, decay_rate,
+                                                     universe_size)
+
+    # Matrix a is just zeros -> there is no overlap between publishers.
+    true_a = np.array([np.zeros(num_publishers) for _ in range(num_publishers)
+                      ]).flatten()
+    training_reach_points = self.generate_reach_points(true_a, reach_curves,
+                                                       training_size,
+                                                       universe_size, 1)
+
+    surface = PairwiseUnionReachSurface(reach_curves, training_reach_points)
+    # Reach for each point is the sum of independent reaches of publishers.
+    test_reach_points = []
+    random_generator = np.random.default_rng(1)
+    for _ in range(training_size):
+      impressions = [[random_generator.uniform(0, universe_size / 2)]
+                     for _ in range(len(reach_curves))]
+      reach_vector = [
+          reach_curve.by_impressions(impression).reach()
+          for reach_curve, impression in zip(reach_curves, impressions)
+      ]
+      test_reach_points.append(ReachPoint(impressions, [sum(reach_vector)]))
+
+    self.assertPointsAlmostEqualToPrediction(surface, training_reach_points)
+    self.assertPointsAlmostEqualToPrediction(surface, test_reach_points)
+
+  def test_independent_reach_curves(self):
+    num_publishers = 2
+    training_size = 5
+    universe_size = 200000
+    decay_rate = 0.8
+
+    reach_curves = self.generate_sample_reach_curves(num_publishers, decay_rate,
+                                                     universe_size)
+
+    training_reach_points = self.generate_reach_points_independent(
+        reach_curves, training_size, universe_size, 1)
+
+    surface = PairwiseUnionReachSurface(reach_curves, training_reach_points)
+    # the reach for each point is the sum of independent reaches of publishers.
+    test_reach_points = self.generate_reach_points_independent(
+        reach_curves, training_size, universe_size, 2)
+
     self.assertPointsAlmostEqualToPrediction(surface, training_reach_points)
     self.assertPointsAlmostEqualToPrediction(surface, test_reach_points)
 

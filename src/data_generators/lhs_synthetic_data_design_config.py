@@ -53,6 +53,15 @@ class LHSSyntheticDataDesignConfig(SyntheticDataDesignConfig):
     """Generates a DataDesign using LHS from a synthetic grid."""
 
     @classmethod
+    def get_rounded_lhs_design(cls, variable_grid_axes: List[float]):
+        levels = [
+            len(variable_levels)
+            for variable_levels in list(variable_grid_axes.values())
+        ]
+        design = lhs(n=len(levels), samples=NUM_SAMPLES_FOR_LHS, criterion="maximin")
+        return (design * np.array(levels)).astype("int32")
+
+    @classmethod
     def get_lhs_design(cls, variable_grid_axes: Dict[str, List[float]]):
         pass
 

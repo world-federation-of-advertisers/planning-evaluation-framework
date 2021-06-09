@@ -52,7 +52,11 @@ name_to_config_dict = {"test": TestSyntheticDataDesignConfig}
 class SyntheticDataGenerator:
 =======
 class SyntheticDataDesignGenerator():
+<<<<<<< HEAD
 >>>>>>> 26f2b1c (getting there):src/data_generators/synthetic_data_design_generator.py
+=======
+  
+>>>>>>> 7844f46 (addressed comments)
   """Generates a DataDesign with synthetic data derived from parameters.
 
     This class translates a SyntheticDataDesignConfig object to a DataDesign by

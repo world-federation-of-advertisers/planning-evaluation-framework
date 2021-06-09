@@ -114,7 +114,7 @@ class GammaPoissonModelTest(absltest.TestCase):
         h_predicted = gpm._expected_histogram(Ih, Imax, N, alpha, beta)
         for i in range(len(h_actual)):
             self.assertTrue(
-                (h_actual[i] - h_predicted[i]) ** 2 < 15,
+                (h_actual[i] - h_predicted[i]) ** 2 < 1,
                 f"Discrepancy found at position {i}. "
                 f"Got {h_predicted[i]} Expected {h_actual[i]}",
             )
@@ -128,7 +128,7 @@ class GammaPoissonModelTest(absltest.TestCase):
         h_predicted = gpm._expected_histogram(Ih, Imax, N0, alpha, beta)
         for i in range(len(h_actual)):
             self.assertTrue(
-                (h_actual[i] - h_predicted[i]) ** 2 < 15,
+                (h_actual[i] - h_predicted[i]) ** 2 < 1,
                 f"Discrepancy found at position {i}. "
                 f"Got {h_predicted[i]} Expected {h_actual[i]}",
             )
@@ -165,12 +165,14 @@ class GammaPoissonModelTest(absltest.TestCase):
         re = list(reversed(np.cumsum(list(reversed(he)))))
         rx = list(reversed(np.cumsum(list(reversed(hp)))))
         rp = gpm.by_impressions([10000], max_frequency=5)
-        h_expected = [5970, 2631, 961, 310, 91]
-        h_actual = [int(rp.reach(i)) for i in range(1, 6)]
+        h_expected = np.array([5970, 2631, 961, 310, 91])
+        h_actual = np.array([int(rp.reach(i)) for i in range(1, 6)])
+        total_error = np.sum((h_expected - h_actual) ** 2 / h_expected)
+        self.assertTrue(total_error < 1)
         self.assertAlmostEqual(rp.spends[0], 100.0)
         for i in range(len(h_actual)):
             self.assertTrue(
-                (h_actual[i] - h_expected[i]) ** 2 < 50,
+                (h_actual[i] - h_expected[i]) ** 2 / h_actual[i] < 0.1,
                 f"Discrepancy found at position {i}. "
                 f"Got {h_actual[i]} Expected {h_expected[i]}",
             )
@@ -182,13 +184,15 @@ class GammaPoissonModelTest(absltest.TestCase):
         gpm = GammaPoissonModel([rp], max_reach=10000)
         gpm._fit()
         rp = gpm.by_spend([100.0], max_frequency=5)
-        h_expected = [5970, 2631, 961, 310, 91]
-        h_actual = [int(rp.reach(i)) for i in range(1, 6)]
+        h_expected = np.array([5970, 2631, 961, 310, 91])
+        h_actual = np.array([int(rp.reach(i)) for i in range(1, 6)])
+        total_error = np.sum((h_expected - h_actual) ** 2 / h_expected)
+        self.assertTrue(total_error < 1)
         self.assertAlmostEqual(rp.impressions[0], 10000.0)
         self.assertAlmostEqual(rp.spends[0], 100.0)
         for i in range(len(h_actual)):
             self.assertTrue(
-                (h_actual[i] - h_expected[i]) ** 2 < 50,
+                (h_actual[i] - h_expected[i]) ** 2 / h_actual[i] < 0.1,
                 f"Discrepancy found at position {i}. "
                 f"Got {h_actual[i]} Expected {h_expected[i]}",
             )

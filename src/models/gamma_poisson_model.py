@@ -121,7 +121,8 @@ class GammaPoissonModel(ReachCurve):
         """Constructs a Gamma-Poisson model of underreported count data.
 
         Args:
-          data:  A list of ReachPoints to which the model is to be fit.
+          data:  A list of consisting of a single ReachPoint to which the model is
+            to be fit.
           max_reach:  Optional.  If specified, the maximum possible reach that can
             be achieved.
           regularization_parameter:  Optional.  A float specifying a regularization
@@ -261,14 +262,7 @@ class GammaPoissonModel(ReachCurve):
         Computes parameters alpha, beta, Imax, N such that the histogram hbar of
         of expected frequencies minimizes the metric
 
-          chi2(h, hbar) = \sum_i (h[i] - hbar[i])^2 / hbar[i] +
-             lambda * (alpha + beta + I_max / I)
-
-        where lambda is a regularization constant and I is the total number of
-        impressions that were observed in the data.
-
-        Optimization is performed using the basin hopping algorithm of Wales
-        and Doye.  Each optimization step is performed using the BFGS optimizer.
+          chi2(h, hbar) = \sum_i (h[i] - hbar[i])^2 / hbar[i]
 
         Args:
           h:  np.array specifying the histogram of observed frequencies.
@@ -305,16 +299,15 @@ class GammaPoissonModel(ReachCurve):
         Computes parameters alpha, beta, Imax such that the histogram hbar of
         of expected frequencies minimizes the metric
 
-          chi2(h, hbar) = \sum_i (h[i] - hbar[i])^2 / hbar[i] +
-             lambda * (alpha + beta + I_max / I)
+          chi2(h, hbar) = \sum_i (h[i] - hbar[i])^2 / hbar[i]
 
         where lambda is a regularization constant and I is the total number of
         impressions that were observed in the data.  The value of Imax is
-        taken to be Imax = N * beta / alpha, so this really a two parameter
-        model.
-
-        Optimization is performed using the basin hopping algorithm of Wales
-        and Doye.  Each optimization step is performed using the BFGS optimizer.
+        taken to satisfy I / Imax = IMPRESSION_INVENTORY_RATIO, where I is
+        number of impressions recorded in the histogram h.  The value of
+        beta is taken to satisfy Imax = N * alpha / beta.  Thus, this
+        is really a one parameter model, and we can use Brent's method
+        to find the optimum.
 
         Args:
           h:  np.array specifying the histogram of observed frequencies.
@@ -384,7 +377,7 @@ class GammaPoissonModel(ReachCurve):
             self._beta,
             MAXIMUM_COMPUTATIONAL_FREQUENCY,
         )
-        kplus_reach = list(reversed(np.cumsum(list(reversed(hist)))))
+        kplus_reach = self._kplus_reaches_from_frequencies(hist)
         if self._cpi:
             return ReachPoint(
                 impressions, kplus_reach[:max_frequency], [impressions[0] * self._cpi]
@@ -406,4 +399,4 @@ class GammaPoissonModel(ReachCurve):
             raise ValueError("Impression cost is not known for this ReachPoint.")
         if len(spends) != 1:
             raise ValueError("Spend vector must have a length of 1.")
-        return self.by_impressions([spends[0] / self._cpi], max_frequency)
+        return self.by_impressions([int(spends[0] / self._cpi)], max_frequency)

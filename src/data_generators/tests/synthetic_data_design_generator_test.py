@@ -16,15 +16,15 @@
 from absl.testing import absltest
 from tempfile import TemporaryDirectory
 
-from wfa_planning_evaluation_framework.data_generators.synthetic_data_generator import (
-    SyntheticDataGenerator)
+from wfa_planning_evaluation_framework.data_generators.synthetic_data_design_generator import (
+    SyntheticDataDesignGenerator)
 from wfa_planning_evaluation_framework.data_generators.data_design import DataDesign
 from wfa_planning_evaluation_framework.data_generators.test_synthetic_data_design_config import TestSyntheticDataDesignConfig
 from wfa_planning_evaluation_framework.data_generators.test_synthetic_data_design_config2 import TestSyntheticDataDesignConfig2
 from wfa_planning_evaluation_framework.data_generators.test_lhs_synthetic_data_design_config import TestLHSSyntheticDataDesignConfig
 
 
-class SyntheticDataGeneratorTest(absltest.TestCase):
+class SyntheticDataDesignGeneratorTest(absltest.TestCase):
 
   def validate_generated_test_data(self, generated_data_set):
     self.assertEqual(generated_data_set.publisher_count, 3)
@@ -35,13 +35,13 @@ class SyntheticDataGeneratorTest(absltest.TestCase):
 
   def test_synthetic_data_generator_lhs_dataset(self):
     with TemporaryDirectory() as d:
-      generator = SyntheticDataGenerator(d, 1, TestLHSSyntheticDataDesignConfig)
+      generator = SyntheticDataDesignGenerator(d, 1, TestLHSSyntheticDataDesignConfig)
       data_design = generator()
       self.assertEqual(data_design.count, 6)
 
   def test_synthetic_data_generator_single_dataset_single_publisher(self):
     with TemporaryDirectory() as d:
-      generator = SyntheticDataGenerator(d, 1, TestSyntheticDataDesignConfig2)
+      generator = SyntheticDataDesignGenerator(d, 1, TestSyntheticDataDesignConfig2)
       data_design = generator()
       self.assertEqual(data_design.count, 1)
       # Random signatures at rs=xxx will change when any underliying operation
@@ -58,7 +58,7 @@ class SyntheticDataGeneratorTest(absltest.TestCase):
 
   def test_synthetic_data_generator_multiple_publishers(self):
     with TemporaryDirectory() as d:
-      generator = SyntheticDataGenerator(d, 1, TestSyntheticDataDesignConfig)
+      generator = SyntheticDataDesignGenerator(d, 1, TestSyntheticDataDesignConfig)
       data_design = generator()
       self.assertEqual(data_design.count, 3)
       # Random signatures at rs=xxx will change when any underliying operation

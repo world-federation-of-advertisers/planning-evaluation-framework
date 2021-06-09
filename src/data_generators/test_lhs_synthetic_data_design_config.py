@@ -14,6 +14,7 @@
 """Encapculates the config for a sample LHS DataDesign."""
 
 from typing import List
+from typing import Dict
 from collections import OrderedDict
 import numpy as np
 from pyDOE import lhs
@@ -51,7 +52,7 @@ class TestLHSSyntheticDataDesignConfig(SyntheticDataDesignConfig):
     return (design * np.array(levels)).astype("int32")
 
   @classmethod
-  def get_grid_axes(cls):
+  def get_grid_axes(cls) -> Dict[str, List[int]]:
     grid_axes = OrderedDict()
     grid_axes[NUM_PUBS] = [1, 2, 5]
     grid_axes[LARGEST_PUB_SIZE] = [100, 1000]

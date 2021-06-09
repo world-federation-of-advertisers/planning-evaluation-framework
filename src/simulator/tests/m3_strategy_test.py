@@ -16,7 +16,6 @@
 from absl.testing import absltest
 import numpy as np
 from typing import List
-from unittest.mock import patch
 
 from wfa_planning_evaluation_framework.models.gamma_poisson_model import (
     GammaPoissonModel,
@@ -63,10 +62,6 @@ class FakeHalo:
 
 
 class M3StrategyTest(absltest.TestCase):
-    @patch(
-        "wfa_planning_evaluation_framework.models.gamma_poisson_model.MAXIMUM_BASIN_HOPS",
-        1,
-    )
     def test_m3_strategy(self):
         halo = FakeHalo()
         params = SystemParameters(

@@ -26,8 +26,8 @@ from wfa_planning_evaluation_framework.data_generators.test_synthetic_data_desig
 from wfa_planning_evaluation_framework.data_generators.test_synthetic_data_design_config2 import (
     TestSyntheticDataDesignConfig2,
 )
-from wfa_planning_evaluation_framework.data_generators.test_lhs_synthetic_data_design_config import (
-    TestLHSSyntheticDataDesignConfig,
+from wfa_planning_evaluation_framework.data_generators.test_rounded_lhs_synthetic_data_design_config import (
+    TestRoundedLHSSyntheticDataDesignConfig,
 )
 
 
@@ -42,7 +42,7 @@ class SyntheticDataDesignGeneratorTest(absltest.TestCase):
     def test_synthetic_data_generator_lhs_dataset(self):
         with TemporaryDirectory() as d:
             generator = SyntheticDataDesignGenerator(
-                d, 1, TestLHSSyntheticDataDesignConfig
+                d, 1, TestRoundedLHSSyntheticDataDesignConfig
             )
             data_design = generator()
             self.assertEqual(data_design.count, 6)

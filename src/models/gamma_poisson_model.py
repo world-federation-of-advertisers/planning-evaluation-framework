@@ -23,9 +23,10 @@ from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 # used for parameter estimation.
 MAXIMUM_COMPUTATIONAL_FREQUENCY = 1000
 
-# The maximum number of basin-hopping iterations that will be performed
-# during optimization.
-MAXIMUM_BASIN_HOPS = 20
+# The ratio of the number of impressions observed in the data to the
+# size of the total impression inventory.  This ratio is kept constant
+# as a way of eliminating a free parameter in the model.
+IMPRESSION_INVENTORY_RATIO = 0.1
 
 
 class GammaPoissonModel(ReachCurve):
@@ -34,8 +35,9 @@ class GammaPoissonModel(ReachCurve):
     The Gamma-Poisson distribution is a discrete distribution defined on the
     non-negative integers.  The probably of observing a count of k is given
     by a Poisson distribution with parameter lambda, where lambda is drawn
-    from a Gamma distribution with shape alpha and rate beta.  E.g.,
-       Pr(X = k) = lambda^k e^{-lambda) / k!, where lambda ~ Gamma(alpha, beta).
+    from a Gamma distribution with shape alpha and rate beta.  Explicitly,
+       Pr(X = k) = lambda^k e^{-lambda} / k!, where lambda ~ Gamma(alpha, beta),
+    k = 0, 1, 2, ...
 
     The Gamma-Poisson distribution is often used for modeling overdispersed
     data, which is common in the advertising industry.  In this setting, the
@@ -64,7 +66,7 @@ class GammaPoissonModel(ReachCurve):
        g(k, n | alpha, beta, I, I_max) =
             C(n, k) (I / I_max)^k (1 - I/I_max)^{n-k} f(n | alpha, beta),
 
-    where C(n, k) is the binomial coefficient n!/k!(n-k)!.
+    where C(n, k) is the binomial coefficient n!/[k!(n-k)!].
 
     Therefore, the probability that a randomly chosen user will be reached
     exactly k times is
@@ -75,48 +77,47 @@ class GammaPoissonModel(ReachCurve):
     Thus, if a total of N viewers can potentially be reached, then the expected
     number of people who will be reached k times is
 
-       N * g(k | alpha, beta, I, I_max)
+       hbar[i] = N * g(k | alpha, beta, I, I_max).
 
-    In the Gamma-Poisson distribution, the expected size of the total
-    impression inventory is
+    Note that the value I is determined from the input and is not a
+    model parameter that needs to be fit.  Thus, the apparent number
+    of parameters that need to be fit is four.  However, we reduce
+    the number of parameters to two as follows.  First, we note that
+    the expected value of a Gamma-Poisson distribution with parameters
+    alpha and beta is alpha/beta.  Thus, the total number of
+    impressions I_max is related to the total number of potential
+    viewers N via the relation
 
-       E[I_max] = N * alpha / beta.
+      E[I_max] = N * alpha/beta.
 
-    To eliminate one parameter from consideration, we therefore assume
-    that N = I_max * beta / alpha.  This leaves us with three parameters
-    to estimate: alpha, beta and I_max.  To estimate these parameters
-    we use a histogram matching approach.  That is to say, let h[i] be
-    the number of people that were reached i times, and let hbar[i] be
-    the estimated number of people that would be reached i times, given
-    alpha, beta and I_max.  The objective function that we compute is
-    as follows:
+    We therefore set N = I_max * beta / alpha.  Next, we note that
+    the size of the total impression inventory I_max is essentially
+    a free parameter.  In fact, along the line I_max * beta = constant,
+    the objective function is nearly constant.  To see this, observe
+    that if the available inventory for each user is doubled, then
+    the probability that any given user will receive k impressions
+    remains essentially constant.  Thus, we set I / I_max to a
+    constant value.  This leaves two remaining parameters to optimize,
+    alpha and beta.
 
-      chi2(h, hbar) = \sum_i (h[i] - hbar[i])^2 / hbar[i] +
-           lambda * (alpha + beta + I_max / I)
+    To estimate these parameters we use a histogram matching approach.
+    That is to say, let h[i] be the number of people that were reached
+    i times, and let hbar[i] be the estimated number of people that
+    would be reached i times, given alpha, beta and I_max, N.  The
+    objective function that we compute is as follows:
 
-    The first part of this objective function is the chi-squared statistic
-    computed between the histograms h and hbar, while the second part of
-    this objective function is a regularization term.
+      chi2(h, hbar) = \sum_i (h[i] - hbar[i])^2 / hbar[i]
 
-    There are a couple advantages to using the chi-squared objective
-    function.  First, in practice, the parameter estimates that are found
-    often give a nearly exact match to the histograms that are observed.
-    Second, a low value of the objective function gives some confidence
-    that a statistically good fit has been found.
-
-    In a few informal experiments, the estimates of alpha and N were generally
-    found to be fairly accurate.  However, a high amount of variance was
-    observed in the estimates of beta and I_max.  The objective function is
-    nearly constant along the line beta * I_max = constant.  This is why the
-    regularization term was added.
+    The perceptive reader might recognize this as the chi-squared
+    statistic.  There are a couple advantages to using the chi-squared
+    objective function.  First, in practice, the parameter estimates
+    that are found often give a nearly exact match to the histograms
+    that are observed.  Second, a low value of the objective function
+    gives some confidence that a statistically good fit has been
+    found.
     """
 
-    def __init__(
-        self,
-        data: [ReachPoint],
-        max_reach=None,
-        regularization_parameter=1.0,
-    ):
+    def __init__(self, data: [ReachPoint], max_reach=None):
         """Constructs a Gamma-Poisson model of underreported count data.
 
         Args:
@@ -130,7 +131,6 @@ class GammaPoissonModel(ReachCurve):
             raise ValueError("Exactly one ReachPoint must be specified")
         self._reach_point = data[0]
         self._max_reach = max_reach
-        self._regularization_parameter = regularization_parameter
         if data[0].spends:
             self._cpi = data[0].spends[0] / data[0].impressions[0]
         else:
@@ -244,15 +244,18 @@ class GammaPoissonModel(ReachCurve):
         """
         return N * self._kreach(np.arange(1, max_freq + 1), I, Imax, alpha, beta)
 
-    def _feasible_point(self, h):
-        """Returns values of alpha, beta, Imax, N that could feasibly produce h."""
-        alpha = 1.0
-        N = 2 * np.sum(h)
-        I = 2 * np.sum([h[i] * (i + 1) for i in range(len(h))])
-        beta = N * alpha / I
-        return alpha, beta, I, N
+    def _impression_count(self, h):
+        """Number of impressions recorded in the histogram h."""
+        return np.sum([h[i] * (i + 1) for i in range(len(h))])
 
-    def _fit_histogram_chi2_distance(self, h, regularization_param=0.01):
+    def _feasible_point(self, h):
+        """Returns values of alpha, beta, Imax that could feasibly produce h."""
+        alpha = 1.0
+        I = self._impression_count(h) / IMPRESSION_INVENTORY_RATIO
+        beta = 2 * np.sum(h) * alpha / I
+        return alpha, beta, I
+
+    def _fit_histogram_chi2_distance(self, h):
         """Chi-squared fit to histogram h.
 
         Computes parameters alpha, beta, Imax, N such that the histogram hbar of
@@ -271,44 +274,32 @@ class GammaPoissonModel(ReachCurve):
           h:  np.array specifying the histogram of observed frequencies.
             h[i] is the number of users that were observed to be reached
             exactly i+1 times.
-          regularization_param:  float, the constant lambda that is used in
-            the regularization term in the above metric.
         Returns:
           A tuple (Imax, N, alpha, beta) representing the parameters of the
           best fit that was found.
         """
-        # The estimated impression count cannot go below the count observed
-        # in the data
-        Imin = sum([h[i] * (i + 1) for i in range(len(h))]) + 1
-
         # Choose a reasonable starting point
-        alpha0, beta0, I0, N0 = self._feasible_point(h)
+        alpha0, beta0, Imax = self._feasible_point(h)
+        Iobs = self._impression_count(h)
 
         def gamma_obj(params):
             """Objective function for optimization."""
-            alpha, beta, Imax = np.exp(params)
-            Imax += Imin
+            alpha, beta = np.exp(params)
             N = Imax * beta / alpha
-            hbar = self._expected_histogram(Imin, Imax, N, alpha, beta, len(h))
-            obj = np.sum((hbar - h) ** 2 / (hbar + 1e-6)) + regularization_param * (
-                alpha + beta + Imax / Imin
-            )
+            hbar = self._expected_histogram(Iobs, Imax, N, alpha, beta, len(h))
+            obj = np.sum((hbar - h) ** 2 / (hbar + 1e-6))
             return obj
 
-        result = scipy.optimize.basinhopping(
-            gamma_obj,
-            np.log((alpha0, beta0, I0 - Imin)),
-            niter=MAXIMUM_BASIN_HOPS,
-            minimizer_kwargs={"method": "BFGS", "tol": 0.1},
+        result = scipy.optimize.minimize(
+            gamma_obj, np.log((alpha0, beta0)), method="BFGS"
         )
 
-        alpha, beta, I = np.exp(result.x)
-        I += Imin
-        N = I * beta / alpha
+        alpha, beta = np.exp(result.x)
+        N = Imax * beta / alpha
 
-        return I, N, alpha, beta
+        return Imax, N, alpha, beta
 
-    def _fit_histogram_fixed_N(self, h, N, regularization_param=0.01):
+    def _fit_histogram_fixed_N(self, h, N):
         """Chi-squared fit to histogram h for fixed N.
 
         Computes parameters alpha, beta, Imax such that the histogram hbar of
@@ -330,42 +321,27 @@ class GammaPoissonModel(ReachCurve):
             h[i] is the number of users that were observed to be reached
             exactly i+1 times.
           N:  int, total reachable audience.
-          regularization_param:  float, the constant lambda that is used in
-            the regularization term in the above metric.
         Returns:
           A tuple (Imax, alpha, beta) representing the parameters of the
           best fit that was found.
         """
-        # The estimated impression count cannot go below the count observed
-        # in the data
-        Imin = sum([h[i] * (i + 1) for i in range(len(h))]) + 1
-
         # Choose a reasonable starting point.
-        alpha0, beta0 = 1.0, 0.5 * N / Imin
+        Iobs = self._impression_count(h)
+        Imax = Iobs / IMPRESSION_INVENTORY_RATIO
+        alpha0 = 1
 
-        def gamma_obj(params):
+        def gamma_obj(alpha):
             """Objective function for optimization."""
-            alpha, beta = np.exp(params)
-            Imax = self._expected_impressions(N, alpha, beta)
-            if Imax <= Imin:
-                return 1e99
-            hbar = self._expected_histogram(Imin, Imax, N, alpha, beta, len(h))
-            obj = np.sum((hbar - h) ** 2 / (hbar + 1e-6)) + regularization_param * (
-                alpha + beta + 1 / beta
-            )
+            beta = N * alpha / Imax
+            hbar = self._expected_histogram(Iobs, Imax, N, alpha, beta, len(h))
+            obj = np.sum((hbar - h) ** 2 / (hbar + 1e-6))
             return obj
 
-        result = scipy.optimize.basinhopping(
-            gamma_obj,
-            np.log((alpha0, beta0)),
-            niter=MAXIMUM_BASIN_HOPS,
-            minimizer_kwargs={"method": "Nelder-Mead", "tol": 0.1},
-        )
+        result = scipy.optimize.minimize_scalar(gamma_obj, bounds=[1e-6, np.Inf])
+        alpha = result.x
+        beta = N * alpha / Imax
 
-        alpha, beta = np.exp(result.x)
-        I = self._expected_impressions(N, alpha, beta)
-
-        return I, alpha, beta
+        return Imax, alpha, beta
 
     def _fit(self) -> None:
         """Fits a model to the data that was provided in the constructor."""
@@ -376,22 +352,16 @@ class GammaPoissonModel(ReachCurve):
         ]
 
         if self._max_reach is None:
-            (
-                self._max_impressions,
-                self._max_reach,
-                self._alpha,
-                self._beta,
-            ) = self._fit_histogram_chi2_distance(
-                h, regularization_param=self._regularization_parameter
-            )
+            Imax, N, alpha, beta = self._fit_histogram_chi2_distance(h)
+            self._max_impressions = Imax
+            self._max_reach = N
+            self._alpha = alpha
+            self._beta = beta
         else:
-            (
-                self._max_impressions,
-                self._alpha,
-                self._beta,
-            ) = self._fit_histogram_fixed_N(
-                h, self._max_reach, regularization_param=self._regularization_parameter
-            )
+            Imax, alpha, beta = self._fit_histogram_fixed_N(h, self._max_reach)
+            self._max_impressions = Imax
+            self._alpha = alpha
+            self._beta = beta
 
     def by_impressions(self, impressions: [int], max_frequency: int = 1) -> ReachPoint:
         """Returns the estimated reach as a function of impressions.

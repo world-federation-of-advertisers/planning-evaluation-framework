@@ -100,23 +100,16 @@ class GammaPoissonModelTest(absltest.TestCase):
 
     def test_feasible_point(self):
         gpm = GammaPoissonModel([ReachPoint([], [])])
-        alpha, beta, I, N = gpm._feasible_point([14, 8, 4, 2])
+        alpha, beta, I = gpm._feasible_point([14, 8, 4, 2])
         self.assertAlmostEqual(alpha, 1.0)
-        self.assertAlmostEqual(beta, 28 / 50)
-        self.assertAlmostEqual(I, 100)
-        self.assertAlmostEqual(N, 56)
+        self.assertAlmostEqual(beta, 56 / 500)
+        self.assertAlmostEqual(I, 500)
 
-    @patch(
-        "wfa_planning_evaluation_framework.models.gamma_poisson_model.MAXIMUM_BASIN_HOPS",
-        1,
-    )
     def test_fit_histogram_chi2_distance(self):
         gpm = GammaPoissonModel([ReachPoint([], [])])
-        I0, Imax0, N0, alpha0, beta0 = 20000, 25000, 10000, 5, 2
-        h_actual = gpm._expected_histogram(I0, Imax0, N0, alpha0, beta0)
-        Imax, N, alpha, beta = gpm._fit_histogram_chi2_distance(
-            h_actual, regularization_param=0.01
-        )
+        I0, N0, alpha0, beta0 = 20000, 10000, 5, 0.5
+        h_actual = gpm._expected_histogram(I0, I0 / 0.1, N0, alpha0, beta0)
+        Imax, N, alpha, beta = gpm._fit_histogram_chi2_distance(h_actual)
         Ih = np.sum([h_actual[i] * (i + 1) for i in range(len(h_actual))])
         h_predicted = gpm._expected_histogram(Ih, Imax, N, alpha, beta)
         for i in range(len(h_actual)):
@@ -126,17 +119,11 @@ class GammaPoissonModelTest(absltest.TestCase):
                 f"Got {h_predicted[i]} Expected {h_actual[i]}",
             )
 
-    @patch(
-        "wfa_planning_evaluation_framework.models.gamma_poisson_model.MAXIMUM_BASIN_HOPS",
-        1,
-    )
     def test_fit_histogram_fixed_N(self):
         gpm = GammaPoissonModel([ReachPoint([], [])])
-        I0, Imax0, N0, alpha0, beta0 = 4000, 10000, 10000, 1, 1
-        h_actual = gpm._expected_histogram(I0, Imax0, N0, alpha0, beta0)
-        Imax, alpha, beta = gpm._fit_histogram_fixed_N(
-            h_actual, N0, regularization_param=0.01
-        )
+        I0, N0, alpha0, beta0 = 4000, 10000, 1, 1
+        h_actual = gpm._expected_histogram(I0, I0 / 0.1, N0, alpha0, beta0)
+        Imax, alpha, beta = gpm._fit_histogram_fixed_N(h_actual, N0)
         Ih = np.sum([h_actual[i] * (i + 1) for i in range(len(h_actual))])
         h_predicted = gpm._expected_histogram(Ih, Imax, N0, alpha, beta)
         for i in range(len(h_actual)):
@@ -146,22 +133,14 @@ class GammaPoissonModelTest(absltest.TestCase):
                 f"Got {h_predicted[i]} Expected {h_actual[i]}",
             )
 
-    @patch(
-        "wfa_planning_evaluation_framework.models.gamma_poisson_model.MAXIMUM_BASIN_HOPS",
-        1,
-    )
     def test_fit_variable_N(self):
         h_actual = [2853, 813, 230, 64, 17, 4, 1, 0, 0, 0]
         rp = ReachPoint([4000], h_actual)
         gpm = GammaPoissonModel([rp])
         gpm._fit()
-        self.assertAlmostEqual(gpm._max_reach, 10000, delta=100)
-        self.assertAlmostEqual(gpm._alpha, 1.0, delta=0.05)
+        self.assertAlmostEqual(gpm._max_reach, 9500, delta=100)
+        self.assertAlmostEqual(gpm._alpha, 1.12, delta=0.05)
 
-    @patch(
-        "wfa_planning_evaluation_framework.models.gamma_poisson_model.MAXIMUM_BASIN_HOPS",
-        1,
-    )
     def test_fit_fixed_N(self):
         # Imax = 4000, N = 10000, alpha = 1, beta = 1
         h_actual = [2853, 813, 230, 64, 17, 4, 1, 0, 0, 0]
@@ -171,10 +150,6 @@ class GammaPoissonModelTest(absltest.TestCase):
         self.assertAlmostEqual(gpm._max_reach, 10000, delta=10)
         self.assertAlmostEqual(gpm._alpha, 1.0, delta=0.05)
 
-    @patch(
-        "wfa_planning_evaluation_framework.models.gamma_poisson_model.MAXIMUM_BASIN_HOPS",
-        1,
-    )
     def test_by_impressions(self):
         # Imax = 25000, N = 10000, alpha = 5, beta = 2
         h_training = [8124, 5464, 3191, 1679, 815, 371, 159, 64, 23, 6, 0]
@@ -195,15 +170,11 @@ class GammaPoissonModelTest(absltest.TestCase):
         self.assertAlmostEqual(rp.spends[0], 100.0)
         for i in range(len(h_actual)):
             self.assertTrue(
-                (h_actual[i] - h_expected[i]) ** 2 < 15,
+                (h_actual[i] - h_expected[i]) ** 2 < 50,
                 f"Discrepancy found at position {i}. "
                 f"Got {h_actual[i]} Expected {h_expected[i]}",
             )
 
-    @patch(
-        "wfa_planning_evaluation_framework.models.gamma_poisson_model.MAXIMUM_BASIN_HOPS",
-        1,
-    )
     def test_by_spend(self):
         # Imax = 25000, N = 10000, alpha = 5, beta = 2
         h_training = [8124, 5464, 3191, 1679, 815, 371, 159, 64, 23, 6, 0]
@@ -217,7 +188,7 @@ class GammaPoissonModelTest(absltest.TestCase):
         self.assertAlmostEqual(rp.spends[0], 100.0)
         for i in range(len(h_actual)):
             self.assertTrue(
-                (h_actual[i] - h_expected[i]) ** 2 < 15,
+                (h_actual[i] - h_expected[i]) ** 2 < 50,
                 f"Discrepancy found at position {i}. "
                 f"Got {h_actual[i]} Expected {h_expected[i]}",
             )

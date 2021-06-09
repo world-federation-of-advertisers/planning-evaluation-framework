@@ -52,7 +52,9 @@ class M3Strategy(ModelingStrategy):
         p = len(params.campaign_spend)
 
         # TODO: Compute total budget usage with advanced composition or PLD's
-        per_request_budget = PrivacyBudget(budget.epsilon / p, budget.delta / p)
+        per_request_budget = PrivacyBudget(
+            budget.epsilon / (2 * p + 1), budget.delta / (2 * p + 1)
+        )
 
         total_reach = halo.simulated_reach_by_spend(
             params.campaign_spend, per_request_budget

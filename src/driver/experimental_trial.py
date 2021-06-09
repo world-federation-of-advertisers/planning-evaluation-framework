@@ -151,12 +151,12 @@ class ExperimentalTrial:
         """Returns path of file where the results of this trial are stored."""
         trial_name = (
             str(self._modeling_strategy_descriptor)
-            + "+"
+            + ","
             + str(self._simulation_params)
-            + "+"
+            + ","
             + str(self._experiment_params)
         )
-        return "{}+{}+{}".format(self._experiment_dir, self._data_set_name, trial_name)
+        return "{},{},{}".format(self._experiment_dir, self._data_set_name, trial_name)
 
     def _make_independent_vars_dataframe(self) -> pd.DataFrame:
         """Returns a 1-row DataFrame of independent variables for this trial."""

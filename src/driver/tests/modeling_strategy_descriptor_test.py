@@ -70,7 +70,7 @@ class ModelingStrategyDescriptorTest(absltest.TestCase):
         self.assertEqual(strategy._single_pub_model_kwargs, {})
         self.assertEqual(strategy._multi_pub_model, PairwiseUnionReachSurface)
         self.assertEqual(strategy._multi_pub_model_kwargs, {})
-        self.assertEqual(str(desc), "fake:x=1:goerg:pairwise_union")
+        self.assertEqual(str(desc), "fake(x=1),goerg,pairwise_union")
 
 
 if __name__ == "__main__":

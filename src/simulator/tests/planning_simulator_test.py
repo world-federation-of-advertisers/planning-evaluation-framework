@@ -47,7 +47,7 @@ class FakeReachSurface:
 class FakeModelingStrategy(ModelingStrategy):
     def __init__(self):
         pass
-    
+
     def fit(self, halo, params, budget):
         return FakeReachSurface()
 

@@ -66,9 +66,10 @@ class ExperimentParameters(NamedTuple):
         return TEST_POINT_STRATEGIES[self.test_point_strategy](data_set, rng)
 
     def __str__(self) -> str:
-        pstrings = ["epsilon={}".format(self.privacy_budget.epsilon)]
-        pstrings.append("delta={}".format(self.privacy_budget.delta))
-        pstrings.append("replica_id={}".format(self.replica_id))
-        pstrings.append("max_frequency={}".format(self.max_frequency))
-        pstrings.append("test_point_strategy={}".format(self.test_point_strategy))
-        return ":".join(pstrings)
+        return (
+            f"epsilon={self.privacy_budget.epsilon}"
+            f",delta={self.privacy_budget.delta}"
+            f",replica_id={self.replica_id}"
+            f",max_frequency={self.max_frequency}"
+            f",test_point_strategy={self.test_point_strategy}"
+        )

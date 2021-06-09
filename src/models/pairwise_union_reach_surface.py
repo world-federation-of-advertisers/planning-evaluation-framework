@@ -18,6 +18,7 @@ import numpy as np
 from cvxopt import matrix
 from cvxopt import solvers
 from typing import Iterable
+from typing import List
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.models.reach_surface import ReachSurface
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
@@ -49,7 +50,7 @@ class PairwiseUnionReachSurface(ReachSurface):
 
   def get_reach_vector(self, impressions: Iterable[int]) -> Iterable[int]:
     return [
-        reach_curve.by_impressions(impression).reach()
+        reach_curve.by_impressions([impression]).reach()
         for reach_curve, impression in zip(self._reach_curves, impressions)
     ]
 
@@ -66,6 +67,13 @@ class PairwiseUnionReachSurface(ReachSurface):
     ])
 
     return ReachPoint(impressions, [reach_sum - overlap])
+
+  def by_spend(self, spend: List[float], max_frequency: int = 1) -> ReachPoint:
+      """Returns the estimated reach for a given spend vector."""
+      impressions = [self._reach_curves[i].impressions_for_spend(spend[i])
+                     for i in range(len(spend))]
+      return self.by_impressions(impressions, max_frequency=max_frequency)
+        
 
   def get_constraints(self):
     G1 = -matrix(np.eye(self._p * self._p))

@@ -100,3 +100,7 @@ class ReachCurve(ReachSurface):
           possible reach.
         """
         return self._by_quantile(quantile, self.by_spend)
+
+    def impressions_for_spend(self, spend: float) -> int:
+        """Converts spend to impressions."""
+        raise NotImplementedError()

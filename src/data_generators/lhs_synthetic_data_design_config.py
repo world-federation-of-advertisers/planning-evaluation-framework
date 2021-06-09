@@ -49,41 +49,16 @@ NUM_SAMPLES_FOR_LHS = 3
 NUM_RANDOM_REPLICAS = 2
 
 
-class TestLHSSyntheticDataDesignConfig(SyntheticDataDesignConfig):
+class LHSSyntheticDataDesignConfig(SyntheticDataDesignConfig):
     """Generates a DataDesign using LHS from a synthetic grid."""
 
     @classmethod
-    def get_rounded_lhs_design(cls, variable_grid_axes):
-        levels = [
-            len(variable_levels)
-            for variable_levels in list(variable_grid_axes.values())
-        ]
-        design = lhs(n=len(levels), samples=NUM_SAMPLES_FOR_LHS, criterion="maximin")
-        return (design * np.array(levels)).astype("int32")
+    def get_lhs_design(cls, variable_grid_axes: Dict[str, List[float]]):
+        pass
 
     @classmethod
-    def get_grid_axes(cls) -> Dict[str, List[int]]:
-        grid_axes = OrderedDict()
-        grid_axes[NUM_PUBS] = [1, 2, 5]
-        grid_axes[LARGEST_PUB_SIZE] = [100, 1000]
-        grid_axes[PUB_RATIO] = [1, 0.5, 0.3, 0.1]
-        grid_axes[IMG_GEN_PARAMS] = [
-            GeneratorParameters(
-                generator=HomogeneousImpressionGenerator, params={"poisson_lambda": 2}
-            ),
-            GeneratorParameters(
-                generator=HomogeneousImpressionGenerator, params={"poisson_lambda": 5}
-            ),
-        ]
-        grid_axes[PRICE_GEN_PARAMS] = [
-            GeneratorParameters(
-                generator=FixedPriceGenerator, params={"cost_per_impression": 0.1}
-            )
-        ]
-        grid_axes[OVERLAP_GEN_PARAMS] = [
-            GeneratorParameters(generator=IndependentOverlapDataSet, params={})
-        ]
-        return grid_axes
+    def get_grid_axes(cls) -> Dict[str, List[float]]:
+        pass
 
     @classmethod
     def get_params_dict(cls, lhs_trial: List[int], grid_axes: OrderedDict):
@@ -99,7 +74,7 @@ class TestLHSSyntheticDataDesignConfig(SyntheticDataDesignConfig):
         cls, random_generator: Generator
     ) -> List[DataSetParameters]:
         grid_axes = cls.get_grid_axes()
-        lhs_design = cls.get_rounded_lhs_design(grid_axes)
+        lhs_design = cls.get_lhs_design(grid_axes)
 
         return [
             cls.get_data_set_params(

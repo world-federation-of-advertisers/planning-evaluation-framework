@@ -79,3 +79,21 @@ class TestRoundedLHSSyntheticDataDesignConfig(LHSSyntheticDataDesignConfig):
             GeneratorParameters(generator=IndependentOverlapDataSet, params={})
         ]
         return grid_axes
+
+    @classmethod
+    def get_data_set_params(
+        cls, params_dict, random_generator: Generator
+    ) -> DataSetParameters:
+        for gen_param in RANDOMIZATION_NEEDED_GEN_PARAMS:
+            params_dict[gen_param].params["random_generator"] = random_generator
+        params_dict[OVERLAP_GEN_PARAMS].params["universe_size"] = (
+            params_dict[LARGEST_PUB_SIZE] * 10
+        )
+        return DataSetParameters(
+            num_publishers=params_dict[NUM_PUBS],
+            largest_publisher_size=params_dict[LARGEST_PUB_SIZE],
+            largest_to_smallest_publisher_ratio=params_dict[PUB_RATIO],
+            pricing_generator_params=params_dict[PRICE_GEN_PARAMS],
+            impression_generator_params=params_dict[IMG_GEN_PARAMS],
+            overlap_generator_params=params_dict[OVERLAP_GEN_PARAMS],
+        )

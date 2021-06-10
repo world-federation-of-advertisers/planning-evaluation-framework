@@ -23,16 +23,28 @@ from wfa_planning_evaluation_framework.data_generators.impression_generator impo
 
 
 class HomogeneousImpressionGenerator(ImpressionGenerator):
+<<<<<<< HEAD
+  """Generate a random sequence of viewer id's of ad impressions.
+=======
     """Generate a random sequence of viewer id's of ad impressions.
+>>>>>>> origin/uakyol-restricted-pairwise
     This class, along with PricingGenerator, assists in the generation of
     random PublisherDataFiles.  The ImpressionGenerator will generate a
     sequence of random impressions according to specified criteria.
     """
 
+<<<<<<< HEAD
+  def __init__(self,
+               n: int,
+               poisson_lambda: float,
+               random_generator: Generator = None):
+    """Constructor for the HomogeneousImpressionGenerator.
+=======
     def __init__(
         self, n: int, poisson_lambda: float, random_generator: Generator = None
     ):
         """Constructor for the HomogeneousImpressionGenerator.
+>>>>>>> origin/uakyol-restricted-pairwise
         For each user, the number of impressions assigned to that user is
         determined by drawing from a shifted Poisson distribution with fixed
         parameter lambda.  The Poisson distribution is shifted by one.  E.g.,
@@ -43,6 +55,18 @@ class HomogeneousImpressionGenerator(ImpressionGenerator):
             determines viewing frequencies.
           random_state:  An instance of numpy.random.RandomState that is used
             for making draws from the Poisson distribution.
+<<<<<<< HEAD
+    """
+    self._poisson_lambda = poisson_lambda
+    self._n = n
+    if random_generator:
+      self.random_generator = random_generator
+    else:
+      self.random_generator = default_rng()
+
+  def __call__(self) -> List[int]:
+    """Generate a random sequence of impressions.
+=======
         """
         self._poisson_lambda = poisson_lambda
         self._n = n
@@ -53,6 +77,7 @@ class HomogeneousImpressionGenerator(ImpressionGenerator):
 
     def __call__(self) -> List[int]:
         """Generate a random sequence of impressions.
+>>>>>>> origin/uakyol-restricted-pairwise
         Returns:
           A list of randomly generated user id's.  An id may occur multiple
           times in the output list, representing the fact that the user may

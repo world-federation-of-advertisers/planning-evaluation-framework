@@ -48,15 +48,7 @@ flags.DEFINE_integer("random_seed", 1, "Seed for the np.random.Generator.")
 name_to_config_dict = {"test": TestSyntheticDataDesignConfig}
 
 
-<<<<<<< HEAD:src/data_generators/synthetic_data_generator.py
-class SyntheticDataGenerator:
-=======
 class SyntheticDataDesignGenerator():
-<<<<<<< HEAD
->>>>>>> 26f2b1c (getting there):src/data_generators/synthetic_data_design_generator.py
-=======
-  
->>>>>>> 7844f46 (addressed comments)
   """Generates a DataDesign with synthetic data derived from parameters.
 
     This class translates a SyntheticDataDesignConfig object to a DataDesign by
@@ -102,19 +94,10 @@ class SyntheticDataDesignGenerator():
 
 
 def main(argv):
-<<<<<<< HEAD:src/data_generators/synthetic_data_generator.py
-  data_generator = SyntheticDataGenerator(
-      FLAGS.output_folder,
-      FLAGS.random_seed,
-      name_to_config_dict[FLAGS.data_design_config],
-  )
-  data_generator()
-=======
   data_design_generator = SyntheticDataDesignGenerator(
       FLAGS.output_folder, FLAGS.random_seed,
       name_to_config_dict[FLAGS.data_design_config])
   data_design_generator()
->>>>>>> 26f2b1c (getting there):src/data_generators/synthetic_data_design_generator.py
 
 
 if __name__ == "__main__":

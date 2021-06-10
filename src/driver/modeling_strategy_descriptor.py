@@ -35,6 +35,8 @@ from wfa_planning_evaluation_framework.simulator.modeling_strategy import (
 # corresponding classes that implement them.
 SINGLE_PUB_MODELS = {
     "goerg": GoergModel,
+    # TODO: Uncomment the following after the Gamma-Poisson model is implemented.
+    #  'gamma_poisson': GammaPoissonModel,
 }
 
 # A dictionary mapping names of multipublisher models to the
@@ -42,6 +44,10 @@ SINGLE_PUB_MODELS = {
 MULTI_PUB_MODELS = {
     "pairwise_union": PairwiseUnionReachSurface,
     "restricted_pairwise_union": RestrictedPairwiseUnionReachSurface,
+    # TODO: Uncomment the following after the Dirac Mixture model is implemented.
+    # 'dirac_mixture': DiracMixtureReachSurface,
+    # TODO: Uncomment the following after the Generalized Mixture model is implemented.
+    # 'generalized_mixture': GeneralizedMixtureReachSurface,
 }
 
 # A dictionary mapping names of modeling strategies to the
@@ -84,19 +90,26 @@ class ModelingStrategyDescriptor(NamedTuple):
             self.single_pub_model_kwargs,
             MULTI_PUB_MODELS[self.multi_pub_model],
             self.multi_pub_model_kwargs,
-            **self.strategy_kwargs
+            **self.strategy_kwargs,
         )
 
     def _dict_to_string(self, s: str, d: Dict) -> str:
+        """Example output:  s(a=b,c=d,e=f)"""
         if not d:
             return s
-        return s + ":" + ",".join(["{}={}".format(k, v) for (k, v) in d.items()])
+        return s + "(" + ",".join([f"{k}={v}" for (k, v) in d.items()]) + ")"
 
     def __str__(self) -> str:
+        """Returns string representing this modeling strategy.
+
+        Example outputs:
+          m3_strategy,goerg,pairwise_union
+          m3_strategy(split=0.2),goerg,pairwise_union(penalty=0.1)
+        """
         return (
             self._dict_to_string(self.strategy, self.strategy_kwargs)
-            + ":"
+            + ","
             + self._dict_to_string(self.single_pub_model, self.single_pub_model_kwargs)
-            + ":"
+            + ","
             + self._dict_to_string(self.multi_pub_model, self.multi_pub_model_kwargs)
         )

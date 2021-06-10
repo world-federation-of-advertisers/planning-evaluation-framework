@@ -21,93 +21,118 @@ from cvxopt import solvers
 from typing import Iterable
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
-from wfa_planning_evaluation_framework.models.pairwise_union_reach_surface import PairwiseUnionReachSurface
+from wfa_planning_evaluation_framework.models.pairwise_union_reach_surface import (
+    PairwiseUnionReachSurface,
+)
 
 
 class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
-  """Models reach with the pairwise union overlap model."""
+    """Models reach with the pairwise union overlap model."""
 
-  def __init__(self, reach_curves: Iterable[ReachCurve],
-               reach_points: Iterable[ReachPoint]):
-    """Constructor for RestrictedPaiwiseUnionReachSurface.
+    def __init__(
+        self, reach_curves: Iterable[ReachCurve], reach_points: Iterable[ReachPoint]
+    ):
+        """Constructor for RestrictedPaiwiseUnionReachSurface.
 
-    Args:
-      reach_curves: A list of ReachCurves to be used in model fitting and reach
-        prediction.
-      reach_points: A list of ReachPoints to which the model is to be fit. This
-        is parallel to the reach_curves list. The reach point at ith poisition
-        is drawn from ith reach curve.
-    """
-    super().__init__(reach_curves=reach_curves, reach_points=reach_points)
+        Args:
+          reach_curves: A list of ReachCurves to be used in model fitting and reach
+            prediction.
+          reach_points: A list of ReachPoints to which the model is to be fit. This
+            is parallel to the reach_curves list. The reach point at ith poisition
+            is drawn from ith reach curve.
+        """
+        super().__init__(reach_curves=reach_curves, reach_points=reach_points)
 
-  def _fit(self) -> None:
-    self._reach_vectors = np.array([
-        self.get_reach_vector(reach_point.impressions)
-        for reach_point in self._data
-    ])
-    res = minimize(
-        fun=lambda x: self.loss(x),
-        x0=np.array([0] * self._p),
-        constraints=self.get_constraints())
-    self.construct_a_from_lambda(res['x'])
+    def _fit(self) -> None:
+        self._reach_vectors = np.array(
+            [
+                self.get_reach_vector(reach_point.impressions)
+                for reach_point in self._data
+            ]
+        )
+        cons = self.get_constraints()
+        res = minimize(
+            fun=lambda x: self.loss(x),
+            x0=np.array([2 / self._p] * self._p) / 2,
+            constraints=cons,
+            method="trust-constr",
+            options={"disp": True},
+        )
+        self.construct_a_from_lambda(res["x"])
 
-  def construct_a_from_lambda(self, lbd):
-    """Get value of flattened a matrix from lamdas.
+    def construct_a_from_lambda(self, lbd):
+        """Get value of flattened a matrix from lamdas.
 
-    Args:
-      lbd: a length p vector indicating lambda_i for each pub.
+        Args:
+          lbd: a length p vector indicating lambda_i for each pub.
 
-    Returns:
-      the value of flattened a matrix.
-    """
-    self._a = np.ones(self._p * self._p)
-    for i in range(self._p):
-      for j in range(self._p):
-        self._a[i * self._p + j] = lbd[i] * lbd[j] if i != j else 0
+        Returns:
+          the value of flattened a matrix.
+        """
+        self._a = np.ones(self._p * self._p)
+        for i in range(self._p):
+            for j in range(self._p):
+                self._a[i * self._p + j] = lbd[i] * lbd[j] if i != j else 0
 
-  def get_constraints(self):
-    """Get constraints to be used in optimization.
+    def get_constraints(self):
+        """Get constraints to be used in optimization.
 
-    Returns:
-      the list of constraint functions
-    """
+        Returns:
+          the list of constraint functions
+        """
 
-    cons = []
-    for i in range(self._p):
-      # All lambdas are non negative : lbd[i] >= 0
-      cons.append({'type': 'ineq', 'fun': lambda x: x[i]})
-      # Lambda j sum times Lambda i is less than 1 : 1 - lbd[i] * sum(lbd) >= 0
-      cons.append({'type': 'ineq', 'fun': lambda x: 1 - x[i] * sum(x)})
-    return cons
+        cons = []
+        for i in range(self._p):
+            # All lambdas are non negative : lbd[i] >= 0
+            cons.append({"type": "ineq", "fun": lambda x: x[i]})
+            # Lambda j sum times Lambda i is less than 1 : 1 - lbd[i] * sum(lbd) >= 0
+            cons.append({"type": "ineq", "fun": lambda x: 1 - x[i] * sum(x)})
+        return cons
 
-  def evaluate_point(self, lbd, reach_vector):
-    """Evaluate reach at a point.
+    def evaluate_point(self, lbd, reach_vector):
+        """Evaluate reach at a point.
 
-    Args:
-      lbd: a length p vector indicating lambda_i for each pub.
-      reach_vector: a length p vector indicating the single-pub reach of each
-        pub at a single data point.
+        Args:
+          lbd: a length p vector indicating lambda_i for each pub.
+          reach_vector: a length p vector indicating the single-pub reach of each
+            pub at a single data point.
 
-    Returns:
-      the value of union reach at the given point.
-    """
-    reach_sum = sum(reach_vector)
-    overlap = sum([
-        (lbd[i] * lbd[j] * reach_vector[i] * reach_vector[j]) /
-        (max(self._reach_curves[i].max_reach, self._reach_curves[j].max_reach) *
-         2) for i in range(self._p - 1) for j in range(i, self._p)
-    ])
-    return reach_sum - overlap
+        Returns:
+          the value of union reach at the given point.
+        """
+        reach_sum = sum(reach_vector)
+        overlap = sum(
+            [
+                (lbd[i] * lbd[j] * reach_vector[i] * reach_vector[j])
+                / (
+                    max(
+                        self._reach_curves[i].max_reach, self._reach_curves[j].max_reach
+                    )
+                    * 2
+                )
+                for i in range(self._p - 1)
+                for j in range(i, self._p)
+            ]
+        )
+        return reach_sum - overlap
 
-  def loss(self, lbd):
-    """Get value of loss function.
+    def loss(self, lbd):
+        """Get value of loss function.
 
-    Args:
-      lbd: a length p vector indicating lambda_i for each pub.
+        Args:
+          lbd: a length p vector indicating lambda_i for each pub.
 
-    Returns:
-      the value of fitted union reach.
-    """
-    return sum([(self._data[k].reach() -
-                 self.evaluate_point(lbd, self._reach_vectors[k]))**2
-                for k in range(self._n)])
+        Returns:
+          the value of fitted union reach.
+        """
+        val = sum(
+            [
+                (
+                    self._data[k].reach()
+                    - self.evaluate_point(lbd, self._reach_vectors[k])
+                )
+                ** 2
+                for k in range(self._n)
+            ]
+        )
+        return val

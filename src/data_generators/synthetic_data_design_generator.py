@@ -21,25 +21,34 @@ from typing import List
 from wfa_planning_evaluation_framework.data_generators.data_design import DataDesign
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.data_generators.data_set_parameters import (
-    DataSetParameters, GeneratorParameters)
-from wfa_planning_evaluation_framework.data_generators.pricing_generator import PricingGenerator
-from wfa_planning_evaluation_framework.data_generators.fixed_price_generator import FixedPriceGenerator
-from wfa_planning_evaluation_framework.data_generators.impression_generator import ImpressionGenerator
-from wfa_planning_evaluation_framework.data_generators.homogeneous_impression_generator import HomogeneousImpressionGenerator
-from wfa_planning_evaluation_framework.data_generators.publisher_data import PublisherData
-from wfa_planning_evaluation_framework.data_generators.test_synthetic_data_design_config import TestSyntheticDataDesignConfig
-from wfa_planning_evaluation_framework.data_generators.synthetic_data_design_config import SyntheticDataDesignConfig
+    DataSetParameters,
+    GeneratorParameters,
+)
+from wfa_planning_evaluation_framework.data_generators.pricing_generator import (
+    PricingGenerator,)
+from wfa_planning_evaluation_framework.data_generators.fixed_price_generator import (
+    FixedPriceGenerator,)
+from wfa_planning_evaluation_framework.data_generators.impression_generator import (
+    ImpressionGenerator,)
+from wfa_planning_evaluation_framework.data_generators.homogeneous_impression_generator import (
+    HomogeneousImpressionGenerator,)
+from wfa_planning_evaluation_framework.data_generators.publisher_data import (
+    PublisherData,)
+from wfa_planning_evaluation_framework.data_generators.test_synthetic_data_design_config import (
+    TestSyntheticDataDesignConfig,)
+from wfa_planning_evaluation_framework.data_generators.synthetic_data_design_config import (
+    SyntheticDataDesignConfig,)
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('output_folder', 'TestDataDesign', 'Output Folder.')
-flags.DEFINE_string('data_design_config', 'TestConfig', 'Data Desgin Config.')
-flags.DEFINE_integer('random_seed', 1, 'Seed for the np.random.Generator.')
+flags.DEFINE_string("output_folder", "TestDataDesign", "Output Folder.")
+flags.DEFINE_string("data_design_config", "TestConfig", "Data Desgin Config.")
+flags.DEFINE_integer("random_seed", 1, "Seed for the np.random.Generator.")
 
-name_to_config_dict = {'test': TestSyntheticDataDesignConfig}
+name_to_config_dict = {"test": TestSyntheticDataDesignConfig}
 
 
-class SyntheticDataGenerator():
+class SyntheticDataDesignGenerator():
   """Generates a DataDesign with synthetic data derived from parameters.
 
     This class translates a SyntheticDataDesignConfig object to a DataDesign by
@@ -74,22 +83,22 @@ class SyntheticDataGenerator():
                   **params.pricing_generator_params.params),
               self.get_publisher_name(publisher)))
       publisher_size = math.floor(publisher_size * publisher_size_decay_rate)
-
+      
     return params.overlap_generator_params.generator(
         unlabeled_publisher_data_list=publishers,
         name=self._config.get_data_set_name(params, self._random_generator),
         **params.overlap_generator_params.params)
 
   def get_publisher_name(self, publisher_num: str) -> str:
-    return 'publisher_' + str(publisher_num + 1)
+    return "publisher_" + str(publisher_num + 1)
 
 
 def main(argv):
-  data_generator = SyntheticDataGenerator(
+  data_design_generator = SyntheticDataDesignGenerator(
       FLAGS.output_folder, FLAGS.random_seed,
       name_to_config_dict[FLAGS.data_design_config])
-  data_generator()
+  data_design_generator()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
   app.run(main)

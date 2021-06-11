@@ -30,6 +30,7 @@ class LinearCappedReachCurve(ReachCurve):
 
     def _fit(self) -> None:
         self._max_reach = self._data[0].reach()
+        self._cpi = 10
 
     def by_impressions(self, impressions: [int], max_frequency: int = 1) -> ReachPoint:
         """Returns the estimated reach for a given impression vector."""
@@ -39,22 +40,32 @@ class LinearCappedReachCurve(ReachCurve):
         ]
         return ReachPoint(impressions, kplus_frequencies)
 
+    def impressions_for_spend(self, spend: float) -> int:
+        if not self._cpi:
+            raise ValueError("Impression cost is not known for this ReachPoint.")
+        return spend / self._cpi
+
 
 class PairwiseUnionReachSurfaceTest(absltest.TestCase):
     def assertPointsAlmostEqualToPrediction(
         self, surface, reach_points, tolerance=0.0001
     ):
         for reach_point in reach_points:
+            prediction = (
+                surface.by_spend(reach_point.spends)
+                if (reach_point.spends)
+                else surface.by_impressions(reach_point.impressions)
+            )
             self.assertAlmostEqual(
-                surface.by_impressions(reach_point.impressions).reach(),
+                prediction.reach(),
                 reach_point.reach(),
                 delta=reach_point.reach() * tolerance,
             )
 
-    def generate_true_reach(self, a, reach_curves, impressions):
+    def generate_true_reach(self, a, reach_curves, impressions, spends=None):
         p = len(reach_curves)
         reach_vector = [
-            reach_curve.by_impressions(impression).reach()
+            reach_curve.by_impressions([impression]).reach()
             for reach_curve, impression in zip(reach_curves, impressions)
         ]
         reach = sum(reach_vector)
@@ -63,12 +74,14 @@ class PairwiseUnionReachSurfaceTest(absltest.TestCase):
                 reach -= (a[i * p + j] * reach_vector[i] * reach_vector[j]) / (
                     max(reach_curves[i].max_reach, reach_curves[j].max_reach) * 2
                 )
-        return ReachPoint(impressions, [reach])
+        return ReachPoint(impressions, [reach], spends)
 
-    def generate_true_reach_independent(self, universe_size, reach_curves, impressions):
+    def generate_true_reach_independent_two_pubs(
+        self, universe_size, reach_curves, impressions
+    ):
         p = len(reach_curves)
         reach_vector = [
-            reach_curve.by_impressions(impression).reach()
+            reach_curve.by_impressions([impression]).reach()
             for reach_curve, impression in zip(reach_curves, impressions)
         ]
         reach = sum(reach_vector) - (reduce(operator.mul, reach_vector) / universe_size)
@@ -102,18 +115,31 @@ class PairwiseUnionReachSurfaceTest(absltest.TestCase):
         return true_a
 
     def generate_reach_points(
-        self, true_a, reach_curves, size, universe_size, random_seed
+        self, true_a, reach_curves, size, universe_size, random_seed, from_spend=False
     ):
         reach_points = []
         random_generator = np.random.default_rng(random_seed)
         for _ in range(size):
-            impressions = [
-                [random_generator.uniform(0, universe_size / 2)]
-                for _ in range(len(reach_curves))
-            ]
-            reach_points.append(
-                self.generate_true_reach(true_a, reach_curves, impressions)
-            )
+            if from_spend:
+                spends = [
+                    random_generator.uniform(0, universe_size / 2)
+                    for _ in range(len(reach_curves))
+                ]
+                impressions = [
+                    reach_curve.impressions_for_spend(spend)
+                    for spend, reach_curve in zip(spends, reach_curves)
+                ]
+                reach_points.append(
+                    self.generate_true_reach(true_a, reach_curves, impressions, spends)
+                )
+            else:
+                impressions = [
+                    random_generator.uniform(0, universe_size / 2)
+                    for _ in range(len(reach_curves))
+                ]
+                reach_points.append(
+                    self.generate_true_reach(true_a, reach_curves, impressions)
+                )
 
         return reach_points
 
@@ -124,11 +150,11 @@ class PairwiseUnionReachSurfaceTest(absltest.TestCase):
         random_generator = np.random.default_rng(random_seed)
         for _ in range(size):
             impressions = [
-                [random_generator.uniform(0, universe_size / 2)]
+                random_generator.uniform(0, universe_size / 2)
                 for _ in range(len(reach_curves))
             ]
             reach_points.append(
-                self.generate_true_reach_independent(
+                self.generate_true_reach_independent_two_pubs(
                     universe_size, reach_curves, impressions
                 )
             )
@@ -152,6 +178,27 @@ class PairwiseUnionReachSurfaceTest(absltest.TestCase):
         surface = PairwiseUnionReachSurface(reach_curves, training_reach_points)
         test_reach_points = self.generate_reach_points(
             true_a, reach_curves, training_size, universe_size, 2
+        )
+        self.assertPointsAlmostEqualToPrediction(surface, training_reach_points)
+        self.assertPointsAlmostEqualToPrediction(surface, test_reach_points)
+
+    def test_by_spend(self):
+        num_publishers = 3
+        training_size = 50
+        universe_size = 200000
+        decay_rate = 0.8
+
+        reach_curves = self.generate_sample_reach_curves(
+            num_publishers, decay_rate, universe_size
+        )
+        true_a = self.generate_sample_matrix_a(num_publishers)
+        training_reach_points = self.generate_reach_points(
+            true_a, reach_curves, training_size, universe_size, 1, True
+        )
+
+        surface = PairwiseUnionReachSurface(reach_curves, training_reach_points)
+        test_reach_points = self.generate_reach_points(
+            true_a, reach_curves, training_size, universe_size, 2, True
         )
         self.assertPointsAlmostEqualToPrediction(surface, training_reach_points)
         self.assertPointsAlmostEqualToPrediction(surface, test_reach_points)
@@ -180,11 +227,11 @@ class PairwiseUnionReachSurfaceTest(absltest.TestCase):
         random_generator = np.random.default_rng(1)
         for _ in range(training_size):
             impressions = [
-                [random_generator.uniform(0, universe_size / 2)]
+                random_generator.uniform(0, universe_size / 2)
                 for _ in range(len(reach_curves))
             ]
             reach_vector = [
-                reach_curve.by_impressions(impression).reach()
+                reach_curve.by_impressions([impression]).reach()
                 for reach_curve, impression in zip(reach_curves, impressions)
             ]
             test_reach_points.append(ReachPoint(impressions, [sum(reach_vector)]))

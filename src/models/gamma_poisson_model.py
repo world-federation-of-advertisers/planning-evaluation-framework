@@ -15,7 +15,7 @@
 
 import numpy as np
 import scipy.stats
-
+from typing import List
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 
@@ -117,7 +117,7 @@ class GammaPoissonModel(ReachCurve):
     found.
     """
 
-    def __init__(self, data: [ReachPoint], max_reach=None):
+    def __init__(self, data: List[ReachPoint], max_reach=None):
         """Constructs a Gamma-Poisson model of underreported count data.
 
         Args:
@@ -125,8 +125,6 @@ class GammaPoissonModel(ReachCurve):
             to be fit.
           max_reach:  Optional.  If specified, the maximum possible reach that can
             be achieved.
-          regularization_parameter:  Optional.  A float specifying a regularization
-            penalty that will be applied to parameter estimates.
         """
         if len(data) != 1:
             raise ValueError("Exactly one ReachPoint must be specified")
@@ -250,11 +248,19 @@ class GammaPoissonModel(ReachCurve):
         return np.sum([h[i] * (i + 1) for i in range(len(h))])
 
     def _feasible_point(self, h):
-        """Returns values of alpha, beta, Imax that could feasibly produce h."""
+        """Returns values of alpha, beta, Imax that could feasibly produce h.
+
+        We start with alpha=1, because a Gamma-Poisson(1,beta) distribution is
+        the same as an Exponential-Poisson(beta), which is the model underlying
+        the Goerg one-point reach curve model.  The value of Imax is chosen so
+        that I/Imax is the constant INVENTORY_IMPRESSION_RATIO.  The value of
+        beta represents a reach point where half of the total available audience
+        is reached.
+        """
         alpha = 1.0
-        I = self._impression_count(h) / IMPRESSION_INVENTORY_RATIO
-        beta = 2 * np.sum(h) * alpha / I
-        return alpha, beta, I
+        Imax = self._impression_count(h) / IMPRESSION_INVENTORY_RATIO
+        beta = 2 * np.sum(h) * alpha / Imax
+        return alpha, beta, Imax
 
     def _fit_histogram_chi2_distance(self, h):
         """Chi-squared fit to histogram h.
@@ -299,15 +305,14 @@ class GammaPoissonModel(ReachCurve):
         Computes parameters alpha, beta, Imax such that the histogram hbar of
         of expected frequencies minimizes the metric
 
-          chi2(h, hbar) = \sum_i (h[i] - hbar[i])^2 / hbar[i]
+          chi2(h, hbar) = \sum_i (h[i] - hbar[i])^2 / hbar[i].
 
-        where lambda is a regularization constant and I is the total number of
-        impressions that were observed in the data.  The value of Imax is
-        taken to satisfy I / Imax = IMPRESSION_INVENTORY_RATIO, where I is
-        number of impressions recorded in the histogram h.  The value of
-        beta is taken to satisfy Imax = N * alpha / beta.  Thus, this
-        is really a one parameter model, and we can use Brent's method
-        to find the optimum.
+        The value of Imax is taken to satisfy I / Imax =
+        IMPRESSION_INVENTORY_RATIO, where I is number of impressions
+        recorded in the histogram h.  The value of beta is taken to
+        satisfy Imax = N * alpha / beta.  Thus, this is really a one
+        parameter model, and we can use Brent's method to find the
+        optimum.
 
         Args:
           h:  np.array specifying the histogram of observed frequencies.
@@ -317,11 +322,11 @@ class GammaPoissonModel(ReachCurve):
         Returns:
           A tuple (Imax, alpha, beta) representing the parameters of the
           best fit that was found.
+
         """
         # Choose a reasonable starting point.
         Iobs = self._impression_count(h)
         Imax = Iobs / IMPRESSION_INVENTORY_RATIO
-        alpha0 = 1
 
         def gamma_obj(alpha):
             """Objective function for optimization."""
@@ -356,7 +361,9 @@ class GammaPoissonModel(ReachCurve):
             self._alpha = alpha
             self._beta = beta
 
-    def by_impressions(self, impressions: [int], max_frequency: int = 1) -> ReachPoint:
+    def by_impressions(
+        self, impressions: List[int], max_frequency: int = 1
+    ) -> ReachPoint:
         """Returns the estimated reach as a function of impressions.
 
         Args:
@@ -385,7 +392,7 @@ class GammaPoissonModel(ReachCurve):
         else:
             return ReachPoint(impressions, kplus_reach[:max_frequency])
 
-    def by_spend(self, spends: [int], max_frequency: int = 1) -> ReachPoint:
+    def by_spend(self, spends: List[int], max_frequency: int = 1) -> ReachPoint:
         """Returns the estimated reach as a function of spend assuming constant CPM
 
         Args:

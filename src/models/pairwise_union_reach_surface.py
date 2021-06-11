@@ -68,8 +68,17 @@ class PairwiseUnionReachSurface(ReachSurface):
         super().__init__(data=reach_points)
 
     def _fit(self) -> None:
-        z, alpha = self.get_z_and_alpha()
-        self._a = self.solve_a_given_z_and_alpha(z, alpha)
+        z, alpha = self._get_z_and_alpha()
+        self._a = self._solve_a_given_z_and_alpha(z, alpha)
+
+    def by_spend(self, spend: Iterable[float], max_frequency: int = 1) -> ReachPoint:
+        return self.by_impressions(
+            [
+                curve.impressions_for_spend(pub_spend)
+                for curve, pub_spend in zip(self._reach_curves, spend)
+            ],
+            max_frequency,
+        )
 
     def get_reach_vector(self, impressions: Iterable[int]) -> Iterable[int]:
         """Calculates single publisher reaches for a given impression vector.
@@ -81,8 +90,9 @@ class PairwiseUnionReachSurface(ReachSurface):
           A list R of length p. The value R[i] is the reach achieved on
           publisher i when impressions[i] impressions are shown.
         """
+
         return [
-            reach_curve.by_impressions(impression).reach()
+            reach_curve.by_impressions([impression]).reach()
             for reach_curve, impression in zip(self._reach_curves, impressions)
         ]
 
@@ -108,7 +118,7 @@ class PairwiseUnionReachSurface(ReachSurface):
 
         return ReachPoint(impressions, [reach_sum - overlap])
 
-    def get_inequality_constraints(self):
+    def _get_inequality_constraints(self):
         """Returns the inequality constraint for the Quadratic Programming solver.
 
         3 types of inequality constraints are stacked in matrix G and vector h:
@@ -130,7 +140,7 @@ class PairwiseUnionReachSurface(ReachSurface):
         )
         return matrix(np.vstack((G1, G2, G3))), h
 
-    def get_equality_constraints(self):
+    def _get_equality_constraints(self):
         """Returns the equality constraint for the Quadratic Programming solver.
 
         2 types of equality constraint is described by matrix A and vector b:
@@ -163,7 +173,7 @@ class PairwiseUnionReachSurface(ReachSurface):
         )
         return matrix(np.vstack((A1, A2))), matrix(b)
 
-    def solve_a_given_z_and_alpha(self, z: List[List[int]], alpha: List[List[int]]):
+    def _solve_a_given_z_and_alpha(self, z: List[List[int]], alpha: List[List[int]]):
         """Optimize for matrix a given z and alpha using Quadratic Programming.
 
         argmin_a sum_{k=1..n} [y^{k} - alpha^{k} - a^T z^{k}]^2 =
@@ -205,13 +215,13 @@ class PairwiseUnionReachSurface(ReachSurface):
             sum((self._data[k].reach() - alpha[k]) * z[k] for k in range(self._n))
         )
 
-        G, h = self.get_inequality_constraints()
-        A, b = self.get_equality_constraints()
+        G, h = self._get_inequality_constraints()
+        A, b = self._get_equality_constraints()
         res = solvers.qp(P, q, G, h, A, b)
 
         return np.array(res["x"]).flatten()
 
-    def get_z_and_alpha(self):
+    def _get_z_and_alpha(self):
         """Get intermidiate quantities z and alpha.
 
         Returns:

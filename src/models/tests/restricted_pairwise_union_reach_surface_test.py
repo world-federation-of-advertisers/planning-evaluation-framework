@@ -22,6 +22,7 @@ from wfa_planning_evaluation_framework.models.restricted_pairwise_union_reach_su
 )
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 
+
 class LinearCappedReachCurve(ReachCurve):
     """Linear ReachCurve that is capped at max_reach."""
 
@@ -42,16 +43,21 @@ class RestrictedPairwiseUnionReachSurfaceTest(absltest.TestCase):
         self, surface, reach_points, tolerance=0.03
     ):
         for reach_point in reach_points:
+            prediction = (
+                surface.by_spend(reach_point.spends)
+                if (reach_point.spends)
+                else surface.by_impressions(reach_point.impressions)
+            )
             self.assertAlmostEqual(
-                surface.by_impressions(reach_point.impressions).reach(),
+                prediction.reach(),
                 reach_point.reach(),
                 delta=reach_point.reach() * tolerance,
             )
 
-    def generate_true_reach(self, a, reach_curves, impressions):
+    def generate_true_reach(self, a, reach_curves, impressions, spends=None):
         p = len(reach_curves)
         reach_vector = [
-            reach_curve.by_impressions(impression).reach()
+            reach_curve.by_impressions([impression]).reach()
             for reach_curve, impression in zip(reach_curves, impressions)
         ]
         reach = sum(reach_vector)
@@ -60,7 +66,7 @@ class RestrictedPairwiseUnionReachSurfaceTest(absltest.TestCase):
                 reach -= (a[i * p + j] * reach_vector[i] * reach_vector[j]) / (
                     max(reach_curves[i].max_reach, reach_curves[j].max_reach) * 2
                 )
-        return ReachPoint(impressions, [reach])
+        return ReachPoint(impressions, [reach], spends)
 
     def generate_sample_reach_curves(self, num_publishers, decay_rate, universe_size):
         max_reaches = [
@@ -87,7 +93,7 @@ class RestrictedPairwiseUnionReachSurfaceTest(absltest.TestCase):
         random_generator = np.random.default_rng(random_seed)
         for _ in range(size):
             impressions = [
-                [random_generator.uniform(0, universe_size / 2)]
+                random_generator.uniform(0, universe_size / 2)
                 for _ in range(len(reach_curves))
             ]
             reach_points.append(

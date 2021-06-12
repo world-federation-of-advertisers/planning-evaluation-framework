@@ -105,7 +105,7 @@ class ReachPoint:
     def user_counts_to_frequencies(
         counts: Dict[int, int], max_frequency: int
     ) -> List[int]:
-        """Constructs k+ reaches from a dictionary of per-id reach counts.
+        """Constructs frequency counts from a dictionary of per-id reach counts.
 
         Args:
           counts: A dictionary mapping user id to the number of times that
@@ -113,8 +113,8 @@ class ReachPoint:
           max_frequency: The maximum frequency to include in the output
             list of k+ reaches.
         Returns:
-          kplus_reaches, where kplus_reaches[k] is the number of people
-            reached k+1 or more times.
+          frequency_counts: List of frequencies with frequency cap, where 
+            frequencies[i] is the number of people reached exactly i+1 times.
         """
         frequency_counts = [0] * max_frequency
         for c in counts.values():

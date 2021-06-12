@@ -113,7 +113,7 @@ class ReachPoint:
           max_frequency: The maximum frequency to include in the output
             list of k+ reaches.
         Returns:
-          frequency_counts: List of frequencies with frequency cap, where 
+          frequency_counts: List of frequencies with frequency cap, where
             frequencies[i] is the number of people reached exactly i+1 times.
         """
         frequency_counts = [0] * max_frequency
@@ -136,7 +136,7 @@ class ReachPoint:
           kplus_reaches, where kplus_reaches[k] is the number of people
             reached k+1 or more times.
         """
-        frequency_counts = ReachPoint.user_counts_to_frequencies(counts, max_frequency)
+        kplus_reaches = ReachPoint.user_counts_to_frequencies(counts, max_frequency)
         for i in range(max_frequency - 2, -1, -1):
-            frequency_counts[i] += frequency_counts[i + 1]
-        return frequency_counts
+            kplus_reaches[i] += kplus_reaches[i + 1]
+        return kplus_reaches

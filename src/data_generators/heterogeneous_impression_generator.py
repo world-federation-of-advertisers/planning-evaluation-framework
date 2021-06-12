@@ -14,7 +14,7 @@
 """Generate a stream of impressions from a Poisson distr with Gamma prior."""
 
 from typing import List
-from numpy.random import RandomState
+import numpy as np
 
 from wfa_planning_evaluation_framework.data_generators.impression_generator import (
     ImpressionGenerator,
@@ -29,7 +29,7 @@ class HeterogeneousImpressionGenerator(ImpressionGenerator):
         n: int,
         gamma_shape: float = 1,
         gamma_scale: float = 1,
-        random_state: RandomState = None,
+        random_generator: np.random.Generator = None,
     ):
         """Constructor for the HeterogeneousImpressionGenerator.
 
@@ -47,16 +47,16 @@ class HeterogeneousImpressionGenerator(ImpressionGenerator):
           n:  The number of users.
           gamma_shape:  The shape parameter of the Gamma distribution.
           gamma_scale:  The scale parameter of the Gamma distribution.
-          random_state:  An instance of numpy.random.RandomState that is
+          random_generator:  An instance of numpy.random.Generator that is
             used for making draws from the Poisson distribution.
         """
         self._gamma_shape = gamma_shape
         self._gamma_scale = gamma_scale
         self._n = n
-        if random_state:
-            self._random_state = random_state
+        if random_generator:
+            self._random_generator = random_generator
         else:
-            self._random_state = RandomState()
+            self._random_generator = np.random.default_rng(seed=1)
 
     def __call__(self) -> List[int]:
         """Generate a random sequence of impressions.
@@ -68,9 +68,11 @@ class HeterogeneousImpressionGenerator(ImpressionGenerator):
         """
         impressions = []
         for i in range(self._n):
-            poisson_lambda = self._random_state.gamma(
+            poisson_lambda = self._random_generator.gamma(
                 shape=self._gamma_shape, scale=self._gamma_scale
             )
-            impressions.extend([i] * (1 + self._random_state.poisson(poisson_lambda)))
-        self._random_state.shuffle(impressions)
+            impressions.extend(
+                [i] * (1 + self._random_generator.poisson(poisson_lambda))
+            )
+        self._random_generator.shuffle(impressions)
         return impressions

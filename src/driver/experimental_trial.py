@@ -62,7 +62,7 @@ class ExperimentalTrial:
         experiment_dir: str,
         data_design: DataDesign,
         data_set_name: str,
-        trial_descriptor: TrialDescriptor
+        trial_descriptor: TrialDescriptor,
     ):
         """Constructs an object representing a trial.
 
@@ -118,18 +118,26 @@ class ExperimentalTrial:
             self._dataset, self._trial_descriptor.system_params, self._privacy_tracker
         )
         privacy_budget = self._trial_descriptor.experiment_params.privacy_budget
-        modeling_strategy = self._trial_descriptor.modeling_strategy.instantiate_strategy()
+        modeling_strategy = (
+            self._trial_descriptor.modeling_strategy.instantiate_strategy()
+        )
         reach_surface = modeling_strategy.fit(
             halo, self._trial_descriptor.system_params, privacy_budget
         )
 
-        test_points = self._trial_descriptor.experiment_params.generate_test_points(self._dataset, rng)
+        test_points = self._trial_descriptor.experiment_params.generate_test_points(
+            self._dataset, rng
+        )
         true_reach = [
-            halo.true_reach_by_spend(t, self._trial_descriptor.experiment_params.max_frequency)
+            halo.true_reach_by_spend(
+                t, self._trial_descriptor.experiment_params.max_frequency
+            )
             for t in test_points
         ]
         simulated_reach = [
-            reach_surface.by_spend(t, self._trial_descriptor.experiment_params.max_frequency)
+            reach_surface.by_spend(
+                t, self._trial_descriptor.experiment_params.max_frequency
+            )
             for t in test_points
         ]
 
@@ -157,7 +165,9 @@ class ExperimentalTrial:
                 "single_pub_model": [
                     self._trial_descriptor.modeling_strategy.single_pub_model
                 ],
-                "multi_pub_model": [self._trial_descriptor.modeling_strategy.multi_pub_model],
+                "multi_pub_model": [
+                    self._trial_descriptor.modeling_strategy.multi_pub_model
+                ],
                 "strategy": [self._trial_descriptor.modeling_strategy.strategy],
                 "liquid_legions_sketch_size": [
                     self._trial_descriptor.system_params.liquid_legions.sketch_size
@@ -168,7 +178,9 @@ class ExperimentalTrial:
                 "maximum_reach": [data_set.maximum_reach],
                 "ncampaigns": [data_set.publisher_count],
                 "largest_pub_reach": [max([p.max_reach for p in data_set._data])],
-                "max_frequency": [self._trial_descriptor.experiment_params.max_frequency],
+                "max_frequency": [
+                    self._trial_descriptor.experiment_params.max_frequency
+                ],
             }
         )
         return independent_vars
@@ -184,7 +196,9 @@ class ExperimentalTrial:
                 "privacy_budget_epsilon": [
                     self._trial_descriptor.experiment_params.privacy_budget.epsilon
                 ],
-                "privacy_budget_delta": [self._trial_descriptor.experiment_params.privacy_budget.delta],
+                "privacy_budget_delta": [
+                    self._trial_descriptor.experiment_params.privacy_budget.delta
+                ],
                 "privacy_used_epsilon": [privacy_tracker.privacy_consumption.epsilon],
                 "privacy_used_delta": [privacy_tracker.privacy_consumption.delta],
                 "privacy_mechanisms": [mechanisms_string],

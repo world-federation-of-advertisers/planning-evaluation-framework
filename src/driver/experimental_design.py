@@ -24,9 +24,7 @@ from typing import List
 from typing import Tuple
 
 
-from wfa_planning_evaluation_framework.driver.trial_descriptor import (
-    TrialDescriptor
-)
+from wfa_planning_evaluation_framework.driver.trial_descriptor import TrialDescriptor
 from wfa_planning_evaluation_framework.data_generators.data_design import (
     DataDesign,
 )

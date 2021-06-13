@@ -41,7 +41,7 @@ from wfa_planning_evaluation_framework.simulator.m3_strategy import (
 # corresponding classes that implement them.
 SINGLE_PUB_MODELS = {
     "goerg": GoergModel,
-    'gamma_poisson': GammaPoissonModel,
+    "gamma_poisson": GammaPoissonModel,
 }
 
 # A dictionary mapping names of multipublisher models to the
@@ -58,7 +58,7 @@ MULTI_PUB_MODELS = {
 # A dictionary mapping names of modeling strategies to the
 # corresponding classes that implement them.
 MODELING_STRATEGIES = {
-    'm3strategy': M3Strategy,
+    "m3strategy": M3Strategy,
 }
 
 

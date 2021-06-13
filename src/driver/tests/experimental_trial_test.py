@@ -77,6 +77,7 @@ from wfa_planning_evaluation_framework.driver.trial_descriptor import (
     TrialDescriptor,
 )
 
+
 class FakeReachSurface(ReachSurface):
     def __init__(self):
         self._max_reach = 1
@@ -193,9 +194,7 @@ class ExperimentalTrialTest(absltest.TestCase):
                 PrivacyBudget(1.0, 0.01), 3, 5, "test_point_strategy"
             )
             trial_descriptor = TrialDescriptor(msd, sparams, eparams)
-            trial = ExperimentalTrial(
-                "edir", data_design, "dataset", trial_descriptor
-            )
+            trial = ExperimentalTrial("edir", data_design, "dataset", trial_descriptor)
 
             actual = trial._make_independent_vars_dataframe()
             expected = pd.DataFrame(
@@ -233,9 +232,7 @@ class ExperimentalTrialTest(absltest.TestCase):
             )
             eparams = ExperimentParameters(PrivacyBudget(1.0, 0.01), 3, 5, "tps")
             trial_descriptor = TrialDescriptor(msd, sparams, eparams)
-            trial = ExperimentalTrial(
-                "edir", data_design, "dataset", trial_descriptor
-            )
+            trial = ExperimentalTrial("edir", data_design, "dataset", trial_descriptor)
 
             actual = trial._compute_trial_results_path()
             expected = "{}/{}/{},{},{},{}".format(

@@ -70,6 +70,7 @@ from wfa_planning_evaluation_framework.driver.trial_descriptor import (
     TrialDescriptor,
 )
 
+
 class FakeReachSurface(ReachSurface):
     def __init__(self):
         self._max_reach = 1

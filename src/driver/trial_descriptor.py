@@ -28,6 +28,7 @@ from wfa_planning_evaluation_framework.simulator.system_parameters import (
     SystemParameters,
 )
 
+
 class TrialDescriptor(NamedTuple):
     """Parameters defining a single experimental trial.
 

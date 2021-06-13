@@ -75,10 +75,7 @@ class Experiment:
         for desc in self._trial_descriptors:
             trials.append(
                 ExperimentalTrial(
-                    self._experiment_dir,
-                    self._data_design,
-                    self._data_set_name,
-                    desc
+                    self._experiment_dir, self._data_design, self._data_set_name, desc
                 )
             )
         self._trials = trials

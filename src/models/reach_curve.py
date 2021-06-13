@@ -28,7 +28,7 @@ from wfa_planning_evaluation_framework.models.reach_surface import ReachSurface
 class ReachCurve(ReachSurface):
     """Models reach as a function of scalar spend or impressions."""
 
-    def __init__(self, data: List[ReachPoint], max_reach: int = None):
+    def __init__(self, data: [ReachPoint], max_reach: int = None):
         """Constructor
 
         Args:

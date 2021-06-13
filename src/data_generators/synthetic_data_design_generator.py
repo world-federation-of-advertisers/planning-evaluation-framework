@@ -70,7 +70,8 @@ from wfa_planning_evaluation_framework.data_generators.data_set_parameters impor
     DataSetParameters,
 )
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
-    PublisherData,)
+    PublisherData,
+)
 
 FLAGS = flags.FLAGS
 
@@ -79,68 +80,85 @@ flags.DEFINE_string("data_design", None, "Name of data design configuration")
 flags.DEFINE_integer("random_seed", 1, "Seed for the random number generator")
 flags.DEFINE_bool("verbose", True, "If true, print names of data sets.")
 
-class SyntheticDataDesignGenerator():
-  """Generates a DataDesign with synthetic data derived from parameters.
+
+class SyntheticDataDesignGenerator:
+    """Generates a DataDesign with synthetic data derived from parameters.
 
     This class translates a SyntheticDataDesignConfig object to a DataDesign by
     constructing the underlying objects and managing the publisher sizes.
     """
 
-  def __init__(self, output_folder: str, random_seed: int,
-               data_design_config: str, verbose: bool):
-    self._data_design_config = data_design_config
-    self._random_generator = np.random.default_rng(random_seed)
-    self._output_folder = output_folder
-    self._verbose = verbose
+    def __init__(
+        self,
+        output_folder: str,
+        random_seed: int,
+        data_design_config: str,
+        verbose: bool,
+    ):
+        self._data_design_config = data_design_config
+        self._random_generator = np.random.default_rng(random_seed)
+        self._output_folder = output_folder
+        self._verbose = verbose
 
-  def __call__(self) -> DataDesign:
-    data_design = DataDesign(dirpath=self._output_folder)
-    for data_set_parameters in self._fetch_data_design_config():
-      data_design.add(self._generate_data_set(data_set_parameters))
-    return data_design
+    def __call__(self) -> DataDesign:
+        data_design = DataDesign(dirpath=self._output_folder)
+        for data_set_parameters in self._fetch_data_design_config():
+            data_design.add(self._generate_data_set(data_set_parameters))
+        return data_design
 
-  def _fetch_data_design_config(self) -> List[DataSetParameters]:
-    spec = importlib.util.spec_from_file_location('data_design_generator', self._data_design_config)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules['data_design_generator'] = module
-    spec.loader.exec_module(module)
-    return module.generate_data_design_config(self._random_generator)
-    
-  def _generate_data_set(self, params: DataSetParameters) -> DataSet:
-    if self._verbose:
-      print(params)
-    publishers = []
-    publisher_size = params.largest_publisher_size
-    publisher_size_decay_rate = 1 if params.num_publishers == 1 else params.largest_to_smallest_publisher_ratio**(
-        1 / float(params.num_publishers - 1))
-    for publisher in range(params.num_publishers):
-      publishers.append(
-          PublisherData.generate_publisher_data(
-              params.impression_generator_params.generator(
-                **{'n': publisher_size,
-                   'random_generator': self._random_generator,
-                   **params.impression_generator_params.params}),
-              params.pricing_generator_params.generator(
-                  **params.pricing_generator_params.params),
-              str(publisher+1)))
-      publisher_size = math.floor(publisher_size * publisher_size_decay_rate)
+    def _fetch_data_design_config(self) -> List[DataSetParameters]:
+        spec = importlib.util.spec_from_file_location(
+            "data_design_generator", self._data_design_config
+        )
+        module = importlib.util.module_from_spec(spec)
+        sys.modules["data_design_generator"] = module
+        spec.loader.exec_module(module)
+        return module.generate_data_design_config(self._random_generator)
 
-    overlap_params = {**params.overlap_generator_params.params}
-    if 'random_generator' in overlap_params:
-      overlap_params['random_generator'] = self._random_generator
-      
-    return params.overlap_generator_params.generator(
-        publishers,
-        name=str(params),
-        **overlap_params)
+    def _generate_data_set(self, params: DataSetParameters) -> DataSet:
+        if self._verbose:
+            print(params)
+        publishers = []
+        publisher_size = params.largest_publisher_size
+        publisher_size_decay_rate = (
+            1
+            if params.num_publishers == 1
+            else params.largest_to_smallest_publisher_ratio
+            ** (1 / float(params.num_publishers - 1))
+        )
+        for publisher in range(params.num_publishers):
+            publishers.append(
+                PublisherData.generate_publisher_data(
+                    params.impression_generator_params.generator(
+                        **{
+                            "n": publisher_size,
+                            "random_generator": self._random_generator,
+                            **params.impression_generator_params.params,
+                        }
+                    ),
+                    params.pricing_generator_params.generator(
+                        **params.pricing_generator_params.params
+                    ),
+                    str(publisher + 1),
+                )
+            )
+            publisher_size = math.floor(publisher_size * publisher_size_decay_rate)
+
+        overlap_params = {**params.overlap_generator_params.params}
+        if "random_generator" in overlap_params:
+            overlap_params["random_generator"] = self._random_generator
+
+        return params.overlap_generator_params.generator(
+            publishers, name=str(params), **overlap_params
+        )
 
 
 def main(argv):
-  data_design_generator = SyntheticDataDesignGenerator(
-      FLAGS.output_dir, FLAGS.random_seed,
-      FLAGS.data_design, FLAGS.verbose)
-  data_design_generator()
+    data_design_generator = SyntheticDataDesignGenerator(
+        FLAGS.output_dir, FLAGS.random_seed, FLAGS.data_design, FLAGS.verbose
+    )
+    data_design_generator()
 
 
 if __name__ == "__main__":
-  app.run(main)
+    app.run(main)

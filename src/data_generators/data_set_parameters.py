@@ -25,6 +25,7 @@ from wfa_planning_evaluation_framework.data_generators.homogeneous_impression_ge
     HomogeneousImpressionGenerator,
 )
 
+
 class GeneratorParameters(NamedTuple):
     """Parameters to create one Generator.
 
@@ -41,11 +42,11 @@ class GeneratorParameters(NamedTuple):
 
     def __str__(self):
         if self.params:
-            param_str = ','.join([f"{k}={v}" for k,v in self.params.items()])
+            param_str = ",".join([f"{k}={v}" for k, v in self.params.items()])
             return f"{self.name}({param_str})"
         else:
             return self.name
-        
+
 
 DEFAULT_NUM_PUBLISHERS = 1
 DEFAULT_LARGEST_PUBLISHER_SIZE = 10000
@@ -59,6 +60,7 @@ DEFAULT_IMPRESSION_GENERATOR_PARAMS = GeneratorParameters(
 DEFAULT_OVERLAP_GENERATOR_PARAMS = GeneratorParameters(
     "FullOverlap", DataSet, params={}
 )
+
 
 class DataSetParameters(NamedTuple):
     """Parameters to create one DataSet.
@@ -79,9 +81,13 @@ class DataSetParameters(NamedTuple):
     name: str = ""
     num_publishers: int = DEFAULT_NUM_PUBLISHERS
     largest_publisher_size: int = DEFAULT_LARGEST_PUBLISHER_SIZE
-    largest_to_smallest_publisher_ratio: float = DEFAULT_LARGEST_TO_SMALLEST_PUBLISHER_RATIO
+    largest_to_smallest_publisher_ratio: float = (
+        DEFAULT_LARGEST_TO_SMALLEST_PUBLISHER_RATIO
+    )
     pricing_generator_params: GeneratorParameters = DEFAULT_PRICING_GENERATOR_PARAMS
-    impression_generator_params: GeneratorParameters = DEFAULT_IMPRESSION_GENERATOR_PARAMS
+    impression_generator_params: GeneratorParameters = (
+        DEFAULT_IMPRESSION_GENERATOR_PARAMS
+    )
     overlap_generator_params: GeneratorParameters = DEFAULT_OVERLAP_GENERATOR_PARAMS
     id: str = ""
 
@@ -89,12 +95,12 @@ class DataSetParameters(NamedTuple):
         if self.name:
             return self.name
         else:
-            return (f"P={self.num_publishers},"
-                    f"N={self.largest_publisher_size},"
-                    f"pub_ratio={self.largest_to_smallest_publisher_ratio},"
-                    f"pricing={str(self.pricing_generator_params)},"
-                    f"impressions={str(self.impression_generator_params)},"
-                    f"overlaps={str(self.overlap_generator_params)}"
-                    f"{',id='+self.id if self.id else ''}")
-
-        
+            return (
+                f"P={self.num_publishers},"
+                f"N={self.largest_publisher_size},"
+                f"pub_ratio={self.largest_to_smallest_publisher_ratio},"
+                f"pricing={str(self.pricing_generator_params)},"
+                f"impressions={str(self.impression_generator_params)},"
+                f"overlaps={str(self.overlap_generator_params)}"
+                f"{',id='+self.id if self.id else ''}"
+            )

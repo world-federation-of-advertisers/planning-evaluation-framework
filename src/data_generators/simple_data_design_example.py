@@ -25,19 +25,26 @@ from wfa_planning_evaluation_framework.data_generators.data_set_parameters impor
 # The data design constructs the cartesian product of these parameter settings.
 NUM_PUBLISHERS = [1, 2, 5]
 LARGEST_PUBLISHER = [100, 500, 1000]
-PUBLISHER_RATIOS = [.9, .5, .1]
+PUBLISHER_RATIOS = [0.9, 0.5, 0.1]
 
-def generate_data_design_config(random_generator: np.random.Generator) -> Iterable[DataSetParameters]:
+
+def generate_data_design_config(
+    random_generator: np.random.Generator,
+) -> Iterable[DataSetParameters]:
     """Generates a data design configuration.
 
     This examples illustrates a simple cartesian product of parameter settings.
     """
     data_design_config = []
-    for params in itertools.product(NUM_PUBLISHERS, LARGEST_PUBLISHER, PUBLISHER_RATIOS):
+    for params in itertools.product(
+        NUM_PUBLISHERS, LARGEST_PUBLISHER, PUBLISHER_RATIOS
+    ):
         num_publishers, largest_publisher, publisher_ratio = params
-        data_design_config.append(DataSetParameters(
-            num_publishers = num_publishers,
-            largest_publisher_size = largest_publisher,
-            largest_to_smallest_publisher_ratio = publisher_ratio))
+        data_design_config.append(
+            DataSetParameters(
+                num_publishers=num_publishers,
+                largest_publisher_size=largest_publisher,
+                largest_to_smallest_publisher_ratio=publisher_ratio,
+            )
+        )
     return data_design_config
-    

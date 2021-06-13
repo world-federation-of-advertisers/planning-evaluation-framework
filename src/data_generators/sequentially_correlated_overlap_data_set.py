@@ -15,7 +15,7 @@
 
 from typing import Iterable
 from enum import Enum
-from numpy.random import RandomState
+import numpy as np
 from wfa_cardinality_estimation_evaluation_framework.simulations.set_generator import (
     SequentiallyCorrelatedSetGenerator,
     ORDER_ORIGINAL,
@@ -55,7 +55,7 @@ class SequentiallyCorrelatedOverlapDataSet(OverlapDataSet):
         order: OrderOptions,
         correlated_sets: CorrelatedSetsOptions,
         shared_prop: float,
-        random_state: RandomState = None,
+        random_generator: np.random.Generator = None,
         name: str = "sequentially_correlated",
     ) -> DataSet:
         """Constructor for IndependentOverlapDataSet.
@@ -73,11 +73,18 @@ class SequentiallyCorrelatedOverlapDataSet(OverlapDataSet):
             in the current set that are overlapped with the previous set(s).
             See wfa_cardinality_estimation_evaluation_framework.simulations.set_generator
             for more explanations on the args order, correlated_sets, shared_prop.
-          random_state: a random state for generating the sequentially correlated
+          random_generator: a random Generator for generating the sequentially correlated
             reached ids.
           name:  If specified, a human-readable name that will be associated to this
             DataSet.
         """
+        if random_generator:
+            random_state = np.random.RandomState(
+                seed=random_generator.integers(low=0, high=1e9)
+            )
+        else:
+            random_state = np.random.RandomState(seed=1)
+
         super().__init__(
             unlabeled_publisher_data_list=unlabeled_publisher_data_list,
             overlap_generator=SequentiallyCorrelatedSetGenerator,

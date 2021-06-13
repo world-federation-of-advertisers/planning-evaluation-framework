@@ -11,42 +11,73 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Generates a DataDesign from SyntheticDataDesignConfig."""
+"""Generates a DataDesign from SyntheticDataDesignConfig.
+
+Generates a collection of synthetic data sets in a format that can
+subsequently be used by the experimental driver for measuring the
+performance of reach models.
+
+Example usage:
+
+  python3 synthetic_data_design_generator.py \
+    --output_dir=<output_dir>
+    --data_design=<data_design>
+    [--random_seed=<int>]
+
+where
+
+  output_dir is the directory where the DataDesign will be written, and
+  data_design is the name of a python file that specifies the underlying
+    data design.  This file should contain a function with the following
+    signature:
+
+       generate_data_design_config(random_generator: np.Generator) ->
+         Iterable[DataSetParameters]
+
+    The function returns a list of DataSetParameters objects.  Each such
+    object specifies the parameters for one data set that will be generated
+    as part of the data design.  For an example of such a function, see
+    the files test_synthetic_data_design_config.py and 
+    lhs_synthetic_data_design_config.py.  The latter file generates a
+    data design using a latin hypercube pattern.
+
+Here are some specific examples of usage, assuming that you are in the
+data_generators directory.  The following is a simple cartesian product
+design:
+
+  python3 synthetic_data_design_generator.py \
+     --output_dir=/tmp/simple-data-design \
+     --data_design=simple_data_design_example.py 
+
+The following is an example latin hypercube design:
+
+  python3 synthetic_data_design_generator.py \
+     --output_dir=/tmp/lhs-example \
+     --data_design=lhs_data_design_example.py
+
+"""
 
 from absl import app
 from absl import flags
+import importlib.util
 import math
 import numpy as np
+import sys
 from typing import List
 from wfa_planning_evaluation_framework.data_generators.data_design import DataDesign
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.data_generators.data_set_parameters import (
     DataSetParameters,
-    GeneratorParameters,
 )
-from wfa_planning_evaluation_framework.data_generators.pricing_generator import (
-    PricingGenerator,)
-from wfa_planning_evaluation_framework.data_generators.fixed_price_generator import (
-    FixedPriceGenerator,)
-from wfa_planning_evaluation_framework.data_generators.impression_generator import (
-    ImpressionGenerator,)
-from wfa_planning_evaluation_framework.data_generators.homogeneous_impression_generator import (
-    HomogeneousImpressionGenerator,)
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,)
-from wfa_planning_evaluation_framework.data_generators.test_synthetic_data_design_config import (
-    TestSyntheticDataDesignConfig,)
-from wfa_planning_evaluation_framework.data_generators.synthetic_data_design_config import (
-    SyntheticDataDesignConfig,)
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string("output_folder", "TestDataDesign", "Output Folder.")
-flags.DEFINE_string("data_design_config", "TestConfig", "Data Desgin Config.")
-flags.DEFINE_integer("random_seed", 1, "Seed for the np.random.Generator.")
-
-name_to_config_dict = {"test": TestSyntheticDataDesignConfig}
-
+flags.DEFINE_string("output_dir", None, "Directory where data design will be written")
+flags.DEFINE_string("data_design", None, "Name of data design configuration")
+flags.DEFINE_integer("random_seed", 1, "Seed for the random number generator")
+flags.DEFINE_bool("verbose", True, "If true, print names of data sets.")
 
 class SyntheticDataDesignGenerator():
   """Generates a DataDesign with synthetic data derived from parameters.
@@ -56,19 +87,28 @@ class SyntheticDataDesignGenerator():
     """
 
   def __init__(self, output_folder: str, random_seed: int,
-               config: SyntheticDataDesignConfig):
-    self._config = config
+               data_design_config: str, verbose: bool):
+    self._data_design_config = data_design_config
     self._random_generator = np.random.default_rng(random_seed)
     self._output_folder = output_folder
+    self._verbose = verbose
 
   def __call__(self) -> DataDesign:
     data_design = DataDesign(dirpath=self._output_folder)
-    for data_set_parameters in self._config.get_data_set_params_list(
-        self._random_generator):
-      data_design.add(self.generate_data_set(data_set_parameters))
+    for data_set_parameters in self._fetch_data_design_config():
+      data_design.add(self._generate_data_set(data_set_parameters))
     return data_design
 
-  def generate_data_set(self, params: DataSetParameters) -> DataSet:
+  def _fetch_data_design_config(self) -> List[DataSetParameters]:
+    spec = importlib.util.spec_from_file_location('data_design_generator', self._data_design_config)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules['data_design_generator'] = module
+    spec.loader.exec_module(module)
+    return module.generate_data_design_config(self._random_generator)
+    
+  def _generate_data_set(self, params: DataSetParameters) -> DataSet:
+    if self._verbose:
+      print(params)
     publishers = []
     publisher_size = params.largest_publisher_size
     publisher_size_decay_rate = 1 if params.num_publishers == 1 else params.largest_to_smallest_publisher_ratio**(
@@ -77,26 +117,28 @@ class SyntheticDataDesignGenerator():
       publishers.append(
           PublisherData.generate_publisher_data(
               params.impression_generator_params.generator(
-                  **params.impression_generator_params.params,
-                  n=publisher_size),
+                **{'n': publisher_size,
+                   'random_generator': self._random_generator,
+                   **params.impression_generator_params.params}),
               params.pricing_generator_params.generator(
                   **params.pricing_generator_params.params),
-              self.get_publisher_name(publisher)))
+              str(publisher+1)))
       publisher_size = math.floor(publisher_size * publisher_size_decay_rate)
+
+    overlap_params = {**params.overlap_generator_params.params}
+    if 'random_generator' in overlap_params:
+      overlap_params['random_generator'] = self._random_generator
       
     return params.overlap_generator_params.generator(
-        unlabeled_publisher_data_list=publishers,
-        name=self._config.get_data_set_name(params, self._random_generator),
-        **params.overlap_generator_params.params)
-
-  def get_publisher_name(self, publisher_num: str) -> str:
-    return "publisher_" + str(publisher_num + 1)
+        publishers,
+        name=str(params),
+        **overlap_params)
 
 
 def main(argv):
   data_design_generator = SyntheticDataDesignGenerator(
-      FLAGS.output_folder, FLAGS.random_seed,
-      name_to_config_dict[FLAGS.data_design_config])
+      FLAGS.output_dir, FLAGS.random_seed,
+      FLAGS.data_design, FLAGS.verbose)
   data_design_generator()
 
 

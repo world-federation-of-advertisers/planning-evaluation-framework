@@ -66,7 +66,9 @@ from wfa_planning_evaluation_framework.driver.modeling_strategy_descriptor impor
 from wfa_planning_evaluation_framework.driver.test_point_generator import (
     TestPointGenerator,
 )
-
+from wfa_planning_evaluation_framework.driver.trial_descriptor import (
+    TrialDescriptor,
+)
 
 class FakeReachSurface(ReachSurface):
     def __init__(self):
@@ -146,10 +148,10 @@ class ExperimentTest(absltest.TestCase):
             eparams2 = ExperimentParameters(PrivacyBudget(0.5, 0.001), 1, 5, "fake_tps")
 
             trial_descriptors = [
-                (msd, sparams1, eparams1),
-                (msd, sparams1, eparams2),
-                (msd, sparams2, eparams1),
-                (msd, sparams2, eparams2),
+                TrialDescriptor(msd, sparams1, eparams1),
+                TrialDescriptor(msd, sparams1, eparams2),
+                TrialDescriptor(msd, sparams2, eparams1),
+                TrialDescriptor(msd, sparams2, eparams2),
             ]
 
             exp = Experiment(experiment_dir, data_design, "dataset", trial_descriptors)

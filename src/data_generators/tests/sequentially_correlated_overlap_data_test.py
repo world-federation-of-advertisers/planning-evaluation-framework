@@ -53,12 +53,12 @@ class SequentiallyCorrelatedOverlapDataSetTest(absltest.TestCase):
             order=OrderOptions.original,
             correlated_sets=CorrelatedSetsOptions.one,
             shared_prop=0.5,
-            random_state=np.random.RandomState(1),
+            random_generator=np.random.default_rng(seed=1),
         )
         expected_data_list = [
-            [(2, 0.02), (6, 0.01), (6, 0.03), (1, 0.04)],
-            [(0, 0.01), (1, 0.02), (4, 0.04)],
-            [(4, 0.01), (4, 0.01), (4, 0.04), (3, 0.02), (5, 0.05)],
+            [(2, 0.02), (4, 0.01), (4, 0.03), (6, 0.04)],
+            [(0, 0.01), (6, 0.02), (5, 0.04)],
+            [(5, 0.01), (1, 0.02), (3, 0.05), (5, 0.04)],
         ]
         expected_name_list = ["a", "b", "c"]
         self.assert_equal_pub_data_list(

@@ -24,6 +24,7 @@ from wfa_planning_evaluation_framework.data_generators.data_design import DataDe
 
 from wfa_planning_evaluation_framework.data_generators import lhs_data_design_example
 from wfa_planning_evaluation_framework.data_generators import simple_data_design_example
+from wfa_planning_evaluation_framework.data_generators import single_publisher_design
 
 
 class SyntheticDataDesignGeneratorTest(absltest.TestCase):
@@ -38,6 +39,18 @@ class SyntheticDataDesignGeneratorTest(absltest.TestCase):
             np.random.default_rng(seed=1)
         )
         self.assertLen(list(lhs_design), 10)
+
+    def test_single_publisher_design(self):
+        sp_design = single_publisher_design.generate_data_design_config(
+            np.random.default_rng(seed=1)
+        )
+        self.assertLen(
+            list(sp_design),
+            56,
+            "Expected single pub design to have {} datasets but it had {}".format(
+                56, len(list(sp_design))
+            ),
+        )
 
     def test_synthetic_data_generator_simple_design(self):
         with TemporaryDirectory() as d:

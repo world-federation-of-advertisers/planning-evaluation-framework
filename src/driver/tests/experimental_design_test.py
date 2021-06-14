@@ -112,7 +112,7 @@ class FakeModelingStrategy(ModelingStrategy):
 
 
 class FakeTestPointGenerator(TestPointGenerator):
-    def __init__(self):
+    def __init__(self, data_set, rng):
         pass
 
     def test_points(self) -> Iterable[List[float]]:
@@ -133,9 +133,7 @@ class ExperimentalDesignTest(absltest.TestCase):
             data_design.add(data_set2)
 
             MODELING_STRATEGIES["fake"] = FakeModelingStrategy
-            TEST_POINT_STRATEGIES[
-                "fake_tps"
-            ] = lambda ds, rng: FakeTestPointGenerator().test_points()
+            TEST_POINT_STRATEGIES["fake_tps"] = FakeTestPointGenerator
 
             msd = ModelingStrategyDescriptor(
                 "fake", {"x": 1}, "goerg", {}, "pairwise_union", {}

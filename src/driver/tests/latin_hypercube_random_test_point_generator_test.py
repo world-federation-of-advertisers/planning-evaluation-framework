@@ -29,7 +29,7 @@ class LatinHypercubeRandomTestPointGeneratorTest(absltest.TestCase):
         pdf = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf")
         data_set = DataSet([pdf], "test")
         generator = LatinHypercubeRandomTestPointGenerator(
-            data_set, np.random.default_rng(1)
+            data_set, np.random.default_rng(1), npoints=100
         )
         values = [x for x in generator.test_points()]
         self.assertLen(values, 100)
@@ -43,7 +43,7 @@ class LatinHypercubeRandomTestPointGeneratorTest(absltest.TestCase):
         pdf2 = PublisherData([(1, 0.02), (2, 0.04), (1, 0.08), (3, 0.10)], "pdf2")
         data_set = DataSet([pdf1, pdf2], "test")
         generator = LatinHypercubeRandomTestPointGenerator(
-            data_set, np.random.default_rng(1)
+            data_set, np.random.default_rng(1), npoints=100
         )
         values = [x for x in generator.test_points()]
         self.assertLen(values, 100)
@@ -65,7 +65,7 @@ class LatinHypercubeRandomTestPointGeneratorTest(absltest.TestCase):
         pdf3 = PublisherData([(1, 0.02), (2, 0.04), (1, 0.01), (3, 0.06)], "pdf3")
         data_set = DataSet([pdf1, pdf2, pdf3], "test")
         generator = LatinHypercubeRandomTestPointGenerator(
-            data_set, np.random.default_rng(1)
+            data_set, np.random.default_rng(1), npoints=100
         )
         design = np.stack([x for x in generator.test_points()])
         equally_spaced = set(range(100))
@@ -88,7 +88,7 @@ class LatinHypercubeRandomTestPointGeneratorTest(absltest.TestCase):
             pdf_list.append(pdf)
         data_set = DataSet(pdf_list, "test")
         generator = LatinHypercubeRandomTestPointGenerator(
-            data_set, np.random.default_rng(1)
+            data_set, np.random.default_rng(1), npoints=225
         )
         values = [x for x in generator.test_points()]
         self.assertLen(values, 225)

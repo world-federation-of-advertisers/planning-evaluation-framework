@@ -36,6 +36,9 @@ from wfa_planning_evaluation_framework.simulator.modeling_strategy import (
 from wfa_planning_evaluation_framework.simulator.m3_strategy import (
     M3Strategy,
 )
+from wfa_planning_evaluation_framework.simulator.single_publisher_strategy import (
+    SinglePublisherStrategy,
+)
 
 # A dictionary mapping names of single publisher models to the
 # corresponding classes that implement them.
@@ -49,6 +52,7 @@ SINGLE_PUB_MODELS = {
 MULTI_PUB_MODELS = {
     "pairwise_union": PairwiseUnionReachSurface,
     "restricted_pairwise_union": RestrictedPairwiseUnionReachSurface,
+    "none": None,
     # TODO: Uncomment the following after the Dirac Mixture model is implemented.
     # 'dirac_mixture': DiracMixtureReachSurface,
     # TODO: Uncomment the following after the Generalized Mixture model is implemented.
@@ -59,6 +63,7 @@ MULTI_PUB_MODELS = {
 # corresponding classes that implement them.
 MODELING_STRATEGIES = {
     "m3strategy": M3Strategy,
+    "single_publisher": SinglePublisherStrategy,
 }
 
 

@@ -33,23 +33,16 @@ from wfa_planning_evaluation_framework.driver.test_point_generator import (
 class UniformlyRandomTestPointGenerator(TestPointGenerator):
     """Generates a collection of test points for a given simulation."""
 
-    def __init__(
-        self,
-        dataset: DataSet,
-        rng: np.random.Generator,
-        npoints: int = MINIMUM_NUMBER_OF_TEST_POINTS,
-    ):
+    def __init__(self, dataset: DataSet, rng: np.random.Generator):
         """Returns a UniformlyRandomTestPointGenerator.
 
         Args:
           dataset:  The DataSet for which test points are to be generated.
           rng:  A numpy Generator object that is used to seed the generation
             of random test points.
-          npoints: Number of points to generate.
         """
         super().__init__(dataset)
         self._rng = rng
-        self._npoints = npoints
 
     def test_points(self) -> Iterable[List[float]]:
         """Returns a generator for generating a list of test points.
@@ -57,7 +50,8 @@ class UniformlyRandomTestPointGenerator(TestPointGenerator):
         Returns:
           An iterable of spend vectors representing locations where
           the true reach surface is to be compared to the modeled reach
-          surface.
+          surface.  A minimum of MINIMUM_NUMBER_OF_TEST_POINTS will
+          be returned.
         """
-        for i in range(self._npoints):
+        for i in range(max(self._npublishers ** 2, MINIMUM_NUMBER_OF_TEST_POINTS)):
             yield list(self._max_spends * self._rng.random(size=self._npublishers))

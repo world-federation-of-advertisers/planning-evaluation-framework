@@ -26,20 +26,14 @@ from wfa_planning_evaluation_framework.models.reach_point import (
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
     PrivacyBudget,
 )
-from wfa_planning_evaluation_framework.driver.grid_test_point_generator import (
-    GridTestPointGenerator,
-)
-from wfa_planning_evaluation_framework.driver.latin_hypercube_random_test_point_generator import (
-    LatinHypercubeRandomTestPointGenerator,
-)
-from wfa_planning_evaluation_framework.driver.uniformly_random_test_point_generator import (
-    UniformlyRandomTestPointGenerator,
-)
 
 TEST_POINT_STRATEGIES = {
-    "latin_hypercube": LatinHypercubeRandomTestPointGenerator,
-    "uniformly_random": UniformlyRandomTestPointGenerator,
-    "grid": GridTestPointGenerator,
+    "latin_hypercube": lambda ds, rng: LatinHypercubeTestPointGenerator(
+        ds, rng
+    ).test_points(),
+    "uniformly_random": lambda ds, rng: UniformlyRandomTestPointGenerator(
+        ds, rng
+    ).test_points(),
 }
 
 
@@ -60,7 +54,6 @@ class ExperimentParameters(NamedTuple):
     replica_id: int
     max_frequency: int
     test_point_strategy: str
-    test_point_strategy_kwargs: Dict = {}
 
     def generate_test_points(
         self, data_set: DataSet, rng: np.random.Generator
@@ -69,17 +62,8 @@ class ExperimentParameters(NamedTuple):
             raise ValueError(
                 "Invalid test point strategy: {}".format(self.test_point_strategy)
             )
-        test_point_generator = TEST_POINT_STRATEGIES[self.test_point_strategy](
-            data_set, rng, **self.test_point_strategy_kwargs
-        )
 
-        return test_point_generator.test_points()
-
-    def _kwargs_string(self, dict: Dict) -> str:
-        if not dict:
-            return ""
-        items = ",".join([f"{k}={v}" for k, v in dict.items()])
-        return f"({items})"
+        return TEST_POINT_STRATEGIES[self.test_point_strategy](data_set, rng)
 
     def __str__(self) -> str:
         return (
@@ -88,5 +72,4 @@ class ExperimentParameters(NamedTuple):
             f",replica_id={self.replica_id}"
             f",max_frequency={self.max_frequency}"
             f",test_point_strategy={self.test_point_strategy}"
-            f"{self._kwargs_string(self.test_point_strategy_kwargs)}"
         )

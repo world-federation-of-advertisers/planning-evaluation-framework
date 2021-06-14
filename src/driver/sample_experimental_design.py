@@ -76,11 +76,7 @@ REPLICA_IDS = [1, 2, 3]
 
 MAX_FREQUENCIES = [5, 10, 20]
 
-TEST_POINT_STRATEGIES = [
-    ("latin_hypercube", {"npoints": 100}),
-    ("uniformly_random", {"npoints": 500}),
-    ("grid", {"grid_size": 5}),
-]
+TEST_POINT_STRATEGIES = ["latin_hypercube", "uniformly_random"]
 
 LEVELS = {
     "modeling_strategies": MODELING_STRATEGIES,
@@ -117,14 +113,10 @@ def generate_experimental_design_config(
             design_parameters["liquid_legions_params"],
             random_generator,
         )
-        test_point_generator, test_point_params = design_parameters[
-            "test_point_strategies"
-        ]
         eparams = ExperimentParameters(
             design_parameters["privacy_budgets"],
             design_parameters["replica_ids"],
             design_parameters["max_frequencies"],
-            test_point_generator,
-            test_point_params,
+            design_parameters["test_point_strategies"],
         )
         yield TrialDescriptor(mstrategy, sparams, eparams)

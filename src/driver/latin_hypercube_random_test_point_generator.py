@@ -36,23 +36,16 @@ MAXIMUM_NUMBER_OF_TEST_POINTS = 2000
 class LatinHypercubeRandomTestPointGenerator(TestPointGenerator):
     """Generates a collection of test points for a given simulation."""
 
-    def __init__(
-        self,
-        dataset: DataSet,
-        rng: np.random.Generator,
-        npoints: int = MINIMUM_NUMBER_OF_TEST_POINTS,
-    ):
+    def __init__(self, dataset: DataSet, rng: np.random.Generator):
         """Returns a LatinHypercubeRandomTestPointGenerator.
 
         Args:
           dataset:  The DataSet for which test points are to be generated.
           rng:  A numpy Generator object that is used to seed the generation
             of random test points.
-          npoints: Number of points to generate.
         """
         super().__init__(dataset)
         self._rng = rng
-        self._npoints = npoints
 
     def test_points(self) -> Iterable[List[float]]:
         """Returns a generator for generating a list of test points.
@@ -64,7 +57,10 @@ class LatinHypercubeRandomTestPointGenerator(TestPointGenerator):
           was chosen heuristically on the belief that this would give an
           acceptably small sampling variance for the modeling errors.
         """
-        num_points = min(self._npoints, MAXIMUM_NUMBER_OF_TEST_POINTS)
+        num_points = min(
+            max(self._npublishers ** 2, MINIMUM_NUMBER_OF_TEST_POINTS),
+            MAXIMUM_NUMBER_OF_TEST_POINTS,
+        )
         design = pyDOE.lhs(n=self._npublishers, samples=num_points, criterion="maximin")
         design = design[self._rng.permutation(num_points), :][
             :, self._rng.permutation(self._npublishers)

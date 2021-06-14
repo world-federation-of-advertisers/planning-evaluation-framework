@@ -35,13 +35,13 @@ class PublisherTest(absltest.TestCase):
     def setUpClass(cls):
         pdf = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
         cls.params = SystemParameters(
-            [1.0, 0.05, 3.0], LiquidLegionsParameters(), np.random.default_rng(1)
+            [1.0, 0.5, 3.0], LiquidLegionsParameters(), np.random.default_rng(1)
         )
         cls.privacy_tracker = PrivacyTracker()
         cls.publisher = Publisher(pdf, 1, cls.params, cls.privacy_tracker)
 
     def test_campaign_spend(self):
-        self.assertEqual(self.publisher.campaign_spend, 0.05)
+        self.assertEqual(self.publisher.campaign_spend, 0.025)
 
     def test_true_reach_by_spend(self):
         reach_point = self.publisher.true_reach_by_spend(0.04, 2)

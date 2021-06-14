@@ -42,8 +42,12 @@ class FakeHalo:
         self.curve._fit()
 
     @property
+    def publisher_count(self):
+        return 2
+
+    @property
     def campaign_spends(self):
-        return [100.0, 100.0]
+        return (100.0, 100.0)
 
     def simulated_reach_by_spend(
         self,
@@ -63,7 +67,7 @@ class FakeHalo:
 
 class M3StrategyTest(absltest.TestCase):
     # TODO: Re-active the following test after bug is fixed in Pairwise Union Model.
-    def donttest_m3_strategy(self):
+    def test_m3_strategy(self):
         halo = FakeHalo()
         params = SystemParameters(
             [100.0, 100.0], LiquidLegionsParameters(), np.random.default_rng(seed=1)

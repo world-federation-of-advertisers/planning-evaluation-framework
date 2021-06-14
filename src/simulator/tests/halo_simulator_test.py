@@ -45,10 +45,25 @@ class HaloSimulatorTest(absltest.TestCase):
         data_set = DataSet([pdf1, pdf2], "test")
 
         cls.params = SystemParameters(
-            [0.04, 0.05], LiquidLegionsParameters(), np.random.default_rng(1)
+            [0.4, 0.5], LiquidLegionsParameters(), np.random.default_rng(1)
         )
         cls.privacy_tracker = PrivacyTracker()
         cls.halo = HaloSimulator(data_set, cls.params, cls.privacy_tracker)
+
+    def test_max_spends(self):
+        self.assertEqual(self.halo.max_spends, (0.05, 0.06))
+
+    def test_campaign_spends(self):
+        expected = (0.02, 0.03)
+        actual = self.halo.campaign_spends
+        self.assertLen(actual, len(expected))
+        for i in range(len(actual)):
+            self.assertAlmostEqual(
+                actual[i],
+                expected[i],
+                msg=f"At position {i} got {actual[i]} expected {expected[i]}",
+                delta=0.0001,
+            )
 
     def test_true_reach_by_spend(self):
         reach_point = self.halo.true_reach_by_spend([0.04, 0.04], 3)
@@ -60,8 +75,8 @@ class HaloSimulatorTest(absltest.TestCase):
         reach_point = self.halo.simulated_reach_by_spend(
             [0.04, 0.04], PrivacyBudget(100.0, 0.0), 0.5, 3
         )
-        self.assertEqual(reach_point.reach(1), 4)
-        self.assertEqual(reach_point.reach(2), 2)
+        self.assertEqual(reach_point.reach(1), 3)
+        self.assertEqual(reach_point.reach(2), 1)
         self.assertEqual(reach_point.reach(3), 0)
 
     @patch(

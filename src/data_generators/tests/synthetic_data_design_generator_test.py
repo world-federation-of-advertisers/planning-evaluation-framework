@@ -42,7 +42,7 @@ class SyntheticDataDesignGeneratorTest(absltest.TestCase):
     def test_synthetic_data_generator_simple_design(self):
         with TemporaryDirectory() as d:
             data_design_generator = SyntheticDataDesignGenerator(
-                d, 1, simple_data_design_example.__file__, False
+                d, simple_data_design_example.__file__, 1, False
             )
             data_design_generator()
             dd = DataDesign(d)
@@ -51,7 +51,7 @@ class SyntheticDataDesignGeneratorTest(absltest.TestCase):
     def test_synthetic_data_generator_lhs_design(self):
         with TemporaryDirectory() as d:
             data_design_generator = SyntheticDataDesignGenerator(
-                d, 1, lhs_data_design_example.__file__, False
+                d, lhs_data_design_example.__file__, 1, False
             )
             data_design_generator()
             dd = DataDesign(d)

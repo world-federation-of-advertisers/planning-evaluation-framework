@@ -21,8 +21,14 @@ from wfa_planning_evaluation_framework.data_generators.synthetic_data_design_gen
     SyntheticDataDesignGenerator,
 )
 from wfa_planning_evaluation_framework.data_generators.data_design import DataDesign
-
+from wfa_planning_evaluation_framework.data_generators.data_set_parameters import (
+    GeneratorParameters,
+)
+from wfa_planning_evaluation_framework.data_generators.independent_overlap_data_set import (
+    IndependentOverlapDataSet,
+)
 from wfa_planning_evaluation_framework.data_generators import lhs_data_design_example
+from wfa_planning_evaluation_framework.data_generators import m3_data_design
 from wfa_planning_evaluation_framework.data_generators import simple_data_design_example
 from wfa_planning_evaluation_framework.data_generators import single_publisher_design
 
@@ -39,6 +45,32 @@ class SyntheticDataDesignGeneratorTest(absltest.TestCase):
             np.random.default_rng(seed=1)
         )
         self.assertLen(list(lhs_design), 10)
+
+    def test_m3_design_size(self):
+        m3_design = m3_data_design.generate_data_design_config(
+            np.random.default_rng(seed=1)
+        )
+        self.assertLen(list(m3_design), 100)
+
+    def test_m3_design_generate_universe_size(self):
+        largest_publisher = [8, 16]
+        overlap_generators = [
+            GeneratorParameters(
+                "Independent",
+                IndependentOverlapDataSet,
+                {"largest_pub_to_universe_ratio": 0.5, "random_generator": 1},
+            ),
+        ]
+        test_levels = {
+            "largest_publisher_size": largest_publisher,
+            "overlap_generator_params": overlap_generators,
+        }
+        test_design = m3_data_design._generate_data_design_config_from_all_levels(
+            test_levels, 2, np.random.default_rng(seed=1)
+        )
+        x = next(test_design).overlap_generator_params.params["universe_size"]
+        y = next(test_design).overlap_generator_params.params["universe_size"]
+        self.assertCountEqual([x, y], [16, 32])
 
     def test_single_publisher_design(self):
         sp_design = single_publisher_design.generate_data_design_config(

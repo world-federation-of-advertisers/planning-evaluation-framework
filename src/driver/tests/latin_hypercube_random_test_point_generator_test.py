@@ -93,6 +93,18 @@ class LatinHypercubeRandomTestPointGeneratorTest(absltest.TestCase):
         values = [x for x in generator.test_points()]
         self.assertLen(values, 225)
 
+    def test_npoints_generator(self):
+        pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
+        pdf2 = PublisherData([(1, 0.02), (2, 0.04), (1, 0.08), (3, 0.10)], "pdf2")
+        data_set = DataSet([pdf1, pdf2], "test")
+        generator = LatinHypercubeRandomTestPointGenerator(
+            data_set,
+            np.random.default_rng(1),
+            npoints_generator=lambda npublishers: 100 * npublishers,
+        )
+        values = [x for x in generator.test_points()]
+        self.assertLen(values, 200)
+
 
 if __name__ == "__main__":
     absltest.main()

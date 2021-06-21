@@ -13,9 +13,10 @@
 # limitations under the License.
 """Defines the execution environment of a simulation instance."""
 
-from numpy.random import Generator
+import numpy as np
 from typing import List
 from typing import NamedTuple
+from typing import Callable
 
 
 class LiquidLegionsParameters(NamedTuple):
@@ -40,21 +41,35 @@ class SystemParameters(NamedTuple):
     """Parameters defining a simulation run.
 
     Attributes:
-        campaign_spend_fraction:  A list of values, each between 0 and 1,
+        campaign_spend_fractions:  A list of values, each between 0 and 1,
             one per campaign, representing the amount spent on the campaign
             as a fractrion of total possible.
         liquid_legions:  Parameters specific to constructing Liquid Legions
             sketches.
         generator:  The single source of randomness that will be used
             for this modeling run.
+        campaign_spend_fractions_generator:  A function that maps the number
+            of publishers to campaign_spend_fractions of the corresponding
+            length. If this is an empty function, then read
+            campaign_spend_fractions from the first argument directly.
+            Otherwise, the campaign_spend_fractions will always be updated using
+            this function in the halo_simulator.
+            Examples:
+            (1) lambda npublishers: [0.2] * npublishers
+            All publishers have campaign spend fraction=0.2.
+            (2) lambda npublishers: list(islice(cycle([0.1, 0.2, 0.5]), npublishers))
+            Roughly one third of publishers have camapign spend fraction=0.1,
+            0.2, 0.5 respectively.
     """
 
-    campaign_spend_fractions: List[float]
-    liquid_legions: LiquidLegionsParameters
-    generator: Generator
+    campaign_spend_fractions: List[float] = [0]
+    liquid_legions: LiquidLegionsParameters = LiquidLegionsParameters()
+    generator: np.random.Generator = np.random.default_rng(1)
+    campaign_spend_fractions_generator: Callable[[int], List[float]] = lambda x: None
 
     def __str__(self) -> str:
         spend_str = ",".join([f"{s}" for s in self.campaign_spend_fractions])
+        # TODO(jiayu): add str for campaign_spend_fractions_generator if necessary
         ll_str = "decay_rate={},sketch_size={}".format(
             self.liquid_legions.decay_rate, self.liquid_legions.sketch_size
         )

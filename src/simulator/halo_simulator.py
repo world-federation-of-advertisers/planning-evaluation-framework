@@ -23,7 +23,8 @@ part of this evaluation effort.
 from typing import List
 from typing import Set
 from typing import Tuple
-
+from math import sqrt, ceil, floor
+import itertools
 import numpy as np
 
 from wfa_cardinality_estimation_evaluation_framework.estimators.same_key_aggregator import (
@@ -188,7 +189,7 @@ class HaloSimulator:
             sketch = self._publishers[i].liquid_legions_sketch(spends[i])
             combined_sketch = StandardizedHistogramEstimator.merge_two_sketches(
                 combined_sketch, sketch
-            )
+            ) 
         frequencies = [
             round(x) for x in estimator.estimate_cardinality(combined_sketch)
         ]
@@ -231,6 +232,47 @@ class HaloSimulator:
             A list of ReachPoint. Each reach point represents the mapping from 
             the spends of a subset of publishers to the differentially private
             estimate of the number of people reached in this subset.
+        """
+        num_publishers = len(spends)
+
+        # Precompute sketches of all publishers
+        sketches = []
+        for i in range(num_publishers):
+            sketches.append(self._publishers[i].liquid_legions_sketch(spends[i]))
+
+        # Separate publishers to several subsets with size equal to 10
+        # TODO: set up optimal size of subsets
+        subset_size = 10
+        reaches = []
+
+        ## If number of publishers is less than 10, directly compute the Venn Diagram counts
+        if num_publishers <= subset_size:
+            publisher_ids = range(num_publishers)
+            reach_point = self._venn_diagram_count(spends, sketches, publisher_ids)
+            reaches.append((publisher_ids, reach_point))
+        else:
+            component_size = subset_size // 2
+            num_components = ceil(num_publishers / component_size)
+
+            for comp_id1, comp_id2 in itertools.combinations(range(num_components), 2):
+                pub_id1 = list(range(component_size * comp_id1, min(num_publishers, component_size * (comp_id1 + 1))))
+                pub_id2 = list(range(component_size * comp_id2, min(num_publishers, component_size * (comp_id2 + 1))))
+
+                publisher_ids = pub_id1 + pub_id2
+                reach_point = self._venn_diagram_count(spends, sketches, publisher_ids)
+                reaches.append((publisher_ids, reach_point))
+
+        return reaches
+
+    def _venn_diagram_count(
+        self, 
+        spends: List[float], 
+        sketches: List[ExponentialSameKeyAggregator], 
+        publisher_ids: List[int]
+    ) -> ReachPoint:
+        """Returns a simulated differentially private reach estimates of the primitive 
+        regions in Venn Diagram.
+
         """
         raise NotImplementedError()
 

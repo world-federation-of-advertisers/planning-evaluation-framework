@@ -43,10 +43,10 @@ from wfa_planning_evaluation_framework.driver.trial_descriptor import (
 
 MODELING_STRATEGIES = [
     ModelingStrategyDescriptor(
-        "m3proposal", {}, "goerg", {}, "restricted_pairwise_union", {}
+        "m3strategy", {}, "goerg", {}, "restricted_pairwise_union", {}
     ),
     ModelingStrategyDescriptor(
-        "m3proposal", {}, "gamma_poisson", {}, "restricted_pairwise_union", {}
+        "m3strategy", {}, "gamma_poisson", {}, "restricted_pairwise_union", {}
     ),
 ]
 

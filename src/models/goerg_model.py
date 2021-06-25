@@ -50,9 +50,17 @@ class GoergModel(ReachCurve):
 
     def _fit(self) -> None:
         """Fits a model to the data that was provided in the constructor."""
-        self._rho = (self._impressions * self._reach) / (
-            self._impressions - self._reach
-        )
+        if self._impressions == self._reach:
+            # In this corner case, there will be a division by zero error if
+            # we estimate rho using the formula. This error will block the rest
+            # of evaluation. To avoid blocking the rest of evaluation,
+            # we will assign rho a hard-coded maximum value, which is 100 here.
+            # TODO(jiayu): Think about the choice of max value or alternatives.
+            self._rho = 100
+        else:
+            self._rho = (self._impressions * self._reach) / (
+                self._impressions - self._reach
+            )
         self._beta = self._rho
 
     def by_impressions(self, impressions: [int], max_frequency: int = 1) -> ReachPoint:

@@ -24,6 +24,9 @@ from wfa_planning_evaluation_framework.data_generators.synthetic_data_design_gen
     SyntheticDataDesignGenerator,
 )
 from wfa_planning_evaluation_framework.data_generators import simple_data_design_example
+from wfa_planning_evaluation_framework.data_generators import (
+    analysis_example_data_design,
+)
 from wfa_planning_evaluation_framework.driver.experiment_driver import ExperimentDriver
 from wfa_planning_evaluation_framework.driver.experimental_trial import (
     ExperimentalTrial,
@@ -121,7 +124,7 @@ class ExperimentDriverTest(absltest.TestCase):
             output_file = d + "/output"
             intermediate_dir = d + "/intermediates"
             data_design_generator = SyntheticDataDesignGenerator(
-                data_design_dir, 1, simple_data_design_example.__file__, False
+                data_design_dir, 1, analysis_example_data_design.__file__, False
             )
             data_design_generator()
             rng = np.random.default_rng(seed=1)
@@ -130,7 +133,7 @@ class ExperimentDriverTest(absltest.TestCase):
                 data_design_dir, experimental_design, output_file, intermediate_dir, rng
             )
             result = experiment_driver.execute()
-            self.assertEqual(result.shape[0], 2592)
+            self.assertEqual(result.shape[0], 1152)
 
 
 if __name__ == "__main__":

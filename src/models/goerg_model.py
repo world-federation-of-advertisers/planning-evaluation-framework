@@ -22,6 +22,8 @@ Poisson distribution with unknown mixing parameter, and shows how the
 reach curve can be extrapolated from a single point on it.
 """
 
+import warnings
+
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 
@@ -56,6 +58,9 @@ class GoergModel(ReachCurve):
             # of evaluation. To avoid blocking the rest of evaluation,
             # we will assign rho a hard-coded maximum value, which is 100 here.
             # TODO(jiayu): Think about the choice of max value or alternatives.
+            warnings.warn(
+                "impression = reach. rho is assigned a hard-coded maximum value."
+            )
             self._rho = 100
         else:
             self._rho = (self._impressions * self._reach) / (

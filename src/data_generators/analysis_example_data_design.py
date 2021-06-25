@@ -57,12 +57,11 @@ PRICING_GENERATORS = [
 ]
 IMPRESSION_GENERATORS = [
     GeneratorParameters(
-        "Homogeneous", HomogeneousImpressionGenerator, {"poisson_lambda": 2.0}
+        "Homogeneous", HomogeneousImpressionGenerator, {"poisson_lambda": 4.0}
     ),
     GeneratorParameters(
         "Heterogeneous",
         HeterogeneousImpressionGenerator,
-        {"gamma_shape": 4.0, "gamma_scale": 0.5},
     ),
 ]
 

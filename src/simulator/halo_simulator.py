@@ -321,7 +321,7 @@ class HaloSimulator:
             venn_diagram_sketches[pub_id].binary_repr_sketch
 
         # Count reaches in primitive regions
-        num_regions = 2**len(spends) - 1 # Exclude NULL region
+        num_regions = 2**len(spends)
         region_reach = np.zeros(num_regions)
 
         is_effective_register = np.isin(
@@ -332,7 +332,9 @@ class HaloSimulator:
             ),
             invert=True
         )
-        
+
+        for binary_repr in combined_venn_diagram_sketch.binary_repr_sketch[is_effective_register]:
+            region_reach[binary_repr] += 1
 
 
     def simulated_reach_curve(

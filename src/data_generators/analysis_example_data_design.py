@@ -11,40 +11,86 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""A simple example of a data design."""
+"""Data design for a quick eval to establish analysis practice."""
 
+from pyDOE import lhs
 from typing import Iterable
 import itertools
 import numpy as np
 
+from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.data_generators.data_set_parameters import (
+    GeneratorParameters,
     DataSetParameters,
+)
+from wfa_planning_evaluation_framework.data_generators.fixed_price_generator import (
+    FixedPriceGenerator,
+)
+from wfa_planning_evaluation_framework.data_generators.heavy_tailed_impression_generator import (
+    HeavyTailedImpressionGenerator,
+)
+from wfa_planning_evaluation_framework.data_generators.heterogeneous_impression_generator import (
+    HeterogeneousImpressionGenerator,
+)
+from wfa_planning_evaluation_framework.data_generators.homogeneous_impression_generator import (
+    HomogeneousImpressionGenerator,
+)
+from wfa_planning_evaluation_framework.data_generators.independent_overlap_data_set import (
+    IndependentOverlapDataSet,
+)
+from wfa_planning_evaluation_framework.data_generators.sequentially_correlated_overlap_data_set import (
+    SequentiallyCorrelatedOverlapDataSet,
+    OrderOptions,
+    CorrelatedSetsOptions,
 )
 
 # The following are the parameter sets that are varied in this data design.
-# The data design constructs the cartesian product of these parameter settings.
-NUM_PUBLISHERS = [1, 2, 5]
+# The latin hypercube design constructs a subset of the cartesian product
+# of these parameter settings.
+NUM_PUBLISHERS = [1, 5]
 LARGEST_PUBLISHER = [30, 60]
-PUBLISHER_RATIOS = [0.8, 0.2]
+PUBLISHER_RATIOS = [1, 0.2]
+PRICING_GENERATORS = [
+    GeneratorParameters(
+        "FixedPrice", FixedPriceGenerator, {"cost_per_impression": 0.1}
+    ),
+]
+IMPRESSION_GENERATORS = [
+    GeneratorParameters(
+        "Homogeneous", HomogeneousImpressionGenerator, {"poisson_lambda": 2.0}
+    ),
+    GeneratorParameters(
+        "Heterogeneous",
+        HeterogeneousImpressionGenerator,
+        {"gamma_shape": 4.0, "gamma_scale": 0.5},
+    ),
+]
+
+OVERLAP_GENERATORS = [
+    GeneratorParameters("FullOverlap", DataSet, {}),
+    GeneratorParameters(
+        "Independent",
+        IndependentOverlapDataSet,
+        {"universe_size": 200, "random_generator": 1},
+    ),
+]
+
+# Key values should be field names of DataSetParameters
+LEVELS = {
+    "num_publishers": NUM_PUBLISHERS,
+    "largest_publisher_size": LARGEST_PUBLISHER,
+    "largest_to_smallest_publisher_ratio": PUBLISHER_RATIOS,
+    "pricing_generator_params": PRICING_GENERATORS,
+    "impression_generator_params": IMPRESSION_GENERATORS,
+    "overlap_generator_params": OVERLAP_GENERATORS,
+}
 
 
 def generate_data_design_config(
     random_generator: np.random.Generator,
 ) -> Iterable[DataSetParameters]:
-    """Generates a data design configuration.
-
-    This examples illustrates a simple cartesian product of parameter settings.
-    """
     data_design_config = []
-    for params in itertools.product(
-        NUM_PUBLISHERS, LARGEST_PUBLISHER, PUBLISHER_RATIOS
-    ):
-        num_publishers, largest_publisher, publisher_ratio = params
-        data_design_config.append(
-            DataSetParameters(
-                num_publishers=num_publishers,
-                largest_publisher_size=largest_publisher,
-                largest_to_smallest_publisher_ratio=publisher_ratio,
-            )
-        )
+    for level_combination in itertools.product(*LEVELS.values()):
+        params = dict(zip(LEVELS.keys(), level_combination))
+        data_design_config.append(DataSetParameters(**params))
     return data_design_config

@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""A sample experimental design."""
+"""Experimental design for a quick eval to establish analysis practice."""
 
 from absl import app
 from absl import flags
@@ -52,12 +52,12 @@ MODELING_STRATEGIES = [
 ]
 
 CAMPAIGN_SPEND_FRACTIONS_GENERATORS = [
-    lambda npublishers: [0.2] * npublishers,
-    lambda npublishers: list(islice(cycle([0.1, 0.2, 0.3]), npublishers)),
+    lambda npublishers: [0.5] * npublishers,
+    lambda npublishers: list(islice(cycle([0.4, 0.6]), npublishers)),
 ]
 
 LIQUID_LEGIONS_PARAMS = [
-    LiquidLegionsParameters(3, 100),
+    LiquidLegionsParameters(5, 100),
 ]
 
 PRIVACY_BUDGETS = [
@@ -70,8 +70,8 @@ REPLICA_IDS = [1, 2, 3]
 MAX_FREQUENCIES = [3, 6]
 
 TEST_POINT_STRATEGIES = [
-    ("latin_hypercube", {"npoints_generator": lambda npublishers: 100 * npublishers}),
-    ("uniformly_random", {"npoints_generator": lambda npublishers: 100 * npublishers}),
+    ("latin_hypercube", {"npoints_generator": lambda npublishers: 10 * npublishers}),
+    ("uniformly_random", {"npoints_generator": lambda npublishers: 10 * npublishers}),
 ]
 
 LEVELS = {

@@ -69,7 +69,6 @@ class SystemParameters(NamedTuple):
 
     def __str__(self) -> str:
         spend_str = ",".join([f"{s}" for s in self.campaign_spend_fractions])
-        # TODO(jiayu): add str for campaign_spend_fractions_generator if necessary
         ll_str = "decay_rate={},sketch_size={}".format(
             self.liquid_legions.decay_rate, self.liquid_legions.sketch_size
         )

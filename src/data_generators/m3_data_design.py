@@ -163,23 +163,18 @@ LEVELS = {
 NUM_SAMPLES_FOR_LHS = 100
 
 
-def _generate_data_design_config_from_all_levels(
-    all_levels: dict,
-    num_samples: int,
+def generate_data_design_config(
     random_generator: np.random.Generator,
 ) -> Iterable[DataSetParameters]:
-    """Generates the data design configuration from a grid of levels.
-
-    This is an intermediate method that facilitates testing.
-    """
-    keys = all_levels.keys()
-    levels = [len(all_levels[k]) for k in keys]
+    """Generates the data design configuration for evaluating M3 strategy."""
+    keys = LEVELS.keys()
+    levels = [len(LEVELS[k]) for k in keys]
     for i, sample in enumerate(
-        lhs(n=len(levels), samples=num_samples, criterion="maximin")
+        lhs(n=len(levels), samples=NUM_SAMPLES_FOR_LHS, criterion="maximin")
     ):
         design_parameters = {"id": str(i)}
         for key, level in zip(keys, sample):
-            design_parameters[key] = all_levels[key][int(level * len(all_levels[key]))]
+            design_parameters[key] = LEVELS[key][int(level * len(LEVELS[key]))]
         if design_parameters["overlap_generator_params"].name == "Independent":
             raw_overlap_params = design_parameters["overlap_generator_params"]
             design_parameters["overlap_generator_params"] = raw_overlap_params._replace(
@@ -192,12 +187,3 @@ def _generate_data_design_config_from_all_levels(
                 }
             )
         yield DataSetParameters(**design_parameters)
-
-
-def generate_data_design_config(
-    random_generator: np.random.Generator,
-) -> Iterable[DataSetParameters]:
-    """Generates the data design configuration for evaluating M3 strategy."""
-    return _generate_data_design_config_from_all_levels(
-        LEVELS, NUM_SAMPLES_FOR_LHS, random_generator
-    )

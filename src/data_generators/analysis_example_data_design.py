@@ -47,9 +47,9 @@ from wfa_planning_evaluation_framework.data_generators.sequentially_correlated_o
 # The following are the parameter sets that are varied in this data design.
 # The latin hypercube design constructs a subset of the cartesian product
 # of these parameter settings.
-NUM_PUBLISHERS = [1, 5]
-LARGEST_PUBLISHER = [200, 250]
-PUBLISHER_RATIOS = [1, 0.5]
+NUM_PUBLISHERS = [1, 3]
+LARGEST_PUBLISHER = [500, 600]
+PUBLISHER_RATIOS = [1, 0.7]
 PRICING_GENERATORS = [
     GeneratorParameters(
         "FixedPrice", FixedPriceGenerator, {"cost_per_impression": 0.1}

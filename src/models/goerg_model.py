@@ -46,7 +46,7 @@ class GoergModel(ReachCurve):
         self._fit()
         self._max_reach = self._rho
         if data[0].spends:
-            if data[0].impressions[0] == 0:
+            if data[0].impressions[0] < 0.001:
                 self.cpi = 0.01
                 # TODO(jiayu): find better solution, or further explain this.
             else:
@@ -56,7 +56,7 @@ class GoergModel(ReachCurve):
 
     def _fit(self) -> None:
         """Fits a model to the data that was provided in the constructor."""
-        if self._impressions == self._reach:
+        if abs(self._impressions - self._reach) < 0.001:
             # In this corner case, there will be a division by zero error if
             # we estimate rho using the formula. This error will block the rest
             # of evaluation. To avoid blocking the rest of evaluation,

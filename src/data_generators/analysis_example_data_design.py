@@ -49,7 +49,7 @@ from wfa_planning_evaluation_framework.data_generators.sequentially_correlated_o
 # of these parameter settings.
 NUM_PUBLISHERS = [1, 5]
 LARGEST_PUBLISHER = [120, 160]
-PUBLISHER_RATIOS = [1, 0.2]
+PUBLISHER_RATIOS = [1, 0.5]
 PRICING_GENERATORS = [
     GeneratorParameters(
         "FixedPrice", FixedPriceGenerator, {"cost_per_impression": 0.1}

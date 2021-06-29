@@ -50,9 +50,9 @@ class LatinHypercubeRandomTestPointGenerator(TestPointGenerator):
           dataset:  The DataSet for which test points are to be generated.
           rng:  A numpy Generator object that is used to seed the generation
             of random test points.
-          npoints_generator: a function from the number of publishers to the
-            number of test points. EΩxample is
-            lambda npublishers: 2 ** npublishers
+          npoints_generator: A function that returns the number of test points
+            that should be generated. The argument of the function is the number
+            of publishers. Example is `lambda npublishers: 2 ** npublishers`.
             If the function is an empty function, then obtain the number of test
             points directly from the next argument.
           npoints: Number of points to generate.

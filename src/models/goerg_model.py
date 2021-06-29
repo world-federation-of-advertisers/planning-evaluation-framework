@@ -41,19 +41,22 @@ class GoergModel(ReachCurve):
         """
         if len(data) != 1:
             raise ValueError("Exactly one ReachPoint must be specified")
-        print(data[0])
         self._impressions = data[0].impressions[0]
         self._reach = data[0].reach(1)
         self._fit()
         self._max_reach = self._rho
         if data[0].spends:
-            self._cpi = data[0].spends[0] / data[0].impressions[0]
+            if data[0].impressions[0] == 0:
+                self.cpi = 0.01
+                # TODO(jiayu): find better solution, or further explain this.
+            else:
+                self._cpi = data[0].spends[0] / data[0].impressions[0]
         else:
             self._cpi = None
 
     def _fit(self) -> None:
         """Fits a model to the data that was provided in the constructor."""
-        if abs(self._impressions - self._reach) < 0.01:
+        if self._impressions == self._reach:
             # In this corner case, there will be a division by zero error if
             # we estimate rho using the formula. This error will block the rest
             # of evaluation. To avoid blocking the rest of evaluation,

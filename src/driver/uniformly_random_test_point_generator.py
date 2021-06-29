@@ -41,7 +41,7 @@ class UniformlyRandomTestPointGenerator(TestPointGenerator):
         npoints_generator: Callable[[int], int] = lambda x: None,
         npoints: int = MINIMUM_NUMBER_OF_TEST_POINTS,
     ):
-        """Returns a LatinHypercubeRandomTestPointGenerator.
+        """Returns a UniformlyRandomTestPointGenerator.
 
         Args:
           dataset:  The DataSet for which test points are to be generated.

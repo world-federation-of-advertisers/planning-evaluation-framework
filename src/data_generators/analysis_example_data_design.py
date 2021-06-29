@@ -71,7 +71,7 @@ OVERLAP_GENERATORS = [
     GeneratorParameters(
         "Independent",
         IndependentOverlapDataSet,
-        {"universe_size": 200, "random_generator": 1},
+        {"universe_size": 500, "random_generator": 1},
     ),
 ]
 

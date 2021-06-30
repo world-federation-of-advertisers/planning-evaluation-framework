@@ -26,7 +26,7 @@ from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 
 
 class LinearCappedReachCurve(ReachCurve):
-    """Linear ReachCurve that is capped at max_reach."""
+    """A curve of simple form that facilitates testing."""
 
     def _fit(self) -> None:
         self._max_reach = self._data[0].reach()

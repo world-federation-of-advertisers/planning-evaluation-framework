@@ -33,6 +33,10 @@ from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
 )
 
 
+def my_print(text):
+    sys.stdout.write(str(text))
+    sys.stdout.flush()
+
 class M3Strategy(ModelingStrategy):
     """Modeling strategy proposed for implementation in M3 milestone."""
 
@@ -85,9 +89,8 @@ class M3Strategy(ModelingStrategy):
         single_pub_curves = []
         for i in range(p):
             data = [single_pub_reach[i]]
-            warnings.warn(f"few impressions: {data[0].impressions}")
-            print(f"few impressions: {data[0].impressions}")
-            sys.stdout.flush()
+            # warnings.warn(f"few impressions: {data[0].impressions}")
+            my_print(f"few impressions: {data[0].impressions}")
             curve = self._single_pub_model(
                 [single_pub_reach[i]], **self._single_pub_model_kwargs
             )

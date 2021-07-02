@@ -89,8 +89,6 @@ class M3Strategy(ModelingStrategy):
         single_pub_curves = []
         for i in range(p):
             data = [single_pub_reach[i]]
-            # warnings.warn(f"few impressions: {data[0].impressions}")
-            my_print(f"few impressions: {data[0].impressions}")
             curve = self._single_pub_model(
                 [single_pub_reach[i]], **self._single_pub_model_kwargs
             )

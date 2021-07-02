@@ -41,16 +41,13 @@ class GoergModel(ReachCurve):
         """
         if len(data) != 1:
             raise ValueError("Exactly one ReachPoint must be specified")
-        self._impressions = max(2, data[0].impressions[0])
-        self._reach = max(2, data[0].reach(1))
+        # Temporary solution to avoid "division by zero" bugs.
+        self._reach = max(1, data[0].reach(1))
+        self._impressions = max(self._reach + 1, data[0].impressions[0])
         self._fit()
         self._max_reach = self._rho
         if data[0].spends:
-            if data[0].impressions[0] < 0.001:
-                self.cpi = 0.01
-                # TODO(jiayu): find better solution, or further explain this.
-            else:
-                self._cpi = data[0].spends[0] / data[0].impressions[0]
+            self._cpi = data[0].spends[0] / data[0].impressions[0]
         else:
             self._cpi = None
 

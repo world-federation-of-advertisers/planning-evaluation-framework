@@ -57,7 +57,7 @@ CAMPAIGN_SPEND_FRACTIONS_GENERATORS = [
 ]
 
 LIQUID_LEGIONS_PARAMS = [
-    LiquidLegionsParameters(5, 3000),
+    LiquidLegionsParameters(5, 1000),
 ]
 
 PRIVACY_BUDGETS = [

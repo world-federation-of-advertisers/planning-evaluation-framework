@@ -47,7 +47,7 @@ class GoergModel(ReachCurve):
         self._fit()
         self._max_reach = self._rho
         if data[0].spends:
-            self._cpi = data[0].spends[0] / data[0].impressions[0]
+            self._cpi = self._reach / self._impressions
         else:
             self._cpi = None
 

@@ -24,6 +24,7 @@ from typing import List
 from typing import Set
 from typing import Tuple
 
+import warnings
 import numpy as np
 
 from wfa_cardinality_estimation_evaluation_framework.estimators.same_key_aggregator import (
@@ -206,6 +207,8 @@ class HaloSimulator:
         # convert result to a ReachPoint
         impressions = self._data_set.impressions_by_spend(spends)
         kplus_reaches = ReachPoint.frequencies_to_kplus_reaches(frequencies)
+        if kplus_reaches[0] < 1:
+            warnings.warn("Zero reach point.")
         return ReachPoint(impressions, kplus_reaches, spends)
 
     def simulated_venn_diagram_reach_by_spend(

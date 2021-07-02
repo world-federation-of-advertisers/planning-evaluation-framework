@@ -48,7 +48,7 @@ from wfa_planning_evaluation_framework.data_generators.sequentially_correlated_o
 # The latin hypercube design constructs a subset of the cartesian product
 # of these parameter settings.
 NUM_PUBLISHERS = [1, 3]
-LARGEST_PUBLISHER = [1000, 1200]
+LARGEST_PUBLISHER = [50, 60]
 PUBLISHER_RATIOS = [1, 0.7]
 PRICING_GENERATORS = [
     GeneratorParameters(

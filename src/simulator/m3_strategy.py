@@ -82,6 +82,13 @@ class M3Strategy(ModelingStrategy):
         # Compute reach curve for each publisher
         single_pub_curves = []
         for i in range(p):
+            data = single_pub_reach[i]
+            if len(data[0].impressions) < 2:
+                warnings.warn(f"few impressions: {data[0].impressions}")
+            if data[0].impressions[0] < 5:
+                warnings.warn(f"small impression: {data[0].impressions[0]}")
+            if data[0].reach(1) < 5:
+                warnings.warn(f"small reach: {data[0].reach(1)}")
             curve = self._single_pub_model(
                 [single_pub_reach[i]], **self._single_pub_model_kwargs
             )

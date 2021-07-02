@@ -52,12 +52,12 @@ MODELING_STRATEGIES = [
 ]
 
 CAMPAIGN_SPEND_FRACTIONS_GENERATORS = [
-    lambda npublishers: [0.5] * npublishers,
-    lambda npublishers: list(islice(cycle([0.4, 0.6]), npublishers)),
+    lambda npublishers: [0.8] * npublishers,
+    lambda npublishers: list(islice(cycle([0.7, 0.9]), npublishers)),
 ]
 
 LIQUID_LEGIONS_PARAMS = [
-    LiquidLegionsParameters(3, 1000),
+    LiquidLegionsParameters(3, 2000),
 ]
 
 PRIVACY_BUDGETS = [

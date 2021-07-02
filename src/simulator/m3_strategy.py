@@ -16,6 +16,7 @@
 from typing import Dict
 from typing import Type
 import warnings
+import sys
 
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 from wfa_planning_evaluation_framework.models.reach_surface import ReachSurface
@@ -85,6 +86,8 @@ class M3Strategy(ModelingStrategy):
         for i in range(p):
             data = [single_pub_reach[i]]
             warnings.warn(f"few impressions: {data[0].impressions}")
+            print(f"few impressions: {data[0].impressions}")
+            sys.stdout.flush()
             curve = self._single_pub_model(
                 [single_pub_reach[i]], **self._single_pub_model_kwargs
             )

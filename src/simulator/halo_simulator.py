@@ -23,8 +23,10 @@ part of this evaluation effort.
 from typing import List
 from typing import Set
 from typing import Tuple
+from typing import NamedTuple
 from math import sqrt, ceil, floor
 import itertools
+import copy
 import collections
 import numpy as np
 
@@ -56,6 +58,10 @@ from wfa_planning_evaluation_framework.simulator.publisher import Publisher
 from wfa_planning_evaluation_framework.simulator.system_parameters import (
     SystemParameters,
 )
+
+class UserInfo(NamedTuple):
+    located_region: int = 0
+    impressions: int = 0
 
 
 class HaloSimulator:
@@ -227,7 +233,8 @@ class HaloSimulator:
         Args:
             spends:  The hypothetical spend vector, equal in length to
               the number of publishers.  spends[i] is the amount that is
-              spent with publisher i.
+              spent with publisher i. Note that publishers with 0 spends will
+              not be included in the Venn diagram reach.
             budget:  The amount of privacy budget that can be consumed while
               satisfying the request.
             max_frequency:  The maximum frequency for which to report reach.
@@ -236,106 +243,53 @@ class HaloSimulator:
             the spends of a subset of publishers to the differentially private
             estimate of the number of people reached in this subset.
         """
-        num_publishers = len(spends)
-        VennDiagramSketch = collections.namedtuple(
-            'VennDiagramSketch', 
-            ['liquid_legions_sketch', 'binary_repr_sketch']
-        )
+        user_counts_by_pub_id = {}
 
-        # Precompute sketches of all publishers
-        venn_diagram_sketches = []
-        for i in range(num_publishers):
-            liquid_legions_sketch = self._publishers[i].liquid_legions_sketch(spends[i])
+        # Get user counts by spend for each active publisher
+        for pub_id, spend in enumerate(spends):
+            if not spend:
+                continue
+            user_counts_by_pub_id[pub_id] = self._publishers[pub_id]._publisher_data.user_counts_by_spend(spend)
 
-            # Generate a sketch of binary representations for registers with non-zero frequency 
-            binary_repr_sketch = np.ones_like(sliquid_legions_sketch.frequency_count_tracker.sketch) * 2**i
-            binary_repr_sketch[liquid_legions_sketch.frequency_count_tracker.sketch == 0] = 0
-            
-            venn_diagram_sketches.append(VennDiagramSketch(liquid_legions_sketch, binary_repr_sketch))
+        # Locate user's region and sum the impressions. Also, map region representation to publisher ids.
+        user_info = collections.defaultdict(UserInfo)
+        pub_set_by_region = collections.defaultdict(set)
 
-        # Separate publishers to several subsets with size equal to 10
-        # TODO: set up optimal size of subsets
-        subset_size = 10
-        reaches = []
+        for pub_id, user_counts in user_counts_by_pub_id.items():
+            for user_id, impressions in user_counts.items():
+                lr = user_info[user_id].located_region
+                new_lr = lr | (1 << pub_id)
+                if not new_lr in pub_set_by_region:
+                    pub_set_by_region[new_lr] = copy.deepcopy(pub_set_by_region[lr])
+                    pub_set_by_region[new_lr].add(pub_id)
+                user_info[user_id].located_region = new_lr
+                user_info[user_id].impressions += impressions
 
-        ## If number of publishers is less than 10, directly compute the Venn Diagram counts
-        if num_publishers <= subset_size:
-            publisher_ids = range(num_publishers)
-            reach_point = self._venn_diagram_count(spends, venn_diagram_sketches, publisher_ids)
-            reaches.append((publisher_ids, reach_point))
-        else:
-            component_size = subset_size // 2
-            num_components = ceil(num_publishers / component_size)
+        # Fill in 2^p - 1 regions of the Venn diagram. Note that the region with index 0 is unused
+        regions = [{} for _ in range(2**len(spends))]
 
-            for comp_id1, comp_id2 in itertools.combinations(range(num_components), 2):
-                pub_id1 = list(range(component_size * comp_id1, min(num_publishers, component_size * (comp_id1 + 1))))
-                pub_id2 = list(range(component_size * comp_id2, min(num_publishers, component_size * (comp_id2 + 1))))
+        for user_id, user_info in user_info.items():
+            lr = user_info.located_region
+            # is this how we use the max_frequency???????
+            regions[lr][user_id] = user_info.impressions if user_info.impressions < max_frequency else max_frequency
 
-                publisher_ids = pub_id1 + pub_id2
-                reach_point = self._venn_diagram_count(spends, venn_diagram_sketches, publisher_ids)
-                reaches.append((publisher_ids, reach_point))
+        # Form the output pair, (pub_set, reach point), for each region
+        venn_diagram_count = []
 
-        return reaches
+        for lr, user_counts in enumerate(regions):
+            impressions = sum(user_counts.values())
+            kplus_reaches = ReachPoint.frequencies_to_kplus_reaches(user_counts.values())
+            pub_set = pub_set_by_region[lr]
+            region_spends = [spends[pub_id] for pub_id in pub_set]
+            venn_diagram_count.append(
+                pub_set,
+                ReachPoint(impressions, kplus_reaches, region_spends)
+            ) 
 
-    def _venn_diagram_count(
-        self, 
-        spends: List[float], 
-        venn_diagram_sketches: List[VennDiagramSketch], 
-        publisher_ids: List[int]
-    ) -> ReachPoint:
-        """Returns a simulated differentially private reach estimates of the primitive 
-        regions in Venn Diagram.
-
-        """
-        combined_venn_diagram_sketch = venn_diagram_sketches[publisher_ids[0]]
+        # TODO: Add noise to both freq and impressions
         
-        estimator = StandardizedHistogramEstimator(
-            max_freq=max_frequency,
-            reach_noiser_class=GeometricEstimateNoiser,
-            frequency_noiser_class=GeometricEstimateNoiser,
-            reach_epsilon=budget.epsilon * privacy_budget_split,
-            frequency_epsilon=budget.epsilon * (1 - privacy_budget_split),
-            reach_delta=budget.delta * privacy_budget_split,
-            frequency_delta=budget.delta * (1 - privacy_budget_split),
-            reach_noiser_kwargs={
-                "random_state": np.random.RandomState(
-                    seed=self._params.generator.integers(low=0, high=1e9)
-                )
-            },
-            frequency_noiser_kwargs={
-                "random_state": np.random.RandomState(
-                    seed=self._params.generator.integers(low=0, high=1e9)
-                )
-            },
-        )
 
-        for pub_id in publisher_ids[1:]:
-            # Update unique keys
-            combined_venn_diagram_sketch.liquid_legions_sketch = StandardizedHistogramEstimator.merge_two_sketches(
-                combined_venn_diagram_sketch.liquid_legions_sketch, 
-                venn_diagram_sketches[pub_id].liquid_legions_sketch
-            )
-
-            # Update binary representation
-            combined_venn_diagram_sketch.binary_repr_sketch = combined_venn_diagram_sketch.binary_repr_sketch + 
-            venn_diagram_sketches[pub_id].binary_repr_sketch
-
-        # Count reaches in primitive regions
-        num_regions = 2**len(spends)
-        region_reach = np.zeros(num_regions)
-
-        is_effective_register = np.isin(
-            combined_venn_diagram_sketch.liquid_legions_sketch.unique_key_tracker.sketch,
-            (
-                UniqueKeyFunction.FLAG_EMPTY_REGISTER, 
-                UniqueKeyFunction.FLAG_COLLIDED_REGISTER
-            ),
-            invert=True
-        )
-
-        for binary_repr in combined_venn_diagram_sketch.binary_repr_sketch[is_effective_register]:
-            region_reach[binary_repr] += 1
-
+        return venn_diagram_count
 
     def simulated_reach_curve(
         self, publisher_index: int, budget: PrivacyBudget

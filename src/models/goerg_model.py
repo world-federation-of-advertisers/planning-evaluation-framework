@@ -41,6 +41,12 @@ class GoergModel(ReachCurve):
         """
         if len(data) != 1:
             raise ValueError("Exactly one ReachPoint must be specified")
+        if len(data[0].impressions) < 2:
+            warnings.warn(f"few impressions: {data[0].impressions}")
+        if data[0].impressions[0] < 5:
+            warnings.warn(f"small impression: {data[0].impressions[0]}")
+        if data[0].reach(1) < 5:
+            warnings.warn(f"small reach: {data[0].reach(1)}")
         self._impressions = data[0].impressions[0]
         self._reach = data[0].reach(1)
         self._fit()

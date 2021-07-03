@@ -52,6 +52,7 @@ from wfa_planning_evaluation_framework.simulator.publisher import Publisher
 from wfa_planning_evaluation_framework.simulator.system_parameters import (
     SystemParameters,
 )
+from wfa_planning_evaluation_framework.models.venn_diagram_region import VennDiagramRegion
 
 
 class HaloSimulator:
@@ -213,7 +214,7 @@ class HaloSimulator:
         spends: List[float],
         budget: PrivacyBudget,
         max_frequency: int = 1,
-    ) -> List[Tuple[Set, ReachPoint]]:
+    ) -> List[Dict[Set, VennDiagramRegion]]:
         """Returns a simulated differentially private Venn diagram reach estimate.
 
         For each subset of publishers, computes a differentially private
@@ -228,8 +229,8 @@ class HaloSimulator:
               satisfying the request.
             max_frequency:  The maximum frequency for which to report reach.
         Returns:
-            A list of pairs (S, R), where S specifies a subset of publishers
-            and R is a ReachPoint representing the differentially private
+            A list of dictionaries {S: R}, where S specifies a subset of publishers
+            and R is a VennDiagramRegion representing the differentially private
             estimate of the number of people reached in this subset.
             The set S is given as a subset of the integers 0..p-1, where p
             is the number of publishers.

@@ -229,7 +229,7 @@ class HaloSimulator:
         For each subset of publishers, computes a differentially private
         reach and frequency estimate for those users who are reached by
         all and only the publishers in that subset.
-
+    
         Args:
             spends:  The hypothetical spend vector, equal in length to
               the number of publishers.  spends[i] is the amount that is
@@ -270,16 +270,15 @@ class HaloSimulator:
 
         for user_id, user_info in user_info.items():
             lr = user_info.located_region
-            # is this how we use the max_frequency???????
-            regions[lr][user_id] = user_info.impressions if user_info.impressions < max_frequency else max_frequency
+            regions[lr][user_id] = user_info.impressions
 
         # Form the output pair, (pub_set, reach point), for each region
         venn_diagram_count = []
 
         for lr, user_counts in enumerate(regions):
-            impressions = sum(user_counts.values())
-            kplus_reaches = ReachPoint.frequencies_to_kplus_reaches(user_counts.values())
             pub_set = pub_set_by_region[lr]
+            impressions = [sum(user_counts_by_pub_id[pub_id][user_id] for user_id in user_counts.keys()) for pub_id in pub_set]
+            kplus_reaches = [len(regions[lr])]
             region_spends = [spends[pub_id] for pub_id in pub_set]
             venn_diagram_count.append(
                 pub_set,

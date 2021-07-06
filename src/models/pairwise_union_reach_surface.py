@@ -71,13 +71,21 @@ class PairwiseUnionReachSurface(ReachSurface):
         z, alpha = self._get_z_and_alpha()
         self._a = self._solve_a_given_z_and_alpha(z, alpha)
 
-    # def by_spend(self, spend: Iterable[float], max_frequency: int = 1) -> ReachPoint:
-    #     return self.by_impressions(
-    #         [
-    #             for curve, pub_spend in zip(self._reach_curves, spend)
-    #         ],
-    #         max_frequency,
-    #     )
+    def by_spend(self, spend: Iterable[float], max_frequency: int = 1) -> ReachPoint:
+        # return self.by_impressions(
+        #     [
+        #         curve.impressions_for_spend(pub_spend)
+        #         for curve, pub_spend in zip(self._reach_curves, spend)
+        #     ],
+        #     max_frequency,
+        # )
+        m3_cpi = 0.1
+        # TODO(jiayu): This is an ad-hoc. Later implement the
+        # impressions_for_spend method and thus systematically fix the bug.
+        return self.by_impressions(
+            [pub_spend / m3_cpi for pub_spend in spend],
+            max_frequency,
+        )
 
     def get_reach_vector(self, impressions: Iterable[int]) -> Iterable[int]:
         """Calculates single publisher reaches for a given impression vector.

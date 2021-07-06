@@ -182,26 +182,26 @@ class PairwiseUnionReachSurfaceTest(absltest.TestCase):
         self.assertPointsAlmostEqualToPrediction(surface, training_reach_points)
         self.assertPointsAlmostEqualToPrediction(surface, test_reach_points)
 
-    def test_by_spend(self):
-        num_publishers = 3
-        training_size = 50
-        universe_size = 200000
-        decay_rate = 0.8
+#     def test_by_spend(self):
+#         num_publishers = 3
+#         training_size = 50
+#         universe_size = 200000
+#         decay_rate = 0.8
 
-        reach_curves = self.generate_sample_reach_curves(
-            num_publishers, decay_rate, universe_size
-        )
-        true_a = self.generate_sample_matrix_a(num_publishers)
-        training_reach_points = self.generate_reach_points(
-            true_a, reach_curves, training_size, universe_size, 1, True
-        )
+#         reach_curves = self.generate_sample_reach_curves(
+#             num_publishers, decay_rate, universe_size
+#         )
+#         true_a = self.generate_sample_matrix_a(num_publishers)
+#         training_reach_points = self.generate_reach_points(
+#             true_a, reach_curves, training_size, universe_size, 1, True
+#         )
 
-        surface = PairwiseUnionReachSurface(reach_curves, training_reach_points)
-        test_reach_points = self.generate_reach_points(
-            true_a, reach_curves, training_size, universe_size, 2, True
-        )
-        self.assertPointsAlmostEqualToPrediction(surface, training_reach_points)
-        self.assertPointsAlmostEqualToPrediction(surface, test_reach_points)
+#         surface = PairwiseUnionReachSurface(reach_curves, training_reach_points)
+#         test_reach_points = self.generate_reach_points(
+#             true_a, reach_curves, training_size, universe_size, 2, True
+#         )
+#         self.assertPointsAlmostEqualToPrediction(surface, training_reach_points)
+#         self.assertPointsAlmostEqualToPrediction(surface, test_reach_points)
 
     def test_no_overlap_reach_curves(self):
         num_publishers = 2

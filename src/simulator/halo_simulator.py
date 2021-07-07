@@ -55,6 +55,23 @@ from wfa_planning_evaluation_framework.simulator.system_parameters import (
 from wfa_planning_evaluation_framework.models.venn_diagram_region import VennDiagramRegion
 
 
+class VennDiagramRegion(NamedTuple):
+    """Impressions, reach and spend for a primitive region of the Venn diagram 
+    of a set of publishers.
+    
+    impressions:  The number of impressions that were served by
+      each publisher.
+    spends:  The amount that was spent at this region on each publisher.
+    kplus_reaches:  An iterable of values representing the number of 
+      people reached at various frequencies.  kplus_reaches[k] is the 
+      number of people who were reached AT LEAST k+1 times.
+
+    """
+    impressions: List[int]
+    spend: List[float]
+    kplus_reaches: List[int]
+
+
 class HaloSimulator:
     """Simulator for the Halo System.
 
@@ -214,7 +231,7 @@ class HaloSimulator:
         spends: List[float],
         budget: PrivacyBudget,
         max_frequency: int = 1,
-    ) -> List[Dict[Set, VennDiagramRegion]]:
+    ) -> List[ReachPoint]:
         """Returns a simulated differentially private Venn diagram reach estimate.
 
         For each subset of publishers, computes a differentially private
@@ -229,11 +246,9 @@ class HaloSimulator:
               satisfying the request.
             max_frequency:  The maximum frequency for which to report reach.
         Returns:
-            A list of dictionaries {S: R}, where S specifies a subset of publishers
-            and R is a VennDiagramRegion representing the differentially private
+            A list of ReachPoint. Each reach point represents the mapping from 
+            the spends of a subset of publishers to the differentially private
             estimate of the number of people reached in this subset.
-            The set S is given as a subset of the integers 0..p-1, where p
-            is the number of publishers.
         """
         raise NotImplementedError()
 

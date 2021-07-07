@@ -52,7 +52,6 @@ from wfa_planning_evaluation_framework.simulator.publisher import Publisher
 from wfa_planning_evaluation_framework.simulator.system_parameters import (
     SystemParameters,
 )
-from wfa_planning_evaluation_framework.models.venn_diagram_region import VennDiagramRegion
 
 
 class VennDiagramRegion(NamedTuple):

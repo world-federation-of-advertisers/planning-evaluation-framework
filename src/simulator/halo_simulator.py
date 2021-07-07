@@ -54,23 +54,6 @@ from wfa_planning_evaluation_framework.simulator.system_parameters import (
 )
 
 
-class VennDiagramRegion(NamedTuple):
-    """Impressions, reach and spend for a primitive region of the Venn diagram 
-    of a set of publishers.
-    
-    impressions:  The number of impressions that were served by
-      each publisher.
-    spends:  The amount that was spent at this region on each publisher.
-    kplus_reaches:  An iterable of values representing the number of 
-      people reached at various frequencies.  kplus_reaches[k] is the 
-      number of people who were reached AT LEAST k+1 times.
-
-    """
-    impressions: List[int]
-    spend: List[float]
-    kplus_reaches: List[int]
-
-
 class HaloSimulator:
     """Simulator for the Halo System.
 

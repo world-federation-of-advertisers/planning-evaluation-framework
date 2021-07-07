@@ -11,14 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""A class of a primitive region in a Venn diagram reach."""
+"""Impressions, reach and spend for a primitive region of the Venn diagram of 
+a set of publishers."""
 
 from typing import List
 from typing import NamedTuple
 
 
 class VennDiagramRegion(NamedTuple):
-    """A single primitive region in a Venn digram reach.
+    """Impressions, reach and spend for a primitive region of the Venn diagram 
+    of a set of publishers.
     
     impressions:  The number of impressions that were served by
       each publisher.

@@ -42,7 +42,6 @@ class IndependentOverlapDataSet(OverlapDataSet):
         name: str = "independent",
     ) -> DataSet:
         """Constructor for IndependentOverlapDataSet.
-
         Args:
           unlabeled_publisher_data_list:  a list of PublisherDataSet indicating
             the reach curve of a publisher.

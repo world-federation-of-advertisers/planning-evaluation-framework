@@ -24,8 +24,6 @@ from typing import List
 from typing import Set
 from typing import Tuple
 from typing import NamedTuple
-from math import sqrt, ceil, floor
-import itertools
 import copy
 import collections
 import numpy as np
@@ -42,7 +40,9 @@ from wfa_cardinality_estimation_evaluation_framework.estimators.vector_of_counts
 from wfa_cardinality_estimation_evaluation_framework.estimators.estimator_noisers import (
     GeometricEstimateNoiser,
 )
-from wfa_cardinality_estimation_evaluation_framework.estimators.any_sketch import UniqueKeyFunction
+from wfa_cardinality_estimation_evaluation_framework.estimators.any_sketch import (
+    UniqueKeyFunction,
+)
 
 
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
@@ -202,7 +202,7 @@ class HaloSimulator:
             sketch = self._publishers[i].liquid_legions_sketch(spends[i])
             combined_sketch = StandardizedHistogramEstimator.merge_two_sketches(
                 combined_sketch, sketch
-            ) 
+            )
         frequencies = [
             round(x) for x in estimator.estimate_cardinality(combined_sketch)
         ]
@@ -233,7 +233,7 @@ class HaloSimulator:
         For each subset of publishers, computes a differentially private
         reach and frequency estimate for those users who are reached by
         all and only the publishers in that subset.
-    
+
         Args:
             spends:  The hypothetical spend vector, equal in length to
               the number of publishers.  spends[i] is the amount that is
@@ -243,21 +243,22 @@ class HaloSimulator:
               satisfying the request.
             max_frequency:  The maximum frequency for which to report reach.
         Returns:
-            A list of ReachPoint. Each reach point represents the mapping from 
+            A list of ReachPoint. Each reach point represents the mapping from
             the spends of a subset of publishers to the differentially private
             estimate of the number of people reached in this subset.
         """
         raise NotImplementedError()
 
     def _form_venn_diagram_regions(self, spends: List[float]):
-        """ Form Venn diagram regions that contain frequency
-        """
+        """Form Venn diagram regions that contain frequency"""
         # Get user counts by spend for each active publisher
         user_counts_by_pub_id = {}
         for pub_id, spend in enumerate(spends):
             if not spend:
                 continue
-            user_counts_by_pub_id[pub_id] = self._publishers[pub_id]._publisher_data.user_counts_by_spend(spend)
+            user_counts_by_pub_id[pub_id] = self._publishers[
+                pub_id
+            ]._publisher_data.user_counts_by_spend(spend)
 
         if len(user_counts_by_pub_id) > MAX_ACTIVE_PUBLISHERS:
             raise ValueError("Too many active publishers for Venn diagram algorithm.")
@@ -279,10 +280,10 @@ class HaloSimulator:
                 user_info[user_id].located_region = new_lr
                 user_info[user_id].impressions += impressions
 
-        # Fill in 2^p - 1 regions of the Venn diagram. Note that the region with 
+        # Fill in 2^p - 1 regions of the Venn diagram. Note that the region with
         # representation 0 is unused
         num_publishers = len(spends)
-        regions = [{} for _ in range(2**num_publishers)]
+        regions = [{} for _ in range(2 ** num_publishers)]
         for user_id, user_info in user_info.items():
             lr = user_info.located_region
             regions[lr][user_id] = user_info.impressions

@@ -258,7 +258,7 @@ class HaloSimulator:
         Returns:
             pub_set_by_region:  Defaultdict. It contains the mapping of a binary
               representation to publisher ids that are in the corresponding region.
-            regions:  a list of lists. Each list is indexed by its binary 
+            regions:  a list of lists. Each list is indexed by its binary
               representation and contains the k+ reaches.
         """
         # Get user counts by spend for each active publisher
@@ -299,8 +299,8 @@ class HaloSimulator:
                 user_info[user_id].located_region = new_lr
                 user_info[user_id].impressions += impressions
 
-        # Fill in 2^p - 1 regions of the Venn diagram with user count. Note
-        # that the region with representation 0 is unused.
+        # Fill in 2^p - 1 regions of the Venn diagram with capped user counts.
+        # Note that the region with representation 0 is unused.
         num_publishers = len(spends)
         region_user_counts = [{} for _ in range(2 ** num_publishers)]
         for user_id, user_info in user_info.items():
@@ -311,11 +311,12 @@ class HaloSimulator:
                 else user_info.impressions
             )
 
-        # Compute k+ reach in each region
-        regions = [0] * (2 ** num_publishers)
-        for lr, user_counts in enumerate(region_user_counts, 1):
+        # Compute k+ reaches in each region except the first one
+        regions = [[] for _ in range(2 ** num_publishers)]
+        for lr in range(1, len(regions)):
+            counts = list(region_user_counts[lr].values())
             regions[lr] = list(
-                np.bincount(list(user_counts.values()), minlength=max_freq + 1)[1:]
+                np.bincount(counts, minlength=max_freq + 1)[1:]  # ignore 0 count
             )
 
         return pub_set_by_region, regions

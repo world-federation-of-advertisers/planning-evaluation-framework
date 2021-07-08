@@ -38,10 +38,9 @@ from wfa_cardinality_estimation_evaluation_framework.common.noisers import (
 from wfa_cardinality_estimation_evaluation_framework.estimators.vector_of_counts import (
     VectorOfCounts,
 )
-from wfa_cardinality_estimation_evaluation_framework.estimators.any_sketch import (
-    UniqueKeyFunction,
+from wfa_cardinality_estimation_evaluation_framework.estimators.estimator_noisers import (
+    GeometricEstimateNoiser,
 )
-
 
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
@@ -277,8 +276,10 @@ class HaloSimulator:
             ]._publisher_data.user_counts_by_spend(spend)
 
         if len(user_counts_by_pub_id) > MAX_ACTIVE_PUBLISHERS:
-            raise ValueError(f"There are {len(user_counts_by_pub_id)} publishers"
-             f"for Venn diagram algorithm. The maximum limit is {MAX_ACTIVE_PUBLISHERS}")
+            raise ValueError(
+                f"There are {len(user_counts_by_pub_id)} publishers"
+                f"for Venn diagram algorithm. The maximum limit is {MAX_ACTIVE_PUBLISHERS}"
+            )
 
         # Locate user's region and sum the impressions. Also, map the region
         # representation to publisher ids.

@@ -59,6 +59,10 @@ from wfa_planning_evaluation_framework.simulator.system_parameters import (
     SystemParameters,
 )
 
+
+MAX_ACTIVE_PUBLISHERS = 20
+
+
 class UserInfo(NamedTuple):
     located_region: int = 0
     impressions: int = 0
@@ -243,15 +247,23 @@ class HaloSimulator:
             the spends of a subset of publishers to the differentially private
             estimate of the number of people reached in this subset.
         """
-        user_counts_by_pub_id = {}
+        raise NotImplementedError()
 
+    def _form_venn_diagram_regions(self, spends: List[float]):
+        """ Form Venn diagram regions that contain frequency
+        """
         # Get user counts by spend for each active publisher
+        user_counts_by_pub_id = {}
         for pub_id, spend in enumerate(spends):
             if not spend:
                 continue
             user_counts_by_pub_id[pub_id] = self._publishers[pub_id]._publisher_data.user_counts_by_spend(spend)
 
-        # Locate user's region and sum the impressions. Also, map region representation to publisher ids.
+        if len(user_counts_by_pub_id) > MAX_ACTIVE_PUBLISHERS:
+            raise ValueError("Too many active publishers for Venn diagram algorithm.")
+
+        # Locate user's region and sum the impressions. Also, map the region
+        # representation to publisher ids.
         user_info = collections.defaultdict(UserInfo)
         pub_set_by_region = collections.defaultdict(set)
 
@@ -259,36 +271,23 @@ class HaloSimulator:
             for user_id, impressions in user_counts.items():
                 lr = user_info[user_id].located_region
                 new_lr = lr | (1 << pub_id)
+
                 if not new_lr in pub_set_by_region:
                     pub_set_by_region[new_lr] = copy.deepcopy(pub_set_by_region[lr])
                     pub_set_by_region[new_lr].add(pub_id)
+
                 user_info[user_id].located_region = new_lr
                 user_info[user_id].impressions += impressions
 
-        # Fill in 2^p - 1 regions of the Venn diagram. Note that the region with index 0 is unused
-        regions = [{} for _ in range(2**len(spends))]
-
+        # Fill in 2^p - 1 regions of the Venn diagram. Note that the region with 
+        # representation 0 is unused
+        num_publishers = len(spends)
+        regions = [{} for _ in range(2**num_publishers)]
         for user_id, user_info in user_info.items():
             lr = user_info.located_region
             regions[lr][user_id] = user_info.impressions
 
-        # Form the output pair, (pub_set, reach point), for each region
-        venn_diagram_count = []
-
-        for lr, user_counts in enumerate(regions):
-            pub_set = pub_set_by_region[lr]
-            impressions = [sum(user_counts_by_pub_id[pub_id][user_id] for user_id in user_counts.keys()) for pub_id in pub_set]
-            kplus_reaches = [len(regions[lr])]
-            region_spends = [spends[pub_id] for pub_id in pub_set]
-            venn_diagram_count.append(
-                pub_set,
-                ReachPoint(impressions, kplus_reaches, region_spends)
-            ) 
-
-        # TODO: Add noise to both freq and impressions
-        
-
-        return venn_diagram_count
+        return pub_set_by_region, regions
 
     def simulated_reach_curve(
         self, publisher_index: int, budget: PrivacyBudget

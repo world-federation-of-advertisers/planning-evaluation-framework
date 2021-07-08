@@ -60,11 +60,6 @@ from wfa_planning_evaluation_framework.simulator.system_parameters import (
 MAX_ACTIVE_PUBLISHERS = 20
 
 
-class UserInfo(NamedTuple):
-    located_region: int = 0
-    impressions: int = 0
-
-
 class HaloSimulator:
     """Simulator for the Halo System.
 
@@ -247,24 +242,24 @@ class HaloSimulator:
         raise NotImplementedError()
 
     def _form_venn_diagram_regions(
-        self, spends: List[float]
-    ) -> Tuple[Defaultdict, List[Dict]]:
-        """Form Venn diagram regions that contain reach and frequency
+        self, spends: List[float], max_frequency: int = 1
+    ) -> Tuple[Defaultdict, List[List]]:
+        """Form Venn diagram regions that contain k+ reaches
 
-        For each subset of publishers, computes a differentially private
-        reach and frequency estimate for those users who are reached by
-        all and only the publishers in that subset.
+        For each subset of publishers, computes k+ reaches for those users
+        who are reached by the publishers in that subset.
 
         Args:
             spends:  The hypothetical spend vector, equal in length to
               the number of publishers.  spends[i] is the amount that is
               spent with publisher i. Note that publishers with 0 spends will
               not be included in the Venn diagram reach.
+            max_frequency:  The maximum frequency for which to report reach.
         Returns:
-            pub_set_by_region: Defaultdict. It contains the mapping of a binary
+            pub_set_by_region:  Defaultdict. It contains the mapping of a binary
               representation to publisher ids that are in the corresponding region.
-            regions: a list of dictionaries. Each dictionary is indexed by its
-              binary representation and contains the mapping of user counts.
+            regions:  a list of lists. Each list is indexed by its binary 
+              representation and contains the k+ reaches.
         """
         # Get user counts by spend for each active publisher
         user_counts_by_pub_id = {}
@@ -283,6 +278,12 @@ class HaloSimulator:
 
         # Locate user's region and sum the impressions. Also, map the region
         # representation to publisher ids.
+        UserInfo = collections.namedtuple(
+            typename="Userinfo",
+            field_names="located_region impressions",
+            defaults=[0, 0],
+        )
+
         user_info = collections.defaultdict(UserInfo)
         pub_set_by_region = collections.defaultdict(set)
 
@@ -298,13 +299,24 @@ class HaloSimulator:
                 user_info[user_id].located_region = new_lr
                 user_info[user_id].impressions += impressions
 
-        # Fill in 2^p - 1 regions of the Venn diagram. Note that the region with
-        # representation 0 is unused
+        # Fill in 2^p - 1 regions of the Venn diagram with user count. Note
+        # that the region with representation 0 is unused.
         num_publishers = len(spends)
-        regions = [{} for _ in range(2 ** num_publishers)]
+        region_user_counts = [{} for _ in range(2 ** num_publishers)]
         for user_id, user_info in user_info.items():
             lr = user_info.located_region
-            regions[lr][user_id] = user_info.impressions
+            region_user_counts[lr][user_id] = (
+                max_frequency
+                if user_info.impressions > max_frequency
+                else user_info.impressions
+            )
+
+        # Compute k+ reach in each region
+        regions = [0] * (2 ** num_publishers)
+        for lr, user_counts in enumerate(region_user_counts, 1):
+            regions[lr] = list(
+                np.bincount(list(user_counts.values()), minlength=max_freq + 1)[1:]
+            )
 
         return pub_set_by_region, regions
 

@@ -22,8 +22,6 @@ Poisson distribution with unknown mixing parameter, and shows how the
 reach curve can be extrapolated from a single point on it.
 """
 
-import warnings
-
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 

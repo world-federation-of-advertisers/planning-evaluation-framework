@@ -17,6 +17,7 @@ An experimental trial represents running a specific ModelingStrategy
 against a specific DataSet, with specific SystemParameters.
 """
 
+from absl import logging
 import numpy as np
 import pandas as pd
 from os.path import isfile, join
@@ -122,7 +123,8 @@ class ExperimentalTrial:
         modeling_strategy = (
             self._trial_descriptor.modeling_strategy.instantiate_strategy()
         )
-
+        logging.vlog(2, f"Dataset {self._data_set_name}")
+        logging.vlog(2, f"Trial   {self._trial_descriptor}")
         try:
             reach_surface = modeling_strategy.fit(
                 halo, self._trial_descriptor.system_params, privacy_budget
@@ -145,7 +147,11 @@ class ExperimentalTrial:
                 for t in test_points
             ]
             metrics = aggregate(true_reach, simulated_reach)
-        except Exception:
+        except Exception as inst:
+            if not logging.vlog_is_on(2):
+                logging.vlog(1, f"Dataset {self._data_set_name}")
+                logging.vlog(1, f"Trial   {self._trial_descriptor}")
+            logging.vlog(1, inst)
             metrics = aggregate_on_failure()
 
         independent_vars = self._make_independent_vars_dataframe()

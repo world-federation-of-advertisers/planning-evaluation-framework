@@ -51,6 +51,7 @@ from wfa_planning_evaluation_framework.driver.trial_descriptor import (
 )
 from wfa_planning_evaluation_framework.driver.test_point_aggregator import (
     aggregate,
+    aggregate_on_failure,
 )
 
 
@@ -121,31 +122,36 @@ class ExperimentalTrial:
         modeling_strategy = (
             self._trial_descriptor.modeling_strategy.instantiate_strategy()
         )
-        reach_surface = modeling_strategy.fit(
-            halo, self._trial_descriptor.system_params, privacy_budget
-        )
 
-        test_points = list(self._trial_descriptor.experiment_params.generate_test_points(
-            self._dataset, rng
-        ))
-        true_reach = [
-            halo.true_reach_by_spend(
-                t, self._trial_descriptor.experiment_params.max_frequency
+        try:
+            reach_surface = modeling_strategy.fit(
+                halo, self._trial_descriptor.system_params, privacy_budget
             )
-            for t in test_points
-        ]
-        simulated_reach = [
-            reach_surface.by_spend(
-                t, self._trial_descriptor.experiment_params.max_frequency
+            test_points = list(
+                self._trial_descriptor.experiment_params.generate_test_points(
+                    self._dataset, rng
+                )
             )
-            for t in test_points
-        ]
+            true_reach = [
+                halo.true_reach_by_spend(
+                    t, self._trial_descriptor.experiment_params.max_frequency
+                )
+                for t in test_points
+            ]
+            simulated_reach = [
+                reach_surface.by_spend(
+                    t, self._trial_descriptor.experiment_params.max_frequency
+                )
+                for t in test_points
+            ]
+            metrics = aggregate(true_reach, simulated_reach)
+        except Exception:
+            metrics = aggregate_on_failure()
 
         independent_vars = self._make_independent_vars_dataframe()
         privacy_tracking_vars = self._make_privacy_tracking_vars_dataframe(
             self._privacy_tracker
         )
-        metrics = aggregate(true_reach, simulated_reach)
         result = pd.concat([independent_vars, privacy_tracking_vars, metrics], axis=1)
         Path(trial_results_path).parent.absolute().mkdir(parents=True, exist_ok=True)
         result.to_csv(trial_results_path)

@@ -124,7 +124,19 @@ def aggregate(
     Returns:
       A single row DataFrame representing the values of the statistics listed in keys.
     """
-    stats = {}
+    stats = {"model_succeeded": 1}
     for key in AGGREGATORS:
         stats[key] = [AGGREGATORS[key](true_reach, simulated_reach)]
+    return pd.DataFrame(data=stats)
+
+
+def aggregate_on_failure() -> pd.DataFrame:
+    """Returns a DataFrame of the same shape as aggregate but for case of failure.
+
+    Returns:
+      A single row DataFrame representing the values of the statistics listed in keys.
+    """
+    stats = {"model_succeeded": 0}
+    for key in AGGREGATORS:
+        stats[key] = [np.NaN]
     return pd.DataFrame(data=stats)

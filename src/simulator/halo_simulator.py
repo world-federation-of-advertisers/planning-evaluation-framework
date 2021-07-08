@@ -23,6 +23,7 @@ part of this evaluation effort.
 from typing import List
 from typing import Set
 from typing import Tuple
+from typing import Defaultdict
 from typing import NamedTuple
 import copy
 import collections
@@ -249,8 +250,27 @@ class HaloSimulator:
         """
         raise NotImplementedError()
 
-    def _form_venn_diagram_regions(self, spends: List[float]):
-        """Form Venn diagram regions that contain frequency"""
+    def _form_venn_diagram_regions(
+        self, 
+        spends: List[float]
+    ) -> Tuple[Defaultdict, List[Dict]]:
+        """Form Venn diagram regions that contain reach and frequency
+
+        For each subset of publishers, computes a differentially private
+        reach and frequency estimate for those users who are reached by
+        all and only the publishers in that subset.
+
+        Args:
+            spends:  The hypothetical spend vector, equal in length to
+              the number of publishers.  spends[i] is the amount that is
+              spent with publisher i. Note that publishers with 0 spends will
+              not be included in the Venn diagram reach.
+        Returns:
+            pub_set_by_region: Defaultdict. It contains the mapping of a binary
+              representation to publisher ids that are in the corresponding region.
+            regions: a list of dictionaries. Each dictionary is indexed by its
+              binary representation and contains the mapping of user counts.
+        """
         # Get user counts by spend for each active publisher
         user_counts_by_pub_id = {}
         for pub_id, spend in enumerate(spends):

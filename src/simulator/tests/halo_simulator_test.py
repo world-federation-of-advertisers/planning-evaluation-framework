@@ -89,7 +89,7 @@ class HaloSimulatorTest(absltest.TestCase):
         )
         self.assertTrue(reach_point.reach(1) >= 0)
 
-    def test_form_venn_diagram_regions(self):
+    def test_form_venn_diagram_regions_with_2_publishers_and_1plus_reach(self):
         pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
         pdf2 = PublisherData([(2, 0.03), (4, 0.06)], "pdf2")
         data_set = DataSet([pdf1, pdf2], "test")
@@ -99,11 +99,85 @@ class HaloSimulatorTest(absltest.TestCase):
         privacy_tracker = PrivacyTracker()
         halo = HaloSimulator(data_set, params, privacy_tracker)
 
-        # Case1
         spends = [0.04, 0.04]
         max_freq = 1
-        expected_pub_set_by_region = {0: set(), 1: set([0]), 3:set([0, 1])}
+        expected_pub_set_by_region = {0: set(), 1: set([0]), 3: set([0, 1])}
         expected_regions = [[0], [1], [0], [1]]
+        pub_set_by_region, regions = halo._form_venn_diagram_regions(spends, max_freq)
+        self.assertEqual(expected_pub_set_by_region, dict(pub_set_by_region))
+        self.assertEqual(expected_regions, regions)
+
+    def test_form_venn_diagram_regions_with_2_publishers_and_2plus_reach(self):
+        pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
+        pdf2 = PublisherData([(2, 0.03), (4, 0.06)], "pdf2")
+        data_set = DataSet([pdf1, pdf2], "test")
+        params = SystemParameters(
+            [0.4, 0.5], LiquidLegionsParameters(), np.random.default_rng(1)
+        )
+        privacy_tracker = PrivacyTracker()
+        halo = HaloSimulator(data_set, params, privacy_tracker)
+
+        spends = [0.05, 0.08]
+        max_freq = 2
+        expected_pub_set_by_region = {
+            0: set(),
+            1: set([0]),
+            2: set([1]),
+            3: set([0, 1]),
+        }
+        expected_regions = [[0, 0], [1, 1], [1, 0], [0, 1]]
+        pub_set_by_region, regions = halo._form_venn_diagram_regions(spends, max_freq)
+        self.assertEqual(expected_pub_set_by_region, dict(pub_set_by_region))
+        self.assertEqual(expected_regions, regions)
+
+    def test_form_venn_diagram_regions_with_3_publishers_and_1plus_reach(self):
+        pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
+        pdf2 = PublisherData([(2, 0.03), (4, 0.06)], "pdf2")
+        pdf3 = PublisherData([(2, 0.01), (3, 0.03), (4, 0.05)], "pdf3")
+        data_set = DataSet([pdf1, pdf2, pdf3], "test")
+        params = SystemParameters(
+            [0.4, 0.5, 0.4], LiquidLegionsParameters(), np.random.default_rng(1)
+        )
+        privacy_tracker = PrivacyTracker()
+        halo = HaloSimulator(data_set, params, privacy_tracker)
+
+        spends = [0.04, 0.04, 0.0]
+        max_freq = 1
+        expected_pub_set_by_region = {0: set(), 1: set([0]), 3: set([0, 1])}
+        expected_regions = [[0], [1], [0], [1], [0], [0], [0], [0]]
+        pub_set_by_region, regions = halo._form_venn_diagram_regions(spends, max_freq)
+        self.assertEqual(expected_pub_set_by_region, dict(pub_set_by_region))
+        self.assertEqual(expected_regions, regions)
+
+    def test_form_venn_diagram_regions_with_3_publishers_and_2plus_reach(self):
+        pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
+        pdf2 = PublisherData([(2, 0.03), (4, 0.06)], "pdf2")
+        pdf3 = PublisherData([(2, 0.01), (3, 0.03), (4, 0.05)], "pdf3")
+        data_set = DataSet([pdf1, pdf2, pdf3], "test")
+        params = SystemParameters(
+            [0.4, 0.5, 0.4], LiquidLegionsParameters(), np.random.default_rng(1)
+        )
+        privacy_tracker = PrivacyTracker()
+        halo = HaloSimulator(data_set, params, privacy_tracker)
+
+        spends = [0.05, 0.08, 0.0]
+        max_freq = 2
+        expected_pub_set_by_region = {
+            0: set(),
+            1: set([0]),
+            2: set([1]),
+            3: set([0, 1]),
+        }
+        expected_regions = [
+            [0, 0],
+            [1, 1],
+            [1, 0],
+            [0, 1],
+            [0, 0],
+            [0, 0],
+            [0, 0],
+            [0, 0],
+        ]
         pub_set_by_region, regions = halo._form_venn_diagram_regions(spends, max_freq)
         self.assertEqual(expected_pub_set_by_region, dict(pub_set_by_region))
         self.assertEqual(expected_regions, regions)

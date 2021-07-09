@@ -242,7 +242,7 @@ class HaloSimulator:
 
     def _form_venn_diagram_regions(
         self, spends: List[float], max_frequency: int = 1
-    ) -> Tuple[DefaultDict, List[List]]:
+    ) -> Tuple[DefaultDict[int, Set], List[List]]:
         """Form Venn diagram regions that contain k+ reaches
 
         For each subset of publishers, computes k+ reaches for those users
@@ -255,8 +255,9 @@ class HaloSimulator:
               not be included in the Venn diagram reach.
             max_frequency:  The maximum frequency for which to report reach.
         Returns:
-            pub_set_by_region:  DefaultDict. It contains the mapping of a binary
-              representation to publisher ids that are in the corresponding region.
+            pub_set_by_region:  DefaultDict of sets. It contains the mapping of
+              a binary representation to a set of publisher ids that are in the
+              corresponding region.
             regions:  a list of lists. Each list is indexed by its binary
               representation and contains the k+ reaches.
         """
@@ -295,7 +296,9 @@ class HaloSimulator:
                     pub_set_by_region[new_lr] = copy.deepcopy(pub_set_by_region[lr])
                     pub_set_by_region[new_lr].add(pub_id)
 
-                new_user_info = UserInfo(new_lr, user_info[user_id].impressions + impressions)
+                new_user_info = UserInfo(
+                    new_lr, user_info[user_id].impressions + impressions
+                )
                 user_info[user_id] = new_user_info
 
         # Fill in 2^p - 1 regions of the Venn diagram with capped user counts.

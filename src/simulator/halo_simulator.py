@@ -23,8 +23,7 @@ part of this evaluation effort.
 from typing import List
 from typing import Set
 from typing import Tuple
-from typing import Defaultdict
-from typing import NamedTuple
+from typing import DefaultDict
 import copy
 import collections
 import numpy as np
@@ -243,7 +242,7 @@ class HaloSimulator:
 
     def _form_venn_diagram_regions(
         self, spends: List[float], max_frequency: int = 1
-    ) -> Tuple[Defaultdict, List[List]]:
+    ) -> Tuple[DefaultDict, List[List]]:
         """Form Venn diagram regions that contain k+ reaches
 
         For each subset of publishers, computes k+ reaches for those users
@@ -256,7 +255,7 @@ class HaloSimulator:
               not be included in the Venn diagram reach.
             max_frequency:  The maximum frequency for which to report reach.
         Returns:
-            pub_set_by_region:  Defaultdict. It contains the mapping of a binary
+            pub_set_by_region:  DefaultDict. It contains the mapping of a binary
               representation to publisher ids that are in the corresponding region.
             regions:  a list of lists. Each list is indexed by its binary
               representation and contains the k+ reaches.
@@ -296,8 +295,8 @@ class HaloSimulator:
                     pub_set_by_region[new_lr] = copy.deepcopy(pub_set_by_region[lr])
                     pub_set_by_region[new_lr].add(pub_id)
 
-                user_info[user_id].located_region = new_lr
-                user_info[user_id].impressions += impressions
+                new_user_info = UserInfo(new_lr, user_info[user_id].impressions + impressions)
+                user_info[user_id] = new_user_info
 
         # Fill in 2^p - 1 regions of the Venn diagram with capped user counts.
         # Note that the region with representation 0 is unused.
@@ -312,11 +311,11 @@ class HaloSimulator:
             )
 
         # Compute k+ reaches in each region except the first one
-        regions = [[] for _ in range(2 ** num_publishers)]
+        regions = [[0] * max_frequency for _ in range(2 ** num_publishers)]
         for lr in range(1, len(regions)):
             counts = list(region_user_counts[lr].values())
             regions[lr] = list(
-                np.bincount(counts, minlength=max_freq + 1)[1:]  # ignore 0 count
+                np.bincount(counts, minlength=max_frequency + 1)[1:]  # ignore 0 count
             )
 
         return pub_set_by_region, regions

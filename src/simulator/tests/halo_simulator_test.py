@@ -89,6 +89,25 @@ class HaloSimulatorTest(absltest.TestCase):
         )
         self.assertTrue(reach_point.reach(1) >= 0)
 
+    def test_form_venn_diagram_regions(self):
+        pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
+        pdf2 = PublisherData([(2, 0.03), (4, 0.06)], "pdf2")
+        data_set = DataSet([pdf1, pdf2], "test")
+        params = SystemParameters(
+            [0.4, 0.5], LiquidLegionsParameters(), np.random.default_rng(1)
+        )
+        privacy_tracker = PrivacyTracker()
+        halo = HaloSimulator(data_set, params, privacy_tracker)
+
+        # Case1
+        spends = [0.04, 0.04]
+        max_freq = 1
+        expected_pub_set_by_region = {0: set(), 1: set([0]), 3:set([0, 1])}
+        expected_regions = [[0], [1], [0], [1]]
+        pub_set_by_region, regions = halo._form_venn_diagram_regions(spends, max_freq)
+        self.assertEqual(expected_pub_set_by_region, dict(pub_set_by_region))
+        self.assertEqual(expected_regions, regions)
+
     def test_privacy_tracker(self):
         self.assertEqual(self.halo.privacy_tracker.mechanisms, [])
         reach_point = self.halo.simulated_reach_by_spend(

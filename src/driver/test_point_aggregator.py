@@ -124,19 +124,21 @@ def aggregate(
     Returns:
       A single row DataFrame representing the values of the statistics listed in keys.
     """
-    stats = {"model_succeeded": 1}
+    stats = {"model_succeeded": [1], "model_exception": [""]}
     for key in AGGREGATORS:
         stats[key] = [AGGREGATORS[key](true_reach, simulated_reach)]
     return pd.DataFrame(data=stats)
 
 
-def aggregate_on_failure() -> pd.DataFrame:
+def aggregate_on_failure(inst: Exception) -> pd.DataFrame:
     """Returns a DataFrame of the same shape as aggregate but for case of failure.
 
+    Args:
+      inst:  The exception instance that was generated in the modeling attempt.
     Returns:
       A single row DataFrame representing the values of the statistics listed in keys.
     """
-    stats = {"model_succeeded": 0}
+    stats = {"model_succeeded": [0], "model_exception": [str(inst)]}
     for key in AGGREGATORS:
         stats[key] = [np.NaN]
     return pd.DataFrame(data=stats)

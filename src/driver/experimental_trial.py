@@ -152,7 +152,7 @@ class ExperimentalTrial:
                 logging.vlog(1, f"Dataset {self._data_set_name}")
                 logging.vlog(1, f"Trial   {self._trial_descriptor}")
             logging.vlog(1, f"Modeling failure: {inst}")
-            metrics = aggregate_on_failure()
+            metrics = aggregate_on_failure(inst)
 
         independent_vars = self._make_independent_vars_dataframe()
         privacy_tracking_vars = self._make_privacy_tracking_vars_dataframe(

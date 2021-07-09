@@ -145,8 +145,8 @@ class ExperimentalTrial:
                 for t in test_points
             ]
             metrics = aggregate(true_reach, simulated_reach)
-        except Exception:
-            metrics = aggregate_on_failure()
+        except Exception as inst:
+            metrics = aggregate_on_failure(inst)
 
         independent_vars = self._make_independent_vars_dataframe()
         privacy_tracking_vars = self._make_privacy_tracking_vars_dataframe(

@@ -23,7 +23,7 @@ part of this evaluation effort.
 from typing import List
 from typing import Set
 from typing import Tuple
-from typing import DefaultDict
+from typing import Dict
 import copy
 import collections
 import numpy as np
@@ -242,7 +242,7 @@ class HaloSimulator:
 
     def _form_venn_diagram_regions(
         self, spends: List[float], max_frequency: int = 1
-    ) -> Tuple[DefaultDict[int, Set], List[List]]:
+    ) -> Tuple[Dict[int, Set], Dict[int, List]]:
         """Form Venn diagram regions that contain k+ reaches
 
         For each subset of publishers, computes k+ reaches for those users
@@ -255,11 +255,10 @@ class HaloSimulator:
               not be included in the Venn diagram reach.
             max_frequency:  The maximum frequency for which to report reach.
         Returns:
-            pub_set_by_region:  DefaultDict of sets. It contains the mapping of
-              a binary representation to a set of publisher ids that are in the
-              corresponding region.
-            regions:  a list of lists. Each list is indexed by its binary
-              representation and contains the k+ reaches.
+            pub_set_by_region:  Contains the mapping of a binary representation
+              to a set of publisher ids that are in the corresponding region.
+            regions:  Contains k+ frequencies indexed by their binary
+              representation.
         """
         # Get user counts by spend for each active publisher
         user_counts_by_pub_id = {}
@@ -284,44 +283,42 @@ class HaloSimulator:
             defaults=[0, 0],
         )
 
-        user_info = collections.defaultdict(UserInfo)
+        users_info = collections.defaultdict(UserInfo)
         pub_set_by_region = collections.defaultdict(set)
 
         for pub_id, user_counts in user_counts_by_pub_id.items():
             for user_id, impressions in user_counts.items():
-                lr = user_info[user_id].located_region
+                lr = users_info[user_id].located_region
                 new_lr = lr | (1 << pub_id)
 
                 if not new_lr in pub_set_by_region:
                     pub_set_by_region[new_lr] = copy.deepcopy(pub_set_by_region[lr])
                     pub_set_by_region[new_lr].add(pub_id)
 
-                new_user_info = UserInfo(
-                    new_lr, user_info[user_id].impressions + impressions
+                users_info[user_id] = UserInfo(
+                    new_lr, users_info[user_id].impressions + impressions
                 )
-                user_info[user_id] = new_user_info
 
-        # Fill in 2^p - 1 regions of the Venn diagram with capped user counts.
-        # Note that the region with representation 0 is unused.
-        num_publishers = len(spends)
-        region_user_counts = [{} for _ in range(2 ** num_publishers)]
-        for user_id, user_info in user_info.items():
-            lr = user_info.located_region
+        # Remove the null region
+        pub_set_by_region.pop(0)
+
+        # Fill in the occupied regions of the Venn diagram with capped user counts.
+        region_user_counts = collections.defaultdict(dict)
+        for user_id, info in users_info.items():
+            lr = info.located_region
             region_user_counts[lr][user_id] = (
-                max_frequency
-                if user_info.impressions > max_frequency
-                else user_info.impressions
+                max_frequency if info.impressions > max_frequency else info.impressions
             )
 
         # Compute k+ reaches in each region except the first one
-        regions = [[0] * max_frequency for _ in range(2 ** num_publishers)]
-        for lr in range(1, len(regions)):
-            counts = list(region_user_counts[lr].values())
+        regions = dict()
+        for lr, user_counts in region_user_counts.items():
+            counts = list(user_counts.values())
             regions[lr] = list(
                 np.bincount(counts, minlength=max_frequency + 1)[1:]  # ignore 0 count
             )
 
-        return pub_set_by_region, regions
+        return dict(pub_set_by_region), regions
 
     def simulated_reach_curve(
         self, publisher_index: int, budget: PrivacyBudget

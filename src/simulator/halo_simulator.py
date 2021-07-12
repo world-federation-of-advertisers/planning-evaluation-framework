@@ -24,7 +24,6 @@ from typing import List
 from typing import Set
 from typing import Tuple
 from typing import Dict
-from itertools import accumulate
 import copy
 import collections
 import numpy as np

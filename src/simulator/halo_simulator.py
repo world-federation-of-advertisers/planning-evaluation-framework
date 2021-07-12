@@ -24,6 +24,7 @@ from typing import List
 from typing import Set
 from typing import Tuple
 from typing import Dict
+from itertools import accumulate
 import copy
 import collections
 import numpy as np
@@ -257,8 +258,9 @@ class HaloSimulator:
         Returns:
             pub_set_by_region:  Contains the mapping of a binary representation
               to a set of publisher ids that are in the corresponding region.
-            regions:  Contains k+ frequencies indexed by their binary
-              representation.
+            regions:  Contains k+ reaches indexed by their binary representation.
+              The k+ reach for a given region is given as a list r[] where r[k]
+              is the number of people who were reached AT LEAST k+1 times.
         """
         # Get user counts by spend for each active publisher
         user_counts_by_pub_id = {}
@@ -275,48 +277,43 @@ class HaloSimulator:
                 f"for Venn diagram algorithm. The maximum limit is {MAX_ACTIVE_PUBLISHERS}"
             )
 
-        # Locate user's region and sum the impressions. Also, map the region
-        # representation to publisher ids.
-        UserInfo = collections.namedtuple(
-            typename="Userinfo",
-            field_names="located_region impressions",
-            defaults=[0, 0],
-        )
-
-        users_info = collections.defaultdict(UserInfo)
+        # Locate user's region represented by number and sum the impressions.
+        # Also, map the region representation to publisher ids.
+        user_region = collections.defaultdict(int)
+        user_impressions = collections.defaultdict(int)
         pub_set_by_region = collections.defaultdict(set)
 
         for pub_id, user_counts in user_counts_by_pub_id.items():
             for user_id, impressions in user_counts.items():
-                lr = users_info[user_id].located_region
-                new_lr = lr | (1 << pub_id)
+                region = user_region[user_id]
+                new_region = region | (1 << pub_id)
 
-                if not new_lr in pub_set_by_region:
-                    pub_set_by_region[new_lr] = copy.deepcopy(pub_set_by_region[lr])
-                    pub_set_by_region[new_lr].add(pub_id)
+                if not new_region in pub_set_by_region:
+                    pub_set_by_region[new_region] = copy.deepcopy(
+                        pub_set_by_region[region]
+                    )
+                    pub_set_by_region[new_region].add(pub_id)
 
-                users_info[user_id] = UserInfo(
-                    new_lr, users_info[user_id].impressions + impressions
-                )
+                user_region[user_id] = new_region
+                user_impressions[user_id] += impressions
 
         # Remove the null region
-        pub_set_by_region.pop(0)
+        pub_set_by_region.pop(0, set())
 
-        # Fill in the occupied regions of the Venn diagram with capped user counts.
-        region_user_counts = collections.defaultdict(dict)
-        for user_id, info in users_info.items():
-            lr = info.located_region
-            region_user_counts[lr][user_id] = (
-                max_frequency if info.impressions > max_frequency else info.impressions
-            )
+        # Compute frequencies in the occupied regions of the Venn diagram with
+        # capped user counts.
+        frequencies_by_region = {
+            r: [0] * (max_frequency + 1) for r in set(user_region.values())
+        }
+        for user_id, region in user_region.items():
+            impressions = min(max_frequency, user_impressions[user_id])
+            frequencies_by_region[region][impressions] += 1
 
-        # Compute k+ reaches in each region except the first one
-        regions = dict()
-        for lr, user_counts in region_user_counts.items():
-            counts = list(user_counts.values())
-            regions[lr] = list(
-                np.bincount(counts, minlength=max_frequency + 1)[1:]  # ignore 0 count
-            )
+        # Compute k+ reaches in each region. Ignore 0 frequency.
+        regions = {
+            r: ReachPoint.frequencies_to_kplus_reaches(freq[1:])
+            for r, freq in frequencies_by_region.items()
+        }
 
         return dict(pub_set_by_region), regions
 

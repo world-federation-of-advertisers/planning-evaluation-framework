@@ -234,6 +234,27 @@ class HaloSimulator:
         """
         raise NotImplementedError()
 
+    def _aggregate_venn_diagram_regions(
+        self, 
+        max_frequency: int,
+        pub_ids: List[int], 
+        pub_set_by_region: Dict[int, Set], 
+        venn_diagram_regions:Dict[int, List]
+    ) -> List[int]:
+        """ Returns an aggregated k+ reaches based on publisher IDs
+
+        """
+        aggregated_kplus_reaches = np.zeros(max_frequency)
+
+        target_pub_set = set(pub_ids)
+        for region, pub_set in pub_set_by_region.items():
+            if not target_pub_set & pub_set:
+                continue
+
+            aggregated_kplus_reaches += np.array(venn_diagram_regions[region])
+
+        return list(aggregated_kplus_reaches)
+
     def simulated_reach_curve(
         self, publisher_index: int, budget: PrivacyBudget
     ) -> ReachCurve:

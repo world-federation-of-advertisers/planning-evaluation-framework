@@ -13,7 +13,7 @@
 # limitations under the License.
 """Grid test point generator.
 
-Generates a uniformly spaced grid of test points.
+Generates an evenly spaced grid of test points.
 """
 
 import itertools
@@ -27,7 +27,7 @@ from wfa_planning_evaluation_framework.driver.test_point_generator import (
 
 
 class GridTestPointGenerator(TestPointGenerator):
-    """Generates a collection of uniformly spaced test points."""
+    """Generates a collection of evenly spaced test points."""
 
     def __init__(self, dataset: DataSet, rng: np.random.Generator, grid_size: int):
         """Returns a GridTestPointGenerator.

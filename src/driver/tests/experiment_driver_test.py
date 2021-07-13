@@ -76,7 +76,7 @@ class ExperimentDriverTest(absltest.TestCase):
             output_file = d + "/output"
             intermediate_dir = d + "/intermediates"
             data_design_generator = SyntheticDataDesignGenerator(
-                data_design_dir, 1, simple_data_design_example.__file__, False
+                data_design_dir, simple_data_design_example.__file__, 1, False
             )
             data_design_generator()
             rng = np.random.default_rng(seed=1)

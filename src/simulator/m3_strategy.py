@@ -17,6 +17,7 @@ from typing import Dict
 from typing import Type
 
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
+from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.models.reach_surface import ReachSurface
 from wfa_planning_evaluation_framework.simulator.halo_simulator import HaloSimulator
 from wfa_planning_evaluation_framework.simulator.modeling_strategy import (
@@ -61,14 +62,20 @@ class M3Strategy(ModelingStrategy):
         )
 
         # Compute reach for each publisher
-        single_pub_reach = []
+        single_pub_reach_list = []
         for i in range(p):
             spend_vec = [0.0] * p
             spend_vec[i] = halo.campaign_spends[i]
-            reach = halo.simulated_reach_by_spend(
+            reach_point = halo.simulated_reach_by_spend(
                 spend_vec, per_request_budget, max_frequency=10
             )
-            single_pub_reach.append(reach)
+            kplus_reaches = [
+                reach_point.reach(k) for k in range(1, reach_point.max_frequency + 1)
+            ]
+            single_pub_reach = ReachPoint(
+                [reach_point.impressions[i]], kplus_reaches, [reach_point.spends[i]]
+            )
+            single_pub_reach_list.append(single_pub_reach)
 
         # Compute reach for all publishers but one
         all_but_one_reach = []
@@ -83,7 +90,7 @@ class M3Strategy(ModelingStrategy):
         single_pub_curves = []
         for i in range(p):
             curve = self._single_pub_model(
-                [single_pub_reach[i]], **self._single_pub_model_kwargs
+                [single_pub_reach_list[i]], **self._single_pub_model_kwargs
             )
             curve._fit()
             single_pub_curves.append(curve)

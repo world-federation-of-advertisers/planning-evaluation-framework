@@ -15,7 +15,7 @@
 
 import numpy as np
 from typing import Dict
-from typing import List
+from typing import Iterable
 from typing import NamedTuple
 from typing import Type
 
@@ -64,7 +64,7 @@ class ExperimentParameters(NamedTuple):
 
     def generate_test_points(
         self, data_set: DataSet, rng: np.random.Generator
-    ) -> List[ReachPoint]:
+    ) -> Iterable[ReachPoint]:
         if not self.test_point_strategy in TEST_POINT_STRATEGIES:
             raise ValueError(
                 "Invalid test point strategy: {}".format(self.test_point_strategy)

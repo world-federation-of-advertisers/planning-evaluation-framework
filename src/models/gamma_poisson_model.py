@@ -131,9 +131,7 @@ class GammaPoissonModel(ReachCurve):
         self._reach_point = data[0]
         self._max_reach = max_reach
         if data[0].spends:
-            # Temporary solution to avoid "division by zero" bugs.
-            # Consistent with the solution in goerg_model
-            self._cpi = data[0].spends[0] / max(2, data[0].impressions[0])
+            self._cpi = data[0].spends[0] / data[0].impressions[0]
         else:
             self._cpi = None
 
@@ -406,11 +404,11 @@ class GammaPoissonModel(ReachCurve):
         """
         if len(spends) != 1:
             raise ValueError("Spend vector must have a length of 1.")
-        return self.by_impressions(
-            [self.impressions_for_spend(spends[0])], max_frequency
-        )
+        return self.by_impressions([self.impressions_for_spend(spends[0])],
+                                   max_frequency)
 
     def impressions_for_spend(self, spend: float) -> int:
         if not self._cpi:
             raise ValueError("Impression cost is not known for this ReachPoint.")
         return spend / self._cpi
+

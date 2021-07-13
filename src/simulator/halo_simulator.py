@@ -238,20 +238,35 @@ class HaloSimulator:
         self, 
         max_frequency: int,
         pub_ids: List[int], 
-        pub_set_by_region: Dict[int, Set], 
         venn_diagram_regions:Dict[int, List]
     ) -> List[int]:
-        """ Returns an aggregated k+ reaches based on publisher IDs
+        """ Returns an aggregated k+ reaches from Venn diagram regions given 
+        publisher IDs.
+        
+        With the Venn diagram regions, we aggregate k+ reaches from the regions
+        containing any given publishers. Note that the binary representation of
+        the index of a region represents the formation of publisher IDs in that 
+        region.
 
+        Args:
+            max_frequency:  The maximum frequency for which to report reach.
+            pub_ids:  The list of target publisher IDs for computing aggregated
+              k+ reaches.
+            venn_diagram_regions:  Contains k+ reaches of regions. The k+ reaches
+              for a given region is given as a list r[] where r[k] is the number
+              of people who were reached AT LEAST k+1 times.
+        Returns:
+            aggregated_kplus_reaches:  The k+ reaches is aggregated over regions 
+              containing given publisher IDs. aggregated_kplus_reaches[k] is the
+              number of people reached k+1 or more times.
         """
         aggregated_kplus_reaches = np.zeros(max_frequency)
-
-        target_pub_set = set(pub_ids)
-        for region, pub_set in pub_set_by_region.items():
-            if not target_pub_set & pub_set:
+        target_pub_repr = sum(1 << pub_id for pub_id in pub_ids)
+        for region, kplus_reaches in venn_diagram_regions.items():
+            if not target_pub_repr & region:
                 continue
 
-            aggregated_kplus_reaches += np.array(venn_diagram_regions[region])
+            aggregated_kplus_reaches += np.array(kplus_reaches)
 
         return list(aggregated_kplus_reaches)
 

@@ -22,7 +22,10 @@ from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
 )
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
-from wfa_planning_evaluation_framework.simulator.halo_simulator import HaloSimulator
+from wfa_planning_evaluation_framework.simulator.halo_simulator import (
+    HaloSimulator,
+    MAX_ACTIVE_PUBLISHERS,
+)
 from wfa_planning_evaluation_framework.simulator.publisher import Publisher
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyBudget
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyTracker
@@ -88,6 +91,22 @@ class HaloSimulatorTest(absltest.TestCase):
             [0.04, 0.04], PrivacyBudget(1.0, 0.0), 0.5, 3
         )
         self.assertTrue(reach_point.reach(1) >= 0)
+
+    def test_form_venn_diagram_regions_with_publishers_more_than_limit(self):
+        num_publishers = MAX_ACTIVE_PUBLISHERS + 1
+        data_set = DataSet(
+            [PublisherData([(1, 0.01)], f"pdf{i + 1}") for i in range(num_publishers)],
+            "test",
+        )
+        params = SystemParameters(
+            [0.4] * num_publishers, LiquidLegionsParameters(), np.random.default_rng(1)
+        )
+        privacy_tracker = PrivacyTracker()
+        halo = HaloSimulator(data_set, params, privacy_tracker)
+
+        spends = [0.01] * num_publishers
+        with self.assertRaises(ValueError):
+            halo._form_venn_diagram_regions(spends)
 
     def test_form_venn_diagram_regions_with_2_inactive_publishers_and_1plus_reach(self):
         pdf1 = PublisherData([(1, 0.04)], "pdf1")

@@ -24,7 +24,6 @@ from typing import List
 from typing import Set
 from typing import Tuple
 from typing import Dict
-import copy
 import collections
 import numpy as np
 
@@ -288,10 +287,9 @@ class HaloSimulator:
                 new_region = region | (1 << pub_id)
 
                 if not new_region in pub_set_by_region:
-                    pub_set_by_region[new_region] = copy.deepcopy(
-                        pub_set_by_region[region]
+                    pub_set_by_region[new_region] = (
+                        set([pub_id]) | pub_set_by_region[region]
                     )
-                    pub_set_by_region[new_region].add(pub_id)
 
                 user_region[user_id] = new_region
                 user_impressions[user_id] += impressions

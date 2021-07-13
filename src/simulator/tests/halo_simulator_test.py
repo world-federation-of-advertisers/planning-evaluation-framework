@@ -120,10 +120,8 @@ class HaloSimulatorTest(absltest.TestCase):
 
         spends = [0.01, 0.01]
         max_freq = 1
-        expected_pub_set_by_region = {}
         expected_regions = {}
-        pub_set_by_region, regions = halo._form_venn_diagram_regions(spends, max_freq)
-        self.assertEqual(expected_pub_set_by_region, pub_set_by_region)
+        regions = halo._form_venn_diagram_regions(spends, max_freq)
         self.assertEqual(expected_regions, regions)
 
     def test_form_venn_diagram_regions_with_simple_2_publishers_and_1plus_reach(self):
@@ -138,10 +136,8 @@ class HaloSimulatorTest(absltest.TestCase):
 
         spends = [0.01, 0.01]
         max_freq = 1
-        expected_pub_set_by_region = {1: set([0]), 3: set([0, 1])}
         expected_regions = {3: [1]}
-        pub_set_by_region, regions = halo._form_venn_diagram_regions(spends, max_freq)
-        self.assertEqual(expected_pub_set_by_region, pub_set_by_region)
+        regions = halo._form_venn_diagram_regions(spends, max_freq)
         self.assertEqual(expected_regions, regions)
 
     def test_form_venn_diagram_regions_with_2_publishers_and_1plus_reach(self):
@@ -156,10 +152,8 @@ class HaloSimulatorTest(absltest.TestCase):
 
         spends = [0.04, 0.04]
         max_freq = 1
-        expected_pub_set_by_region = {1: set([0]), 3: set([0, 1])}
         expected_regions = {1: [1], 3: [1]}
-        pub_set_by_region, regions = halo._form_venn_diagram_regions(spends, max_freq)
-        self.assertEqual(expected_pub_set_by_region, pub_set_by_region)
+        regions = halo._form_venn_diagram_regions(spends, max_freq)
         self.assertEqual(expected_regions, regions)
 
     def test_form_venn_diagram_regions_with_2_publishers_and_2plus_reach(self):
@@ -174,14 +168,8 @@ class HaloSimulatorTest(absltest.TestCase):
 
         spends = [0.05, 0.08]
         max_freq = 2
-        expected_pub_set_by_region = {
-            1: set([0]),
-            2: set([1]),
-            3: set([0, 1]),
-        }
         expected_regions = {1: [2, 1], 2: [1, 0], 3: [1, 1]}
-        pub_set_by_region, regions = halo._form_venn_diagram_regions(spends, max_freq)
-        self.assertEqual(expected_pub_set_by_region, pub_set_by_region)
+        regions = halo._form_venn_diagram_regions(spends, max_freq)
         self.assertEqual(expected_regions, regions)
 
     def test_form_venn_diagram_regions_with_3_publishers_and_1plus_reach(self):
@@ -197,10 +185,8 @@ class HaloSimulatorTest(absltest.TestCase):
 
         spends = [0.04, 0.04, 0.0]
         max_freq = 1
-        expected_pub_set_by_region = {1: set([0]), 3: set([0, 1])}
         expected_regions = {1: [1], 3: [1]}
-        pub_set_by_region, regions = halo._form_venn_diagram_regions(spends, max_freq)
-        self.assertEqual(expected_pub_set_by_region, pub_set_by_region)
+        regions = halo._form_venn_diagram_regions(spends, max_freq)
         self.assertEqual(expected_regions, regions)
 
     def test_form_venn_diagram_regions_with_3_publishers_and_2plus_reach(self):
@@ -216,14 +202,8 @@ class HaloSimulatorTest(absltest.TestCase):
 
         spends = [0.05, 0.08, 0.0]
         max_freq = 2
-        expected_pub_set_by_region = {
-            1: set([0]),
-            2: set([1]),
-            3: set([0, 1]),
-        }
         expected_regions = {1: [2, 1], 2: [1, 0], 3: [1, 1]}
-        pub_set_by_region, regions = halo._form_venn_diagram_regions(spends, max_freq)
-        self.assertEqual(expected_pub_set_by_region, pub_set_by_region)
+        regions = halo._form_venn_diagram_regions(spends, max_freq)
         self.assertEqual(expected_regions, regions)
 
     def test_privacy_tracker(self):

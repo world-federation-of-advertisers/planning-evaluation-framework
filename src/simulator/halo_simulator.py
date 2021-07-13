@@ -24,7 +24,7 @@ from typing import List
 from typing import Set
 from typing import Tuple
 from typing import Dict
-import collections
+from collections import defaultdict
 import numpy as np
 
 from wfa_cardinality_estimation_evaluation_framework.estimators.same_key_aggregator import (
@@ -241,7 +241,7 @@ class HaloSimulator:
 
     def _form_venn_diagram_regions(
         self, spends: List[float], max_frequency: int = 1
-    ) -> Tuple[Dict[int, Set], Dict[int, List]]:
+    ) -> Dict[int, List]:
         """Form Venn diagram regions that contain k+ reaches
 
         For each subset of publishers, computes k+ reaches for those users
@@ -254,8 +254,6 @@ class HaloSimulator:
               not be included in the Venn diagram reach.
             max_frequency:  The maximum frequency for which to report reach.
         Returns:
-            pub_set_by_region:  Contains the mapping of a binary representation
-              to a set of publisher ids that are in the corresponding region.
             regions:  Contains k+ reaches indexed by their binary representation.
               The k+ reach for a given region is given as a list r[] where r[k]
               is the number of people who were reached AT LEAST k+1 times.
@@ -276,26 +274,13 @@ class HaloSimulator:
             )
 
         # Locate user's region represented by number and sum the impressions.
-        # Also, map the region representation to publisher ids.
-        user_region = collections.defaultdict(int)
-        user_impressions = collections.defaultdict(int)
-        pub_set_by_region = collections.defaultdict(set)
+        user_region = defaultdict(int)
+        user_impressions = defaultdict(int)
 
         for pub_id, user_counts in user_counts_by_pub_id.items():
             for user_id, impressions in user_counts.items():
-                region = user_region[user_id]
-                new_region = region | (1 << pub_id)
-
-                if not new_region in pub_set_by_region:
-                    pub_set_by_region[new_region] = (
-                        set([pub_id]) | pub_set_by_region[region]
-                    )
-
-                user_region[user_id] = new_region
+                user_region[user_id] |= 1 << pub_id
                 user_impressions[user_id] += impressions
-
-        # Remove the null region
-        pub_set_by_region.pop(0, set())
 
         # Compute frequencies in the occupied regions of the Venn diagram with
         # capped user counts.
@@ -312,7 +297,7 @@ class HaloSimulator:
             for r, freq in frequencies_by_region.items()
         }
 
-        return dict(pub_set_by_region), regions
+        return regions
 
     def simulated_reach_curve(
         self, publisher_index: int, budget: PrivacyBudget

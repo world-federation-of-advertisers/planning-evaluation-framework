@@ -89,6 +89,180 @@ class HaloSimulatorTest(absltest.TestCase):
         )
         self.assertTrue(reach_point.reach(1) >= 0)
 
+    def test_aggregate_reach_in_venn_diagram_regions_with_0P(self):
+        pdf1 = PublisherData([(1, 0.01), (2, 0.02)], "id0")
+        pdf2 = PublisherData([(1, 0.01)], "id1")
+        data_set = DataSet([pdf1, pdf2], "test")
+        params = SystemParameters(
+            [0.4, 0.5], LiquidLegionsParameters(), np.random.default_rng(1)
+        )
+        privacy_tracker = PrivacyTracker()
+        halo = HaloSimulator(data_set, params, privacy_tracker)
+
+        pub_ids = []
+        regions = {1: [1], 3: [1]}
+        expected_agg_reach = 0
+        agg_reach = halo._aggregate_reach_in_venn_diagram_regions(pub_ids, regions)
+        self.assertEqual(agg_reach, expected_agg_reach)
+
+    def test_aggregate_reach_in_venn_diagram_regions_with_0R(self):
+        pdf1 = PublisherData([(1, 0.1)], "id0")
+        pdf2 = PublisherData([(1, 0.1)], "id1")
+        data_set = DataSet([pdf1, pdf2], "test")
+        params = SystemParameters(
+            [0.4, 0.5], LiquidLegionsParameters(), np.random.default_rng(1)
+        )
+        privacy_tracker = PrivacyTracker()
+        halo = HaloSimulator(data_set, params, privacy_tracker)
+
+        pub_ids = [0, 1]
+        regions = {}
+        expected_agg_reach = 0
+        agg_reach = halo._aggregate_reach_in_venn_diagram_regions(pub_ids, regions)
+        self.assertEqual(agg_reach, expected_agg_reach)
+
+    def test_aggregate_reach_in_venn_diagram_regions_with_empty_kplus_reaches(self):
+        pdf1 = PublisherData([(1, 0.1)], "id0")
+        pdf2 = PublisherData([(1, 0.1)], "id1")
+        data_set = DataSet([pdf1, pdf2], "test")
+        params = SystemParameters(
+            [0.4, 0.5], LiquidLegionsParameters(), np.random.default_rng(1)
+        )
+        privacy_tracker = PrivacyTracker()
+        halo = HaloSimulator(data_set, params, privacy_tracker)
+
+        pub_ids = [0, 1]
+        regions = {3: []}
+        with self.assertRaises(ValueError):
+            agg_reach = halo._aggregate_reach_in_venn_diagram_regions(pub_ids, regions)
+
+    def test_aggregate_reach_in_venn_diagram_regions_with_1R1P_1plus_reach(self):
+        pdf1 = PublisherData([(1, 0.01)], "id0")
+        pdf2 = PublisherData([(1, 0.01)], "id1")
+        data_set = DataSet([pdf1, pdf2], "test")
+        params = SystemParameters(
+            [0.4, 0.5], LiquidLegionsParameters(), np.random.default_rng(1)
+        )
+        privacy_tracker = PrivacyTracker()
+        halo = HaloSimulator(data_set, params, privacy_tracker)
+
+        pub_ids = [0]
+        regions = {3: [1]}
+        expected_agg_reach = 1
+        agg_reach = halo._aggregate_reach_in_venn_diagram_regions(pub_ids, regions)
+
+    def test_aggregate_reach_in_venn_diagram_regions_with_1R2P_1plus_reach(self):
+        pdf1 = PublisherData([(1, 0.01)], "id0")
+        pdf2 = PublisherData([(1, 0.01)], "id1")
+        data_set = DataSet([pdf1, pdf2], "test")
+        params = SystemParameters(
+            [0.4, 0.5], LiquidLegionsParameters(), np.random.default_rng(1)
+        )
+        privacy_tracker = PrivacyTracker()
+        halo = HaloSimulator(data_set, params, privacy_tracker)
+
+        pub_ids = [0, 1]
+        regions = {3: [1]}
+        expected_agg_reach = 1
+        agg_reach = halo._aggregate_reach_in_venn_diagram_regions(pub_ids, regions)
+        self.assertEqual(agg_reach, expected_agg_reach)
+
+    def test_aggregate_reach_in_venn_diagram_regions_with_3R1P_1plus_reach(self):
+        pdf1 = PublisherData([(1, 0.01), (2, 0.02), (3, 0.03)], "id0")
+        pdf2 = PublisherData([(1, 0.01), (4, 0.02)], "id1")
+        data_set = DataSet([pdf1, pdf2], "test")
+        params = SystemParameters(
+            [0.4, 0.5], LiquidLegionsParameters(), np.random.default_rng(1)
+        )
+        privacy_tracker = PrivacyTracker()
+        halo = HaloSimulator(data_set, params, privacy_tracker)
+
+        pub_ids = [0]
+        regions = {1: [2], 2: [1], 3: [1]}
+        expected_agg_reach = 3
+        agg_reach = halo._aggregate_reach_in_venn_diagram_regions(pub_ids, regions)
+        self.assertEqual(agg_reach, expected_agg_reach)
+
+    def test_aggregate_reach_in_venn_diagram_regions_with_3R2P_1plus_reach(self):
+        pdf1 = PublisherData([(1, 0.01), (2, 0.02), (3, 0.03)], "id0")
+        pdf2 = PublisherData([(1, 0.01), (4, 0.02)], "id1")
+        data_set = DataSet([pdf1, pdf2], "test")
+        params = SystemParameters(
+            [0.4, 0.5], LiquidLegionsParameters(), np.random.default_rng(1)
+        )
+        privacy_tracker = PrivacyTracker()
+        halo = HaloSimulator(data_set, params, privacy_tracker)
+
+        pub_ids = [0, 1]
+        regions = {1: [2], 2: [1], 3: [1]}
+        expected_agg_reach = 4
+        agg_reach = halo._aggregate_reach_in_venn_diagram_regions(pub_ids, regions)
+        self.assertEqual(agg_reach, expected_agg_reach)
+
+    def test_aggregate_reach_in_venn_diagram_regions_with_1R1P_2plus_reach(self):
+        pdf1 = PublisherData([(1, 0.01)], "id0")
+        pdf2 = PublisherData([(1, 0.01)], "id1")
+        data_set = DataSet([pdf1, pdf2], "test")
+        params = SystemParameters(
+            [0.4, 0.5], LiquidLegionsParameters(), np.random.default_rng(1)
+        )
+        privacy_tracker = PrivacyTracker()
+        halo = HaloSimulator(data_set, params, privacy_tracker)
+
+        pub_ids = [0]
+        regions = {3: [1, 1]}
+        expected_agg_reach = 1
+        agg_reach = halo._aggregate_reach_in_venn_diagram_regions(pub_ids, regions)
+        self.assertEqual(agg_reach, expected_agg_reach)
+
+    def test_aggregate_reach_in_venn_diagram_regions_with_1R2P_2plus_reach(self):
+        pdf1 = PublisherData([(1, 0.01)], "id0")
+        pdf2 = PublisherData([(1, 0.01)], "id1")
+        data_set = DataSet([pdf1, pdf2], "test")
+        params = SystemParameters(
+            [0.4, 0.5], LiquidLegionsParameters(), np.random.default_rng(1)
+        )
+        privacy_tracker = PrivacyTracker()
+        halo = HaloSimulator(data_set, params, privacy_tracker)
+
+        pub_ids = [0, 1]
+        regions = {3: [1, 1]}
+        expected_agg_reach = 1
+        agg_reach = halo._aggregate_reach_in_venn_diagram_regions(pub_ids, regions)
+        self.assertEqual(agg_reach, expected_agg_reach)
+
+    def test_aggregate_reach_in_venn_diagram_regions_with_3R1P_2plus_reach(self):
+        pdf1 = PublisherData([(1, 0.01), (2, 0.02), (3, 0.03), (2, 0.04)], "id0")
+        pdf2 = PublisherData([(1, 0.01), (4, 0.02), (4, 0.03)], "id1")
+        data_set = DataSet([pdf1, pdf2], "test")
+        params = SystemParameters(
+            [0.4, 0.5], LiquidLegionsParameters(), np.random.default_rng(1)
+        )
+        privacy_tracker = PrivacyTracker()
+        halo = HaloSimulator(data_set, params, privacy_tracker)
+
+        pub_ids = [0]
+        regions = {1: [2, 1], 2: [1, 1], 3: [1, 1]}
+        expected_agg_reach = 3
+        agg_reach = halo._aggregate_reach_in_venn_diagram_regions(pub_ids, regions)
+        self.assertEqual(agg_reach, expected_agg_reach)
+
+    def test_aggregate_reach_in_venn_diagram_regions_with_3R2P_2plus_reach(self):
+        pdf1 = PublisherData([(1, 0.01), (2, 0.02), (3, 0.03), (2, 0.04)], "id0")
+        pdf2 = PublisherData([(1, 0.01), (4, 0.02), (4, 0.03)], "id1")
+        data_set = DataSet([pdf1, pdf2], "test")
+        params = SystemParameters(
+            [0.4, 0.5], LiquidLegionsParameters(), np.random.default_rng(1)
+        )
+        privacy_tracker = PrivacyTracker()
+        halo = HaloSimulator(data_set, params, privacy_tracker)
+
+        pub_ids = [0, 1]
+        regions = {1: [2, 1], 2: [1, 1], 3: [1, 1]}
+        expected_agg_reach = 4
+        agg_reach = halo._aggregate_reach_in_venn_diagram_regions(pub_ids, regions)
+        self.assertEqual(agg_reach, expected_agg_reach)
+
     def test_privacy_tracker(self):
         self.assertEqual(self.halo.privacy_tracker.mechanisms, [])
         reach_point = self.halo.simulated_reach_by_spend(

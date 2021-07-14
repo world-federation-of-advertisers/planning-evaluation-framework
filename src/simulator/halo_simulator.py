@@ -229,23 +229,21 @@ class HaloSimulator:
               satisfying the request.
             max_frequency:  The maximum frequency for which to report reach.
         Returns:
-            A list of ReachPoint. Each reach point represents the mapping from 
+            A list of ReachPoint. Each reach point represents the mapping from
             the spends of a subset of publishers to the differentially private
             estimate of the number of people reached in this subset.
         """
         raise NotImplementedError()
 
     def _aggregate_reach_in_venn_diagram_regions(
-        self, 
-        pub_ids: List[int], 
-        venn_diagram_regions:Dict[int, List]
+        self, pub_ids: List[int], venn_diagram_regions: Dict[int, List]
     ) -> int:
-        """ Returns an aggregated reach from Venn diagram regions given 
+        """Returns an aggregated reach from Venn diagram regions given
         publisher IDs.
-        
+
         With the Venn diagram regions, we aggregate reach from the regions
         containing any given publishers. Note that the binary representation of
-        the index of a region represents the formation of publisher IDs in that 
+        the index of a region represents the formation of publisher IDs in that
         region.
 
         Args:
@@ -262,6 +260,11 @@ class HaloSimulator:
         for region, kplus_reaches in venn_diagram_regions.items():
             if not target_pub_repr & region:
                 continue
+
+            if not kplus_reaches:
+                raise ValueError(
+                    f"The k+ reaches in the region-{region} is an empty list."
+                )
 
             aggregated_reach += kplus_reaches[0]
 

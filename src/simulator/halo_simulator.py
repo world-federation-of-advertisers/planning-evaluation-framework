@@ -23,6 +23,7 @@ part of this evaluation effort.
 from typing import List
 from typing import Set
 from typing import Tuple
+from typing import Dict
 
 import numpy as np
 
@@ -234,41 +235,37 @@ class HaloSimulator:
         """
         raise NotImplementedError()
 
-    def _aggregate_venn_diagram_regions(
+    def _aggregate_reach_in_venn_diagram_regions(
         self, 
-        max_frequency: int,
         pub_ids: List[int], 
         venn_diagram_regions:Dict[int, List]
-    ) -> List[int]:
-        """ Returns an aggregated k+ reaches from Venn diagram regions given 
+    ) -> int:
+        """ Returns an aggregated reach from Venn diagram regions given 
         publisher IDs.
         
-        With the Venn diagram regions, we aggregate k+ reaches from the regions
+        With the Venn diagram regions, we aggregate reach from the regions
         containing any given publishers. Note that the binary representation of
         the index of a region represents the formation of publisher IDs in that 
         region.
 
         Args:
-            max_frequency:  The maximum frequency for which to report reach.
             pub_ids:  The list of target publisher IDs for computing aggregated
-              k+ reaches.
-            venn_diagram_regions:  Contains k+ reaches of regions. The k+ reaches
-              for a given region is given as a list r[] where r[k] is the number
-              of people who were reached AT LEAST k+1 times.
+              reach.
+            venn_diagram_regions:  Contains k+ reaches in the regions. The k+
+              reaches for a given region is given as a list r[] where r[k] is
+              the number of people who were reached AT LEAST k+1 times.
         Returns:
-            aggregated_kplus_reaches:  The k+ reaches is aggregated over regions 
-              containing given publisher IDs. aggregated_kplus_reaches[k] is the
-              number of people reached k+1 or more times.
+            aggregated_reach:  The total reach from the given publishers.
         """
-        aggregated_kplus_reaches = np.zeros(max_frequency)
+        aggregated_reach = 0
         target_pub_repr = sum(1 << pub_id for pub_id in pub_ids)
         for region, kplus_reaches in venn_diagram_regions.items():
             if not target_pub_repr & region:
                 continue
 
-            aggregated_kplus_reaches += np.array(kplus_reaches)
+            aggregated_reach += kplus_reaches[0]
 
-        return list(aggregated_kplus_reaches)
+        return aggregated_reach
 
     def simulated_reach_curve(
         self, publisher_index: int, budget: PrivacyBudget

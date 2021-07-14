@@ -3,7 +3,7 @@
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-#
+#a
 #      http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
@@ -15,8 +15,6 @@
 
 from typing import Dict
 from typing import Type
-import warnings
-import sys
 
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
@@ -33,10 +31,6 @@ from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
     PrivacyBudget,
 )
 
-
-def my_print(text):
-    sys.stdout.write(str(text))
-    sys.stdout.flush()
 
 class M3Strategy(ModelingStrategy):
     """Modeling strategy proposed for implementation in M3 milestone."""
@@ -95,7 +89,6 @@ class M3Strategy(ModelingStrategy):
         # Compute reach curve for each publisher
         single_pub_curves = []
         for i in range(p):
-            data = [single_pub_reach[i]]
             curve = self._single_pub_model(
                 [single_pub_reach_list[i]], **self._single_pub_model_kwargs
             )

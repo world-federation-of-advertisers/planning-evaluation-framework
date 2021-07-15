@@ -271,16 +271,21 @@ class HaloSimulator:
 
         if len(user_counts_by_pub_id) > MAX_ACTIVE_PUBLISHERS:
             raise ValueError(
-                f"There are {len(user_counts_by_pub_id)} publishers"
-                f"for Venn diagram algorithm. The maximum limit is {MAX_ACTIVE_PUBLISHERS}"
+                f"There are {len(user_counts_by_pub_id)} publishers for the Venn "
+                f"diagram algorithm. The maximum limit is {MAX_ACTIVE_PUBLISHERS}."
             )
 
-        # Locate user's region represented by number and sum the impressions.
+        # Locate user's region represented by a number and sum the impressions.
         user_region = defaultdict(int)
         user_impressions = defaultdict(int)
 
         for pub_id, user_counts in user_counts_by_pub_id.items():
             for user_id, impressions in user_counts.items():
+                # To update the user's located region, we use bit operation here.
+                # Ex: For a user reached by publisher id-0 and id-2, it's located
+                # at the region with the binary representation = bin('101') = 5.
+                # If the user is also reached by publisher id-1, then the updated
+                # representation will be bin('111') = 7.
                 user_region[user_id] |= 1 << pub_id
                 user_impressions[user_id] += impressions
 

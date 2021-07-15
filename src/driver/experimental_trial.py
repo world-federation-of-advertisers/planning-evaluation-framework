@@ -22,6 +22,7 @@ import numpy as np
 import pandas as pd
 from os.path import isfile, join
 from pathlib import Path
+import traceback
 from typing import List
 from typing import NamedTuple
 
@@ -152,6 +153,7 @@ class ExperimentalTrial:
                 logging.vlog(1, f"Dataset {self._data_set_name}")
                 logging.vlog(1, f"Trial   {self._trial_descriptor}")
             logging.vlog(1, f"Modeling failure: {inst}")
+            logging.vlog(2, traceback.format_exc())
             metrics = aggregate_on_failure(inst)
 
         independent_vars = self._make_independent_vars_dataframe()

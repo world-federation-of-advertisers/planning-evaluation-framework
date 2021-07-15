@@ -14,6 +14,7 @@
 """Class for modeling Restricted Pairwise union reach surface."""
 
 import copy
+import warnings
 import numpy as np
 from typing import List
 from scipy.optimize import minimize
@@ -38,14 +39,30 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
             ]
         )
         cons = self._get_constraints()
-        res = minimize(
+        with warnings.catch_warnings(record=True) as w:
+            fit_result = self._fit_with_constraints(cons)
+            if len(w) > 1 or (
+                len(w) == 1 and not str(w[0].message).startswith("delta_grad == 0.0")
+            ):
+                raise RuntimeError(
+                    "Unexpected warning in RestrictedPairwiseUnionReachSurface: {}".format(
+                        ",".join([str(m) for m in w])
+                    )
+                )
+            if not fit_result.success:
+                raise RuntimeError(
+                    "Optimizer failure in RestrictedPairwiseUnionReachSurface"
+                )
+        self._construct_a_from_lambda(fit_result["x"])
+
+    def _fit_with_constraints(self, cons):
+        return minimize(
             fun=lambda x: self._loss(x),
             x0=np.array([2 / self._p] * self._p) / 2,
             constraints=cons,
             method="trust-constr",
             options={"disp": False},
         )
-        self._construct_a_from_lambda(res["x"])
 
     def _construct_a_from_lambda(self, lbd: List[float]):
         """Get value of flattened a matrix from lamdas.

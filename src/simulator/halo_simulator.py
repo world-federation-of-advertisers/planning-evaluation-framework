@@ -254,7 +254,9 @@ class HaloSimulator:
               not be included in the Venn diagram reach.
             max_frequency:  The maximum frequency for which to report reach.
         Returns:
-            regions:  Contains k+ reaches indexed by their binary representation.
+            regions:  A dictionary in which each key are the binary
+              representations of each primitive region of the Venn diagram, and
+              each value is a list of the k+ reaches in the corresponding region.
               The k+ reach for a given region is given as a list r[] where r[k]
               is the number of people who were reached AT LEAST k+1 times.
         """

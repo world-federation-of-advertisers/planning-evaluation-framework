@@ -103,14 +103,6 @@ class HaloSimulatorTest(absltest.TestCase):
         agg_reach = self.halo._aggregate_reach_in_venn_diagram_regions(pub_ids, regions)
         self.assertEqual(agg_reach, expected_agg_reach)
 
-    def test_aggregate_reach_in_venn_diagram_regions_with_empty_kplus_reaches(self):
-        pub_ids = [0, 1]
-        regions = {3: []}
-        with self.assertRaises(ValueError):
-            agg_reach = self.halo._aggregate_reach_in_venn_diagram_regions(
-                pub_ids, regions
-            )
-
     def test_aggregate_reach_in_venn_diagram_regions_with_1R1P_1plus_reach(self):
         pub_ids = [0]
         regions = {3: [1]}

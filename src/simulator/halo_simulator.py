@@ -238,11 +238,10 @@ class HaloSimulator:
     def _aggregate_reach_in_venn_diagram_regions(
         self, pub_ids: List[int], venn_diagram_regions: Dict[int, List]
     ) -> int:
-        """Returns an aggregated reach from Venn diagram regions given
-        publisher IDs.
+        """Returns an aggregated reach from Venn diagram regions given publishers.
 
-        With the Venn diagram regions, we aggregate reach from the regions
-        containing any given publishers. Note that the binary representation of
+        With the Venn diagram regions, we aggregate reach from the regions which
+        contain any one of given publishers. Note that the binary representation of
         the index of a region represents the formation of publisher IDs in that
         region.
 
@@ -255,18 +254,12 @@ class HaloSimulator:
         Returns:
             aggregated_reach:  The total reach from the given publishers.
         """
-        aggregated_reach = 0
-        target_pub_repr = sum(1 << pub_id for pub_id in pub_ids)
-        for region, kplus_reaches in venn_diagram_regions.items():
-            if not target_pub_repr & region:
-                continue
-
-            if not kplus_reaches:
-                raise ValueError(
-                    f"The k+ reaches in the region-{region} is an empty list."
-                )
-
-            aggregated_reach += kplus_reaches[0]
+        targeted_pub_repr = sum(1 << pub_id for pub_id in pub_ids)
+        aggregated_reach = sum(
+            venn_diagram_regions[r][0]
+            for r in venn_diagram_regions.keys()
+            if r & targeted_pub_repr
+        )
 
         return aggregated_reach
 

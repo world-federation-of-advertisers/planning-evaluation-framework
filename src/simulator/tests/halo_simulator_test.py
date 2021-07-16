@@ -103,8 +103,12 @@ class HaloSimulatorTest(parameterized.TestCase):
         ("with_3R1P_2plus_reach", [0], {1: [2, 1], 2: [1, 1], 3: [1, 1]}, 3),
         ("with_3R2P_2plus_reach", [0, 1], {1: [2, 1], 2: [1, 1], 3: [1, 1]}, 4),
     )
-    def test_aggregate_reach_in_venn_diagram_regions(self, pub_ids, regions, expected):
-        agg_reach = self.halo._aggregate_reach_in_venn_diagram_regions(pub_ids, regions)
+    def test_aggregate_reach_in_primitive_venn_diagram_regions(
+        self, pub_ids, regions, expected
+    ):
+        agg_reach = self.halo._aggregate_reach_in_primitive_venn_diagram_regions(
+            pub_ids, regions
+        )
         self.assertEqual(agg_reach, expected)
 
     def test_privacy_tracker(self):

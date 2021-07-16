@@ -235,18 +235,20 @@ class HaloSimulator:
         """
         raise NotImplementedError()
 
-    def _aggregate_reach_in_venn_diagram_regions(
-        self, pub_ids: List[int], venn_diagram_regions: Dict[int, List]
+    def _aggregate_reach_in_primitive_venn_diagram_regions(
+        self, pub_ids: List[int], primitive_regions: Dict[int, List]
     ) -> int:
-        """Returns an aggregated reach from Venn diagram regions.
+        """Returns aggregated reach from Venn diagram primitive regions.
 
         To obtain the union reach of the given subset of publishers, we sum up
-        the reaches from the regions which belong to at least one of the given
-        publisher. Note that the binary representation of the index of a region
-        represents the formation of publisher IDs in that region.
+        the reaches from the primitive regions which belong to at least one of
+        the given publisher. Note that the binary representation of the index
+        of a primitive region represents the formation of publisher IDs in that
+        primitive region.
 
         For example, given a subset of publisher ids, {0}, out of the whole set
-        {0, 1, 2}, the reaches in the following regions will be summed up:
+        {0, 1, 2}, the reaches in the following primitive regions will be summed
+        up:
 
             region with index = 1 = bin('001'): belongs to pub_id-0
             region with index = 3 = bin('011'): belongs to pub_id-0 and 1
@@ -256,7 +258,7 @@ class HaloSimulator:
         Args:
             pub_ids:  The list of target publisher IDs for computing aggregated
               reach.
-            venn_diagram_regions:  Contains k+ reaches in the regions. The k+
+            primitive_regions:  Contains k+ reaches in the regions. The k+
               reaches for a given region is given as a list r[] where r[k] is
               the number of people who were reached AT LEAST k+1 times.
         Returns:
@@ -264,8 +266,8 @@ class HaloSimulator:
         """
         targeted_pub_repr = sum(1 << pub_id for pub_id in pub_ids)
         aggregated_reach = sum(
-            venn_diagram_regions[r][0]
-            for r in venn_diagram_regions.keys()
+            primitive_regions[r][0]
+            for r in primitive_regions.keys()
             if r & targeted_pub_repr
         )
 

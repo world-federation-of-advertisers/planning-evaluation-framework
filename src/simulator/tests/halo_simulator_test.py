@@ -14,6 +14,7 @@
 """Tests for halo_simulator.py."""
 
 from absl.testing import absltest
+from absl.testing import parameterized
 import numpy as np
 from unittest.mock import patch
 
@@ -37,7 +38,7 @@ class FakeLaplaceMechanism:
         return [2 * y for y in x]
 
 
-class HaloSimulatorTest(absltest.TestCase):
+class HaloSimulatorTest(parameterized.TestCase):
     @classmethod
     def setUpClass(cls):
         pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
@@ -89,74 +90,22 @@ class HaloSimulatorTest(absltest.TestCase):
         )
         self.assertTrue(reach_point.reach(1) >= 0)
 
-    def test_aggregate_reach_in_venn_diagram_regions_without_pub(self):
-        pub_ids = []
-        regions = {1: [1], 3: [1]}
-        expected_agg_reach = 0
+    @parameterized.named_parameters(
+        # testcase_name, pub_ids, regions, expected
+        ("without_publisher", [], {1: [1], 3: [1]}, 0),
+        ("without_region", [0, 1], {}, 0),
+        ("with_1R1P_1plus_reach", [0], {3: [1]}, 1),
+        ("with_1R2P_1plus_reach", [0, 1], {3: [1]}, 1),
+        ("with_3R1P_1plus_reach", [0], {1: [2], 2: [1], 3: [1]}, 3),
+        ("with_3R2P_1plus_reach", [0, 1], {1: [2], 2: [1], 3: [1]}, 4),
+        ("with_1R1P_2plus_reach", [0], {3: [1, 1]}, 1),
+        ("with_1R2P_2plus_reach", [0, 1], {3: [1, 1]}, 1),
+        ("with_3R1P_2plus_reach", [0], {1: [2, 1], 2: [1, 1], 3: [1, 1]}, 3),
+        ("with_3R2P_2plus_reach", [0, 1], {1: [2, 1], 2: [1, 1], 3: [1, 1]}, 4),
+    )
+    def test_aggregate_reach_in_venn_diagram_regions(self, pub_ids, regions, expected):
         agg_reach = self.halo._aggregate_reach_in_venn_diagram_regions(pub_ids, regions)
-        self.assertEqual(agg_reach, expected_agg_reach)
-
-    def test_aggregate_reach_in_venn_diagram_regions_without_region(self):
-        pub_ids = [0, 1]
-        regions = {}
-        expected_agg_reach = 0
-        agg_reach = self.halo._aggregate_reach_in_venn_diagram_regions(pub_ids, regions)
-        self.assertEqual(agg_reach, expected_agg_reach)
-
-    def test_aggregate_reach_in_venn_diagram_regions_with_1R1P_1plus_reach(self):
-        pub_ids = [0]
-        regions = {3: [1]}
-        expected_agg_reach = 1
-        agg_reach = self.halo._aggregate_reach_in_venn_diagram_regions(pub_ids, regions)
-
-    def test_aggregate_reach_in_venn_diagram_regions_with_1R2P_1plus_reach(self):
-        pub_ids = [0, 1]
-        regions = {3: [1]}
-        expected_agg_reach = 1
-        agg_reach = self.halo._aggregate_reach_in_venn_diagram_regions(pub_ids, regions)
-        self.assertEqual(agg_reach, expected_agg_reach)
-
-    def test_aggregate_reach_in_venn_diagram_regions_with_3R1P_1plus_reach(self):
-        pub_ids = [0]
-        regions = {1: [2], 2: [1], 3: [1]}
-        expected_agg_reach = 3
-        agg_reach = self.halo._aggregate_reach_in_venn_diagram_regions(pub_ids, regions)
-        self.assertEqual(agg_reach, expected_agg_reach)
-
-    def test_aggregate_reach_in_venn_diagram_regions_with_3R2P_1plus_reach(self):
-        pub_ids = [0, 1]
-        regions = {1: [2], 2: [1], 3: [1]}
-        expected_agg_reach = 4
-        agg_reach = self.halo._aggregate_reach_in_venn_diagram_regions(pub_ids, regions)
-        self.assertEqual(agg_reach, expected_agg_reach)
-
-    def test_aggregate_reach_in_venn_diagram_regions_with_1R1P_2plus_reach(self):
-        pub_ids = [0]
-        regions = {3: [1, 1]}
-        expected_agg_reach = 1
-        agg_reach = self.halo._aggregate_reach_in_venn_diagram_regions(pub_ids, regions)
-        self.assertEqual(agg_reach, expected_agg_reach)
-
-    def test_aggregate_reach_in_venn_diagram_regions_with_1R2P_2plus_reach(self):
-        pub_ids = [0, 1]
-        regions = {3: [1, 1]}
-        expected_agg_reach = 1
-        agg_reach = self.halo._aggregate_reach_in_venn_diagram_regions(pub_ids, regions)
-        self.assertEqual(agg_reach, expected_agg_reach)
-
-    def test_aggregate_reach_in_venn_diagram_regions_with_3R1P_2plus_reach(self):
-        pub_ids = [0]
-        regions = {1: [2, 1], 2: [1, 1], 3: [1, 1]}
-        expected_agg_reach = 3
-        agg_reach = self.halo._aggregate_reach_in_venn_diagram_regions(pub_ids, regions)
-        self.assertEqual(agg_reach, expected_agg_reach)
-
-    def test_aggregate_reach_in_venn_diagram_regions_with_3R2P_2plus_reach(self):
-        pub_ids = [0, 1]
-        regions = {1: [2, 1], 2: [1, 1], 3: [1, 1]}
-        expected_agg_reach = 4
-        agg_reach = self.halo._aggregate_reach_in_venn_diagram_regions(pub_ids, regions)
-        self.assertEqual(agg_reach, expected_agg_reach)
+        self.assertEqual(agg_reach, expected)
 
     def test_privacy_tracker(self):
         self.assertEqual(self.halo.privacy_tracker.mechanisms, [])

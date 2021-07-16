@@ -238,12 +238,20 @@ class HaloSimulator:
     def _aggregate_reach_in_venn_diagram_regions(
         self, pub_ids: List[int], venn_diagram_regions: Dict[int, List]
     ) -> int:
-        """Returns an aggregated reach from Venn diagram regions given publishers.
+        """Returns an aggregated reach from Venn diagram regions.
 
-        With the Venn diagram regions, we aggregate reach from the regions which
-        contain any one of given publishers. Note that the binary representation of
-        the index of a region represents the formation of publisher IDs in that
-        region.
+        To obtain the union reach of the given subset of publishers, we sum up
+        the reaches from the regions which belong to at least one of the given
+        publisher. Note that the binary representation of the index of a region
+        represents the formation of publisher IDs in that region.
+
+        For example, given a subset of publisher ids, {0}, out of the whole set
+        {0, 1, 2}, the reaches in the following regions will be summed up:
+
+            region with index = 1 = bin('001'): belongs to pub_id-0
+            region with index = 3 = bin('011'): belongs to pub_id-0 and 1
+            region with index = 5 = bin('101'): belongs to pub_id-0 and 2
+            region with index = 7 = bin('111'): belongs to pub_id-0, 1, and 2
 
         Args:
             pub_ids:  The list of target publisher IDs for computing aggregated

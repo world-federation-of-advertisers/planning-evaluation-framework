@@ -90,6 +90,70 @@ class HaloSimulatorTest(parameterized.TestCase):
         )
         self.assertTrue(reach_point.reach(1) >= 0)
 
+    def test_generate_reach_points_from_venn_diagram_with_simple_2(self):
+        pdf1 = PublisherData([(1, 0.01)], "pdf1")
+        pdf2 = PublisherData([(1, 0.01)], "pdf2")
+        data_set = DataSet([pdf1, pdf2], "test")
+        params = SystemParameters(
+            [0.4, 0.5], LiquidLegionsParameters(), np.random.default_rng(1)
+        )
+        privacy_tracker = PrivacyTracker()
+        halo = HaloSimulator(data_set, params, privacy_tracker)
+
+        spends = [0.01, 0.01]
+        regions = {3: [1]}  # max_freq = 1
+
+        expected = [
+            ReachPoint([1, 0], [1], [0.01, 0]),
+            ReachPoint([0, 1], [1], [0, 0.01]),
+            ReachPoint([1, 1], [1], [0.01, 0.01]),
+        ]
+        reach_points = halo._generate_reach_points_from_venn_diagram(spends, regions)
+
+        for i, (r_pt, expected_r_pt) in enumerate(zip(reach_points, expected)):
+            self.assertEqual(
+                r_pt.impressions,
+                expected_r_pt.impressions,
+                msg=f"The impressions of No.{i + 1} reach point is not correct",
+            )
+            self.assertEqual(
+                r_pt.reach(1),
+                expected_r_pt.reach(1),
+                msg=f"The reach of No.{i + 1} reach point is not correct",
+            )
+
+    def test_generate_reach_points_from_venn_diagram_with_simple_2p1R(self):
+        pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
+        pdf2 = PublisherData([(2, 0.03), (4, 0.06)], "pdf2")
+        data_set = DataSet([pdf1, pdf2], "test")
+        params = SystemParameters(
+            [0.4, 0.5], LiquidLegionsParameters(), np.random.default_rng(1)
+        )
+        privacy_tracker = PrivacyTracker()
+        halo = HaloSimulator(data_set, params, privacy_tracker)
+
+        spends = [0.04, 0.04]
+        regions = {1: [1], 3: [1]}  # max_freq = 1
+
+        expected = [
+            ReachPoint([3, 0], [2], [0.04, 0]),
+            ReachPoint([0, 1], [1], [0, 0.04]),
+            ReachPoint([3, 1], [2], [0.04, 0.04]),
+        ]
+        reach_points = halo._generate_reach_points_from_venn_diagram(spends, regions)
+
+        for i, (r_pt, expected_r_pt) in enumerate(zip(reach_points, expected)):
+            self.assertEqual(
+                r_pt.impressions,
+                expected_r_pt.impressions,
+                msg=f"The impressions of No.{i + 1} reach point is not correct",
+            )
+            self.assertEqual(
+                r_pt.reach(1),
+                expected_r_pt.reach(1),
+                msg=f"The reach of No.{i + 1} reach point is not correct",
+            )
+
     @parameterized.named_parameters(
         # testcase_name, pub_ids, regions, expected
         ("without_publisher", [], {1: [1], 3: [1]}, 0),

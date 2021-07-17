@@ -24,7 +24,7 @@ from typing import List
 from typing import Set
 from typing import Tuple
 from typing import Dict
-
+from itertools import chain, combinations
 import numpy as np
 
 from wfa_cardinality_estimation_evaluation_framework.estimators.same_key_aggregator import (
@@ -234,6 +234,33 @@ class HaloSimulator:
             estimate of the number of people reached in this subset.
         """
         raise NotImplementedError()
+
+    def _generate_reach_points_from_venn_diagram(
+        self, spends: List[float], primitive_regions: Dict[int, List]
+    ) -> List[ReachPoint]:
+        """Return the reach points of the powerset of active publishers."""
+        active_pub_set = [i for i in range(len(spends)) if spends[i]]
+        powerset = chain.from_iterable(
+            combinations(active_pub_set, r) for r in range(1, len(active_pub_set) + 1)
+        )
+        impressions = self._data_set.impressions_by_spend(spends)
+
+        reach_points = []
+        for sub_pub_ids in powerset:
+            sub_reach = self._aggregate_reach_in_primitive_venn_diagram_regions(
+                sub_pub_ids, primitive_regions
+            )
+            sub_pub_set = set(sub_pub_ids)
+            sub_imp = [
+                imp if pub_id in sub_pub_set else 0
+                for pub_id, imp in enumerate(impressions)
+            ]
+            sub_spends = [
+                s if pub_id in sub_pub_set else 0 for pub_id, s in enumerate(spends)
+            ]
+            reach_points.append(ReachPoint(sub_imp, [sub_reach], sub_spends))
+
+        return reach_points
 
     def _aggregate_reach_in_primitive_venn_diagram_regions(
         self, pub_ids: List[int], primitive_regions: Dict[int, List]

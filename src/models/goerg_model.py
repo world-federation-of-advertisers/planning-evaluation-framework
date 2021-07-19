@@ -22,8 +22,6 @@ Poisson distribution with unknown mixing parameter, and shows how the
 reach curve can be extrapolated from a single point on it.
 """
 
-import warnings
-
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 
@@ -46,26 +44,14 @@ class GoergModel(ReachCurve):
         self._fit()
         self._max_reach = self._rho
         if data[0].spends:
-            if data[0].impressions[0] < 0.001:
-                self.cpi = 0.01
-                # TODO(jiayu): find better solution, or further explain this.
-            else:
-                self._cpi = data[0].spends[0] / data[0].impressions[0]
+            self._cpi = data[0].spends[0] / data[0].impressions[0]
         else:
             self._cpi = None
 
     def _fit(self) -> None:
         """Fits a model to the data that was provided in the constructor."""
         if abs(self._impressions - self._reach) < 0.001:
-            # In this corner case, there will be a division by zero error if
-            # we estimate rho using the formula. This error will block the rest
-            # of evaluation. To avoid blocking the rest of evaluation,
-            # we will assign rho a hard-coded maximum value, which is 100 here.
-            # TODO(jiayu): Think about the choice of max value or alternatives.
-            warnings.warn(
-                "impression = reach. rho is assigned a hard-coded maximum value."
-            )
-            self._rho = 100
+            raise ValueError("Cannot fit Goerg model when impressions=reach")
         else:
             self._rho = (self._impressions * self._reach) / (
                 self._impressions - self._reach
@@ -74,7 +60,7 @@ class GoergModel(ReachCurve):
 
     def by_impressions(self, impressions: [int], max_frequency: int = 1) -> ReachPoint:
         """Returns the estimated reach as a function of impressions.
-
+        
         Args:
           impressions: list of ints of length 1, specifying the hypothetical number
             of impressions that are shown.
@@ -99,7 +85,7 @@ class GoergModel(ReachCurve):
 
     def by_spend(self, spends: [int], max_frequency: int = 1) -> ReachPoint:
         """Returns the estimated reach as a function of spend assuming constant CPM
-
+        
         Args:
           spend: list of floats of length 1, specifying the hypothetical spend.
           max_frequency: int, specifies the number of frequencies for which reach

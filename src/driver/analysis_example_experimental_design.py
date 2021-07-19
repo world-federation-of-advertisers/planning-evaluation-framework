@@ -52,17 +52,17 @@ MODELING_STRATEGIES = [
 ]
 
 CAMPAIGN_SPEND_FRACTIONS_GENERATORS = [
-    lambda npublishers: [0.5] * npublishers,
-    lambda npublishers: list(islice(cycle([0.4, 0.6]), npublishers)),
+    lambda npublishers: [0.8] * npublishers,
+    lambda npublishers: list(islice(cycle([0.7, 0.9]), npublishers)),
 ]
 
 LIQUID_LEGIONS_PARAMS = [
-    LiquidLegionsParameters(3, 500),
+    LiquidLegionsParameters(3, 2000),
 ]
 
 PRIVACY_BUDGETS = [
-    PrivacyBudget(2.0, 1e-7),
-    PrivacyBudget(1.0, 1e-7),
+    PrivacyBudget(20, 1e-9),
+    PrivacyBudget(10, 1e-9),
 ]
 
 REPLICA_IDS = [1, 2, 3]

@@ -26,14 +26,12 @@ from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyB
 from wfa_planning_evaluation_framework.simulator.system_parameters import (
     SystemParameters,
 )
-from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
-    PrivacyBudget,
-)
 
 
 # The following is the maximum frequency used for obtaining measurements
 # from the Halo simulator.
 MAX_MEASUREMENT_FREQUENCY = 20
+
 
 class SinglePublisherStrategy(ModelingStrategy):
     """A trival modeling strategy for use with single publisher models."""
@@ -54,14 +52,14 @@ class SinglePublisherStrategy(ModelingStrategy):
         """
 
         if halo.publisher_count != 1:
-            raise ValueError("SinglePublisherStrategy cannot be used with multiple publishers")
+            raise ValueError(
+                "SinglePublisherStrategy cannot be used with multiple publishers"
+            )
 
         total_reach = halo.simulated_reach_by_spend(
             halo.campaign_spends, budget, max_frequency=MAX_MEASUREMENT_FREQUENCY
         )
 
-        curve = self._single_pub_model(
-            [total_reach], **self._single_pub_model_kwargs
-        )
+        curve = self._single_pub_model([total_reach], **self._single_pub_model_kwargs)
         curve._fit()
         return curve

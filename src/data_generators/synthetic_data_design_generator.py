@@ -34,12 +34,12 @@ where
        generate_data_design_config(random_generator: np.Generator) ->
          Iterable[DataSetParameters]
 
-    The function returns a list of DataSetParameters objects.  Each such
-    object specifies the parameters for one data set that will be generated
-    as part of the data design.  For an example of such a function, see
-    the files test_synthetic_data_design_config.py and 
-    lhs_synthetic_data_design_config.py.  The latter file generates a
-    data design using a latin hypercube pattern.
+    The function returns a list of DataSetParameters objects.  Each
+    such object specifies the parameters for one data set that will be
+    generated as part of the data design.  For an example of such a
+    function, see the files simple_data_design_example.py and
+    lhs_data_design_example.py.  The latter file generates a data
+    design using a latin hypercube pattern.
 
 Here are some specific examples of usage, assuming that you are in the
 data_generators directory.  The following is a simple cartesian product
@@ -76,7 +76,7 @@ from wfa_planning_evaluation_framework.data_generators.publisher_data import (
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string("output_dir", None, "Directory where data design will be written")
-flags.DEFINE_string("data_design", None, "Name of data design configuration")
+flags.DEFINE_string("data_design_config", None, "Name of data design configuration")
 flags.DEFINE_integer("random_seed", 1, "Seed for the random number generator")
 flags.DEFINE_bool("verbose", True, "If true, print names of data sets.")
 
@@ -90,23 +90,39 @@ class SyntheticDataDesignGenerator:
 
     def __init__(
         self,
-        output_folder: str,
-        random_seed: int,
+        output_dir: str,
         data_design_config: str,
-        verbose: bool,
+        random_seed: int = 1,
+        verbose: bool = True,
     ):
+        """Constructor for SyntheticDataGenerator.
+
+        Args:
+          output_dir:  String, specifies the directory in the local file
+            system where the data design should be written.
+          data_design_config:  String, specifies the name of a file in the
+            local file system containing Python code that specifies the
+            data design.  This file should contain a function with the
+            following signature:
+              generate_data_design_config(random_generator: np.Generator) ->
+                Iterable[DataSetParameters]
+          random_seed:  Int, a value used to initialize the random number
+            generator.
+          verbose:  If True, generates messages as the data design is
+            written to disk.
+        """
+        self._output_dir = output_dir
         self._data_design_config = data_design_config
         self._random_generator = np.random.default_rng(random_seed)
-        self._output_folder = output_folder
         self._verbose = verbose
 
     def __call__(self) -> DataDesign:
-        data_design = DataDesign(dirpath=self._output_folder)
-        for data_set_parameters in self._fetch_data_design_config():
+        data_design = DataDesign(dirpath=self._output_dir)
+        for data_set_parameters in self._fetch_data_set_parameters_list():
             data_design.add(self._generate_data_set(data_set_parameters))
         return data_design
 
-    def _fetch_data_design_config(self) -> List[DataSetParameters]:
+    def _fetch_data_set_parameters_list(self) -> List[DataSetParameters]:
         spec = importlib.util.spec_from_file_location(
             "data_design_generator", self._data_design_config
         )
@@ -155,7 +171,7 @@ class SyntheticDataDesignGenerator:
 
 def main(argv):
     data_design_generator = SyntheticDataDesignGenerator(
-        FLAGS.output_dir, FLAGS.random_seed, FLAGS.data_design, FLAGS.verbose
+        FLAGS.output_dir, FLAGS.data_design_config, FLAGS.random_seed, FLAGS.verbose
     )
     data_design_generator()
 

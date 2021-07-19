@@ -238,25 +238,42 @@ class HaloSimulator:
     def _generate_reach_points_from_venn_diagram(
         self, spends: List[float], primitive_regions: Dict[int, List]
     ) -> List[ReachPoint]:
-        """Return the reach points of the powerset of active publishers."""
+        """Return the reach points of the powerset of active publishers.
+
+        For each subset of active publishers, compute reach and frequency
+        estimate for those users who are reached by the publishers in that
+        subset.
+
+        Args:
+            spends:  The hypothetical spend vector, equal in length to
+              the number of publishers.  spends[i] is the amount that is
+              spent with publisher i.
+            primitive_regions:  Contains k+ reaches in the regions. The k+
+              reaches for a given region is given as a list r[] where r[k] is
+              the number of people who were reached AT LEAST k+1 times.
+        Returns:
+            A list of ReachPoint. Each reach point represents the mapping from
+            the spends of a subset of publishers to the number of people reached
+            in this subset.
+        """
         active_pub_set = [i for i in range(len(spends)) if spends[i]]
-        powerset = chain.from_iterable(
+        active_pub_powerset = chain.from_iterable(
             combinations(active_pub_set, r) for r in range(1, len(active_pub_set) + 1)
         )
         impressions = self._data_set.impressions_by_spend(spends)
 
         reach_points = []
-        for sub_pub_ids in powerset:
+        for sub_pub_ids in active_pub_powerset:
             sub_reach = self._aggregate_reach_in_primitive_venn_diagram_regions(
                 sub_pub_ids, primitive_regions
             )
-            sub_pub_set = set(sub_pub_ids)
+            pub_subset = set(sub_pub_ids)
             sub_imp = [
-                imp if pub_id in sub_pub_set else 0
+                imp if pub_id in pub_subset else 0
                 for pub_id, imp in enumerate(impressions)
             ]
             sub_spends = [
-                s if pub_id in sub_pub_set else 0 for pub_id, s in enumerate(spends)
+                s if pub_id in pub_subset else 0 for pub_id, s in enumerate(spends)
             ]
             reach_points.append(ReachPoint(sub_imp, [sub_reach], sub_spends))
 

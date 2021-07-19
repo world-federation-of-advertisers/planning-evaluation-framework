@@ -241,8 +241,8 @@ class HaloSimulator:
         """Return the reach points of the powerset of active publishers.
 
         For each subset of active publishers, compute reach and frequency
-        estimate for those users who are reached by the publishers in that
-        subset.
+        estimate for those users who are reached by at least one of the
+        publishers in the subset.
 
         Args:
             spends:  The hypothetical spend vector, equal in length to
@@ -268,14 +268,14 @@ class HaloSimulator:
                 sub_pub_ids, primitive_regions
             )
             pub_subset = set(sub_pub_ids)
-            sub_imp = [
-                imp if pub_id in pub_subset else 0
-                for pub_id, imp in enumerate(impressions)
+            sub_imps = [
+                imps if pub_id in pub_subset else 0
+                for pub_id, imps in enumerate(impressions)
             ]
             sub_spends = [
                 s if pub_id in pub_subset else 0 for pub_id, s in enumerate(spends)
             ]
-            reach_points.append(ReachPoint(sub_imp, [sub_reach], sub_spends))
+            reach_points.append(ReachPoint(sub_imps, [sub_reach], sub_spends))
 
         return reach_points
 

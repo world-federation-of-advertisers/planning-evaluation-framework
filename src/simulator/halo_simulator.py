@@ -245,12 +245,16 @@ class HaloSimulator:
         publishers in the subset.
 
         Args:
-            spends:  The hypothetical spend vector, equal in length to
-              the number of publishers.  spends[i] is the amount that is
-              spent with publisher i.
-            primitive_regions:  Contains k+ reaches in the regions. The k+
-              reaches for a given region is given as a list r[] where r[k] is
-              the number of people who were reached AT LEAST k+1 times.
+            spends:  The hypothetical spend vector, equal in length to the
+              number of publishers.  spends[i] is the amount that is spent with
+              publisher i.
+            primitive_regions:  Contains k+ reaches in the regions. Note that
+              the binary representation of the key of a primitive region
+              represents the formation of publisher IDs in that primitive
+              region. For example, primitive_regions[key] with key = 5 = bin('101')
+              is the region which belongs to pub_id-0 and id-2.
+              The k+ reaches for a given region is given as a list r[] where
+              r[k] is the number of people who were reached AT LEAST k+1 times.
         Returns:
             A list of ReachPoint. Each reach point represents the mapping from
             the spends of a subset of publishers to the number of people reached
@@ -286,18 +290,18 @@ class HaloSimulator:
 
         To obtain the union reach of the given subset of publishers, we sum up
         the reaches from the primitive regions which belong to at least one of
-        the given publisher. Note that the binary representation of the index
-        of a primitive region represents the formation of publisher IDs in that
+        the given publisher. Note that the binary representation of the key of
+        a primitive region represents the formation of publisher IDs in that
         primitive region.
 
         For example, given a subset of publisher ids, {0}, out of the whole set
         {0, 1, 2}, the reaches in the following primitive regions will be summed
         up:
 
-            region with index = 1 = bin('001'): belongs to pub_id-0
-            region with index = 3 = bin('011'): belongs to pub_id-0 and 1
-            region with index = 5 = bin('101'): belongs to pub_id-0 and 2
-            region with index = 7 = bin('111'): belongs to pub_id-0, 1, and 2
+            region with key = 1 = bin('001'): belongs to pub_id-0
+            region with key = 3 = bin('011'): belongs to pub_id-0 and 1
+            region with key = 5 = bin('101'): belongs to pub_id-0 and 2
+            region with key = 7 = bin('111'): belongs to pub_id-0, 1, and 2
 
         Args:
             pub_ids:  The list of target publisher IDs for computing aggregated

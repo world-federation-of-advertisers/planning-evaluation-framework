@@ -99,8 +99,8 @@ class HaloSimulatorTest(parameterized.TestCase):
             "regions": {},
             "expected": [
                 ReachPoint([0, 0], [0], [0.005, 0]),
-                ReachPoint([0, 0], [0], [0, 0.005]),
-                ReachPoint([0, 0], [0], [0.005, 0.005]),
+                ReachPoint([0, 0], [0], [0, 0.01]),
+                ReachPoint([0, 0], [0], [0.005, 0.01]),
             ],
         },
         {
@@ -117,8 +117,8 @@ class HaloSimulatorTest(parameterized.TestCase):
             "regions": {1: [2]},
             "expected": [
                 ReachPoint([3, 0], [2], [0.04, 0]),
-                ReachPoint([0, 0], [0], [0, 0.04]),
-                ReachPoint([3, 0], [2], [0.04, 0.04]),
+                ReachPoint([0, 0], [0], [0, 0.02]),
+                ReachPoint([3, 0], [2], [0.04, 0.02]),
             ],
         },
         {
@@ -175,6 +175,11 @@ class HaloSimulatorTest(parameterized.TestCase):
                 r_pt.reach(1),
                 expected_r_pt.reach(1),
                 msg=f"The reach of No.{i + 1} reach point is not correct",
+            )
+            self.assertEqual(
+                r_pt.spends,
+                expected_r_pt.spends,
+                msg=f"The spends of No.{i + 1} reach point is not correct",
             )
 
     @parameterized.named_parameters(

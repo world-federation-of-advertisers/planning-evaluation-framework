@@ -161,6 +161,8 @@ class HaloSimulatorTest(parameterized.TestCase):
         privacy_tracker = PrivacyTracker()
         halo = HaloSimulator(data_set, params, privacy_tracker)
 
+        # Note that the reach points generated from the Venn diagram only 
+        # contain 1+ reaches.
         reach_points = halo._generate_reach_points_from_venn_diagram(spends, regions)
 
         self.assertEqual(len(reach_points), len(expected))

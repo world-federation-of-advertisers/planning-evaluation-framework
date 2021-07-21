@@ -110,7 +110,7 @@ class HaloSimulatorTest(parameterized.TestCase):
         self.assertEqual(
             self.halo._num_active_registers(cardinality, random_state),
             num_active,
-            msg=f"The variance for estimating n={cardinality} is not correct.",
+            msg=f"The number of active registers for n={cardinality} is not correct.",
         )
 
     @parameterized.named_parameters(

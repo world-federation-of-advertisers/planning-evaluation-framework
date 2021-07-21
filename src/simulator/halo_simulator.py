@@ -26,6 +26,7 @@ from typing import Tuple
 from typing import Dict
 from itertools import chain, combinations
 import numpy as np
+from scipy.special import expi
 
 from wfa_cardinality_estimation_evaluation_framework.estimators.same_key_aggregator import (
     StandardizedHistogramEstimator,
@@ -208,6 +209,37 @@ class HaloSimulator:
         impressions = self._data_set.impressions_by_spend(spends)
         kplus_reaches = ReachPoint.frequencies_to_kplus_reaches(frequencies)
         return ReachPoint(impressions, kplus_reaches, spends)
+
+    def _cardinality_estimate_variance(self, n: int) -> float:
+        """Variance of cardinality estimate by unnoised LiquidLegions.
+
+        Args:
+          n:  true cardinality.
+
+        Returns:
+          var(n-hat) where n-hat is the cardinality estimate from a
+          LiquidLegions which contains n distinct items and has the system
+          parameters (decay rate and sketch size) in this halo.
+        """
+        m = self._params.liquid_legions.sketch_size
+        a = self._params.liquid_legions.decay_rate
+        c = a * n / m / (1 - np.exp(-a))
+        variance = (
+            expi(-c) - expi(-c * np.exp(-a)) - expi(-2 * c) + expi(-2 * c * np.exp(-a))
+        )
+        variance *= a * n ** 2 / m / (np.exp(-c) - np.exp(-c * np.exp(-a))) ** 2
+        variance -= n
+        return variance
+
+    def _num_active_registers(
+        self, n: int, random_generator: np.random.Generator = np.random.default_rng()
+    ) -> int:
+        """Simulate an observation of the number of active registers."""
+        m = self._params.liquid_legions.sketch_size
+        a = self._params.liquid_legions.decay_rate
+        register_probs = np.exp(-a * np.arange(m) / m)
+        register_probs /= sum(register_probs)
+        return sum(random_generator.multinomial(n, register_probs) == 1)
 
     def simulated_venn_diagram_reach_by_spend(
         self,

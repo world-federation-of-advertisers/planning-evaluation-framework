@@ -90,6 +90,29 @@ class HaloSimulatorTest(parameterized.TestCase):
         )
         self.assertTrue(reach_point.reach(1) >= 0)
 
+    @parameterized.parameters(
+        [1, 0],
+        [1e5, 731820],
+    )
+    def test_cardinality_estimate_variance(self, cardinality, variance):
+        self.assertAlmostEqual(
+            self.halo._cardinality_estimate_variance(cardinality),
+            variance,
+            0,
+            msg=f"The variance for estimating n={cardinality} is not correct.",
+        )
+
+    @parameterized.parameters(
+        [1, np.random.default_rng(0), 1],
+        [1e5, np.random.default_rng(0), 8259],
+    )
+    def test_num_active_registers(self, cardinality, random_state, num_active):
+        self.assertEqual(
+            self.halo._num_active_registers(cardinality, random_state),
+            num_active,
+            msg=f"The variance for estimating n={cardinality} is not correct.",
+        )
+
     @parameterized.named_parameters(
         # testcase_name, num_publishers, spends, regions, expected
         {

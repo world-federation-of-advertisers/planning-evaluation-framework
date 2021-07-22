@@ -41,6 +41,20 @@ class FakeLaplaceMechanism:
         return [2 * y for y in x]
 
 
+class FakeRandomGenerator:
+    def multivariate_hypergeometric(self, colors, nsample):
+        samples = [0] * len(colors)
+        index = 0
+
+        while nsample:
+            if samples[index] < colors[index]:
+                samples[index] += 1
+                nsample -= 1
+            index = (index + 1) % len(samples)
+
+        return samples
+
+
 class HaloSimulatorTest(parameterized.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -237,11 +251,11 @@ class HaloSimulatorTest(parameterized.TestCase):
             "expected": {3: [1]},
         },
         {
-            "testcase_name": "with_10_regions",
-            "regions": {i: [i ** 2 + 1] for i in range(10)},
+            "testcase_name": "with_5_regions_and_fake_rng",
+            "regions": {i: [i ** 2 + 1] for i in range(5)},
             "sample_size": 20,
-            "random_generator": np.random.default_rng(0),
-            "expected": {i: [n] for i, n in enumerate([0, 0, 0, 1, 1, 1, 2, 3, 4, 8])},
+            "random_generator": FakeRandomGenerator(),
+            "expected": {i: [n] for i, n in enumerate([1, 2, 5, 6, 6])},
         },
     )
     def test_sample_venn_diagram(

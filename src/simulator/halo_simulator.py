@@ -296,6 +296,12 @@ class HaloSimulator:
         ]
         region_repr_seq, reach_population = list(zip(*region_repr_and_reach_pairs))
 
+        if sample_size > sum(reach_population):
+            raise ValueError(
+                f"The given sample size is {sample_size} which is"
+                f" larger than the total number of reach = {sum(reach_population)}"
+            )
+
         sampled_reach = random_generator.multivariate_hypergeometric(
             reach_population, sample_size
         )

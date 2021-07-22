@@ -137,6 +137,10 @@ class HaloSimulatorTest(parameterized.TestCase):
             expected,
         )
 
+    def test_sample_venn_diagram_with_invalid_input(self):
+        with self.assertRaises(ValueError):
+            self.halo._sample_venn_diagram({3: [1]}, 20)
+
     @parameterized.named_parameters(
         # testcase_name, num_publishers, spends, regions, expected
         {

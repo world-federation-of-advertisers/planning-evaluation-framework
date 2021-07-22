@@ -267,6 +267,27 @@ class HaloSimulator:
         """
         raise NotImplementedError()
 
+    def _sample_venn_diagram(
+        self,
+        primitive_regions: Dict[int, List],
+        sample_size: int,
+        random_generator: np.random.Generator = np.random.default_rng(),
+    ) -> Dict[int, List]:
+
+        region_repr_and_reach_pairs = [
+            (region_repr, kplus_reaches[0])
+            for region_repr, kplus_reaches in primitive_regions.items()
+        ]
+        region_repr_seq, reach_population = list(zip(*region_repr_and_reach_pairs))
+
+        sampled_reach = random_generator.multivariate_hypergeometric(
+            reach_population, sample_size
+        )
+
+        return {
+            region_repr: [r] for region_repr, r in zip(region_repr_seq, sampled_reach)
+        }
+
     def _generate_reach_points_from_venn_diagram(
         self, spends: List[float], primitive_regions: Dict[int, List]
     ) -> List[ReachPoint]:

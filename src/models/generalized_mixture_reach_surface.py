@@ -28,7 +28,7 @@ solvers.options["show_progress"] = False
 
 
 class GeneralizedMixtureReachSurface(ReachSurface):
-    """Models reach with the pairwise union overlap model.
+    """Models reach with the generalized mixture overlap model.
 
     GeneralizedMixtureReachSurface models the combined reach with the formula
 
@@ -40,7 +40,7 @@ class GeneralizedMixtureReachSurface(ReachSurface):
           imp_i is the numnber of impressions for ith publisher
           r_j(imp_j) is the reach of the jth publisher for imp_j impressions.
 
-    reference doc:
+    reference doc:  ###
     """
 
     def __init__(
@@ -64,8 +64,56 @@ class GeneralizedMixtureReachSurface(ReachSurface):
         self._p = len(reach_points[0].impressions)
         super().__init__(data=reach_points)
 
-    def _fit(self) -> None:
+  def update_theta_from_a(a, r):
+    """Udpate theta using equation (TODO: add formula somewhere).
 
+    Args:
+      a: a length (p * c) vector. Current best guess of a.
+      r: a length n list of length p vectors. Single publisher reaches for
+        each training point.
+
+    Returns:
+      A length n list of length c vectors that indicate each $theta_j^{(k)}$.
+    """
+    theta = []
+    for k in range(n):
+      theta_k = np.zeros(c)
+      for j in range(c):
+        x = a[[j + i * c for i in range(p)]] * r[k] / N
+        theta_k[j] = (1 - np.prod(1 - x)) / np.sum(x)
+      theta.append(theta_k)
+    return theta
+
+  def update_a_from_theta(theta, r, y):
+    """Udpate theta using equation (TODO: add formula somewhere).
+
+    Args:
+      theta: a length n list of length c vectors. Current best guess of theta.
+      r: a length n list of length p vectors. Single publisher reaches for
+        each training point.
+      y: a length n list of responses.
+
+    Returns:
+      A length (p * c) vector indicating each $a_{ij}$.
+    """
+    z = get_z_from_theta(theta, r)
+    return solve_a_given_z(z, y)
+
+  def get_z_from_theta(theta, r):
+    z = []
+      for k in range(n):
+        z_k = np.zeros(p * c)
+        for i in range(p):
+          for j in range(c):
+            z_k[j + i * c] = r[k][i] * theta[k][j] / N
+        z.append(z_k)
+      return z
+
+    def _fit(self) -> None:
+      for _ in range(n_iter):
+        z = get_z_from_theta(cur_theta, r)
+        cur_a = update_a_from_theta(cur_theta, r, true_y)
+        cur_theta = update_theta_from_a(cur_a, r)
 
     def by_spend(self, spend: Iterable[float], max_frequency: int = 1) -> ReachPoint:
         return
@@ -86,4 +134,13 @@ class GeneralizedMixtureReachSurface(ReachSurface):
     def by_impressions(
         self, impressions: Iterable[int], max_frequency: int = 1
     ) -> ReachPoint:
-      return
+        y = []
+        for k in range(n):
+          y_k = 0
+          for j in range(c):
+            w = 1
+            for i in range(p):
+              w *= 1 - self.a[j + i * c] * r[k][i] / N
+            y_k += 1 - w
+          y.append(y_k)
+        return y

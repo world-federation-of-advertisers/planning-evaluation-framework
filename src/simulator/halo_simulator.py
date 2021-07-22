@@ -307,6 +307,27 @@ class HaloSimulator:
 
         return regions
 
+    def _sample_venn_diagram(
+        self,
+        primitive_regions: Dict[int, List],
+        sample_size: int,
+        random_generator: np.random.Generator = np.random.default_rng(),
+    ) -> Dict[int, List]:
+
+        region_repr_and_reach_pairs = [
+            (region_repr, kplus_reaches[0])
+            for region_repr, kplus_reaches in primitive_regions.items()
+        ]
+        region_repr_seq, reach_population = list(zip(*region_repr_and_reach_pairs))
+
+        sampled_reach = random_generator.multivariate_hypergeometric(
+            reach_population, sample_size
+        )
+
+        return {
+            region_repr: [r] for region_repr, r in zip(region_repr_seq, sampled_reach)
+        }
+
     def _aggregate_reach_in_primitive_venn_diagram_regions(
         self, pub_ids: List[int], primitive_regions: Dict[int, List]
     ) -> int:

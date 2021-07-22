@@ -229,6 +229,30 @@ class HaloSimulatorTest(parameterized.TestCase):
         self.assertEqual(agg_reach, expected)
 
     @parameterized.named_parameters(
+        {
+            "testcase_name": "with_1_region",
+            "regions": {3: [1]},
+            "sample_size": 1,
+            "random_generator": np.random.default_rng(0),
+            "expected": {3: [1]},
+        },
+        {
+            "testcase_name": "with_10_regions",
+            "regions": {i: [i ** 2 + 1] for i in range(10)},
+            "sample_size": 20,
+            "random_generator": np.random.default_rng(0),
+            "expected": {i: [n] for i, n in enumerate([0, 0, 0, 1, 1, 1, 2, 3, 4, 8])},
+        },
+    )
+    def test_sample_venn_diagram(
+        self, regions, sample_size, random_generator, expected
+    ):
+        self.assertEqual(
+            self.halo._sample_venn_diagram(regions, sample_size, random_generator),
+            expected,
+        )
+
+    @parameterized.named_parameters(
         # testcase_name, num_publishers, spends, regions, expected
         {
             "testcase_name": "with_empty_regions",

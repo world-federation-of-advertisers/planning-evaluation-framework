@@ -46,6 +46,7 @@ from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
     DP_NOISE_MECHANISM_DISCRETE_GAUSSIAN,
+    DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
 )
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import NoisingEvent
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyBudget
@@ -306,6 +307,39 @@ class HaloSimulator:
         }
 
         return regions
+
+    def _add_dp_noise_to_primitive_regions(
+        self,
+        occupied_primitive_regions: Dict[int, List],
+        num_all_primitive_regions: int,
+        budget: PrivacyBudget,
+        privacy_budget_split: float,
+    ) -> List[int]:
+        """ """
+        epsilon_for_reach = budget.epsilon * privacy_budget_split
+        # TODO(jiayu,matthew): should delta be splitted in this way?
+        delta_for_reach = budget.delta * privacy_budget_split
+
+        noiser = GeometricEstimateNoiser(
+            epsilon_for_reach,
+            np.random.RandomState(
+                seed=self._params.generator.integers(low=0, high=1e9)
+            ),
+        )
+
+        noised_regions = []
+        for region_repr in range(1, num_all_primitive_regions + 1):
+            reach = occupied_primitive_regions.get(region_repr, [0])[0]
+            noised_regions.append(max(0, noiser(reach)))
+            self._privacy_tracker.append(
+                NoisingEvent(
+                    PrivacyBudget(epsilon_for_reach, delta_for_reach),
+                    DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
+                    {"privacy_budget_split": privacy_budget_split},
+                )
+            )
+
+        return noised_regions
 
     def _aggregate_reach_in_primitive_venn_diagram_regions(
         self, pub_ids: List[int], primitive_regions: Dict[int, List]

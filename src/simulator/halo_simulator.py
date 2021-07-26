@@ -314,7 +314,7 @@ class HaloSimulator:
         num_all_primitive_regions: int,
         budget: PrivacyBudget,
         privacy_budget_split: float,
-    ) -> List[int]:
+    ) -> Dict[int, List]:
         """ """
         epsilon_for_reach = budget.epsilon * privacy_budget_split
         # TODO(jiayu,matthew): should delta be splitted in this way?
@@ -327,10 +327,10 @@ class HaloSimulator:
             ),
         )
 
-        noised_regions = []
+        noised_primitive_regions = {}
         for region_repr in range(1, num_all_primitive_regions + 1):
             reach = occupied_primitive_regions.get(region_repr, [0])[0]
-            noised_regions.append(max(0, noiser(reach)))
+            noised_primitive_regions[region_repr] = max(0, noiser(reach))
             self._privacy_tracker.append(
                 NoisingEvent(
                     PrivacyBudget(epsilon_for_reach, delta_for_reach),
@@ -339,7 +339,7 @@ class HaloSimulator:
                 )
             )
 
-        return noised_regions
+        return noised_primitive_regions
 
     def _aggregate_reach_in_primitive_venn_diagram_regions(
         self, pub_ids: List[int], primitive_regions: Dict[int, List]

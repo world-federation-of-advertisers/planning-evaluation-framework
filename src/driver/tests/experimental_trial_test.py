@@ -73,6 +73,9 @@ from wfa_planning_evaluation_framework.driver.modeling_strategy_descriptor impor
 from wfa_planning_evaluation_framework.driver.test_point_generator import (
     TestPointGenerator,
 )
+from wfa_planning_evaluation_framework.driver.trial_descriptor import (
+    TrialDescriptor,
+)
 
 
 class FakeReachSurface(ReachSurface):
@@ -126,7 +129,8 @@ class ExperimentalTrialTest(absltest.TestCase):
         eparams = ExperimentParameters(
             PrivacyBudget(1.0, 0.01), 1, 3, "test_point_strategy"
         )
-        trial = ExperimentalTrial("", None, "", None, None, eparams)
+        trial_descriptor = TrialDescriptor(None, None, eparams)
+        trial = ExperimentalTrial("", None, "", trial_descriptor)
 
         actual0 = trial._make_privacy_tracking_vars_dataframe(tracker)
         expected0 = pd.DataFrame(
@@ -189,9 +193,8 @@ class ExperimentalTrialTest(absltest.TestCase):
             eparams = ExperimentParameters(
                 PrivacyBudget(1.0, 0.01), 3, 5, "test_point_strategy"
             )
-            trial = ExperimentalTrial(
-                "edir", data_design, "dataset", msd, sparams, eparams
-            )
+            trial_descriptor = TrialDescriptor(msd, sparams, eparams)
+            trial = ExperimentalTrial("edir", data_design, "dataset", trial_descriptor)
 
             actual = trial._make_independent_vars_dataframe()
             expected = pd.DataFrame(
@@ -228,12 +231,11 @@ class ExperimentalTrialTest(absltest.TestCase):
                 np.random.default_rng(),
             )
             eparams = ExperimentParameters(PrivacyBudget(1.0, 0.01), 3, 5, "tps")
-            trial = ExperimentalTrial(
-                "edir", data_design, "dataset", msd, sparams, eparams
-            )
+            trial_descriptor = TrialDescriptor(msd, sparams, eparams)
+            trial = ExperimentalTrial("edir", data_design, "dataset", trial_descriptor)
 
             actual = trial._compute_trial_results_path()
-            expected = "{},{},{},{},{},{}".format(
+            expected = "{}/{}/{},{},{},{}".format(
                 "edir",
                 "dataset",
                 "strategy,single_pub_model,multi_pub_model",
@@ -267,8 +269,9 @@ class ExperimentalTrialTest(absltest.TestCase):
                 np.random.default_rng(),
             )
             eparams = ExperimentParameters(PrivacyBudget(1.0, 0.01), 3, 5, "fake_tps")
+            trial_descriptor = TrialDescriptor(msd, sparams, eparams)
             trial = ExperimentalTrial(
-                experiment_dir, data_design, "dataset", msd, sparams, eparams
+                experiment_dir, data_design, "dataset", trial_descriptor
             )
             result = trial.evaluate(rng=np.random.default_rng(seed=1))
             # We don't check each column in the resulting dataframe, because these have

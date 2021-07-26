@@ -18,6 +18,9 @@ from typing import Dict
 from typing import NamedTuple
 from typing import Type
 
+from wfa_planning_evaluation_framework.models.gamma_poisson_model import (
+    GammaPoissonModel,
+)
 from wfa_planning_evaluation_framework.models.goerg_model import (
     GoergModel,
 )
@@ -30,13 +33,15 @@ from wfa_planning_evaluation_framework.models.restricted_pairwise_union_reach_su
 from wfa_planning_evaluation_framework.simulator.modeling_strategy import (
     ModelingStrategy,
 )
+from wfa_planning_evaluation_framework.simulator.m3_strategy import (
+    M3Strategy,
+)
 
 # A dictionary mapping names of single publisher models to the
 # corresponding classes that implement them.
 SINGLE_PUB_MODELS = {
     "goerg": GoergModel,
-    # TODO: Uncomment the following after the Gamma-Poisson model is implemented.
-    #  'gamma_poisson': GammaPoissonModel,
+    "gamma_poisson": GammaPoissonModel,
 }
 
 # A dictionary mapping names of multipublisher models to the
@@ -53,8 +58,7 @@ MULTI_PUB_MODELS = {
 # A dictionary mapping names of modeling strategies to the
 # corresponding classes that implement them.
 MODELING_STRATEGIES = {
-    # TODO: Uncomment the following after the M3 Proposal is implemented.
-    #    'm3proposal': M3Proposal,
+    "m3strategy": M3Strategy,
 }
 
 

@@ -35,6 +35,9 @@ from wfa_planning_evaluation_framework.driver.modeling_strategy_descriptor impor
 from wfa_planning_evaluation_framework.driver.experiment_parameters import (
     ExperimentParameters,
 )
+from wfa_planning_evaluation_framework.driver.trial_descriptor import (
+    TrialDescriptor,
+)
 
 
 class Experiment:
@@ -45,9 +48,7 @@ class Experiment:
         experiment_dir: str,
         data_design: DataDesign,
         data_set_name: str,
-        trial_descriptors: List[
-            Tuple[ModelingStrategyDescriptor, SystemParameters, ExperimentParameters]
-        ],
+        trial_descriptors: List[TrialDescriptor],
     ):
         """Constructs an Experiment object.
 
@@ -72,15 +73,9 @@ class Experiment:
         """Generates list of Trial objects associated to this experiement."""
         trials = []
         for desc in self._trial_descriptors:
-            modeling_strategy, simulation_params, experiment_params = desc
             trials.append(
                 ExperimentalTrial(
-                    self._experiment_dir,
-                    self._data_design,
-                    self._data_set_name,
-                    modeling_strategy,
-                    simulation_params,
-                    experiment_params,
+                    self._experiment_dir, self._data_design, self._data_set_name, desc
                 )
             )
         self._trials = trials

@@ -23,23 +23,16 @@ import pandas as pd
 from typing import List
 from typing import Tuple
 
+
+from wfa_planning_evaluation_framework.driver.trial_descriptor import TrialDescriptor
 from wfa_planning_evaluation_framework.data_generators.data_design import (
     DataDesign,
-)
-from wfa_planning_evaluation_framework.simulator.system_parameters import (
-    SystemParameters,
 )
 from wfa_planning_evaluation_framework.driver.experiment import (
     Experiment,
 )
 from wfa_planning_evaluation_framework.driver.experimental_trial import (
     ExperimentalTrial,
-)
-from wfa_planning_evaluation_framework.driver.modeling_strategy_descriptor import (
-    ModelingStrategyDescriptor,
-)
-from wfa_planning_evaluation_framework.driver.experiment_parameters import (
-    ExperimentParameters,
 )
 
 
@@ -50,9 +43,7 @@ class ExperimentalDesign:
         self,
         experiment_dir: str,
         data_design: DataDesign,
-        trial_descriptors: List[
-            Tuple[ModelingStrategyDescriptor, SystemParameters, ExperimentParameters]
-        ],
+        trial_descriptors: List[TrialDescriptor],
         rng: np.random.Generator,
     ):
         """Constructs an ExperimentalDesign object.

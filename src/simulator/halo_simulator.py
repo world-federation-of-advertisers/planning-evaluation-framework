@@ -313,12 +313,27 @@ class HaloSimulator:
         occupied_primitive_regions: Dict[int, List],
         num_all_primitive_regions: int,
         budget: PrivacyBudget,
-        privacy_budget_split: float,
+        privacy_budget_ratio_for_reach: float,
     ) -> Dict[int, List]:
-        """ """
-        epsilon_for_reach = budget.epsilon * privacy_budget_split
+        """Add differential privacy noise to every primitive regions
+
+        Args:
+            occupied_primitive_regions:  Contains k+ reaches in the regions. 
+              The k+ reaches for a given region is given as a list r[] where
+              r[k] is the number of people who were reached AT LEAST k+1 times.
+            num_all_primitive_regions:  The total number of primitive regions.
+            budget:  The amount of privacy budget that can be consumed while
+              satisfying the request.
+            privacy_budget_ratio_for_reach:  Specifies the proportion of the 
+              privacy budget that should be allocated to reach estimation.
+        Returns:
+            A dictionary in which each key are the binary representations of
+              each primitive region of the Venn diagram, and each value is a
+              list of the reach in the corresponding region.
+        """
+        epsilon_for_reach = budget.epsilon * privacy_budget_ratio_for_reach
         # TODO(jiayu,matthew): should delta be splitted in this way?
-        delta_for_reach = budget.delta * privacy_budget_split
+        delta_for_reach = budget.delta * privacy_budget_ratio_for_reach
 
         noiser = GeometricEstimateNoiser(
             epsilon_for_reach,
@@ -335,7 +350,7 @@ class HaloSimulator:
                 NoisingEvent(
                     PrivacyBudget(epsilon_for_reach, delta_for_reach),
                     DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
-                    {"privacy_budget_split": privacy_budget_split},
+                    {"privacy_budget_ratio_for_reach": privacy_budget_ratio_for_reach},
                 )
             )
 

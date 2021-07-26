@@ -57,13 +57,20 @@ class Publisher:
         """
         self._publisher_data = publisher_data
         self._publisher_index = publisher_index
-        self._campaign_spend = params.campaign_spend[publisher_index]
+        self._campaign_spend = (
+            params.campaign_spend_fractions[publisher_index] * publisher_data.max_spend
+        )
         self._params = params
 
     @property
     def campaign_spend(self) -> float:
         """Returns the amount spent on this campaign."""
         return self._campaign_spend
+
+    @property
+    def max_spend(self) -> float:
+        """Returns the maximum amount that can be spent with this publisher."""
+        return self._publisher_data.max_spend
 
     def true_reach_by_spend(self, spend: float, max_frequency: int = 1) -> ReachPoint:
         """Returns the true reach obtained for a given spend vector.

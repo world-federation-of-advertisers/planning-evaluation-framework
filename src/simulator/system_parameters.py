@@ -40,20 +40,22 @@ class SystemParameters(NamedTuple):
     """Parameters defining a simulation run.
 
     Attributes:
-        campaign_spend:  A list of spend values, one per campaign,
-            representing the total actual spend for each campaign.
+        campaign_spend_fractions:  A list of values, each between 0 and 1,
+            one per campaign, representing the amount spent on the campaign
+            as a fraction of total possible.  Note that 
+            len(campaign_spend_fractions) must equal the number of publishers.
         liquid_legions:  Parameters specific to constructing Liquid Legions
             sketches.
         generator:  The single source of randomness that will be used
             for this modeling run.
     """
 
-    campaign_spend: List[float]
+    campaign_spend_fractions: List[float]
     liquid_legions: LiquidLegionsParameters
     generator: Generator
 
     def __str__(self) -> str:
-        spend_str = ",".join([f"{s}" for s in self.campaign_spend])
+        spend_str = ",".join([f"{s}" for s in self.campaign_spend_fractions])
         ll_str = "decay_rate={},sketch_size={}".format(
             self.liquid_legions.decay_rate, self.liquid_legions.sketch_size
         )

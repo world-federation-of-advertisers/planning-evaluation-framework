@@ -86,10 +86,31 @@ class HaloSimulator:
         self._params = params
         self._privacy_tracker = privacy_tracker
         self._publishers = []
+        campaign_spends = []
+        max_spends = []
         for i in range(data_set.publisher_count):
             self._publishers.append(
                 Publisher(data_set._data[i], i, params, privacy_tracker)
             )
+            campaign_spends.append(self._publishers[i].campaign_spend)
+            max_spends.append(self._publishers[i].max_spend)
+        self._campaign_spends = tuple(campaign_spends)
+        self._max_spends = tuple(max_spends)
+
+    @property
+    def publisher_count(self):
+        """Returns the number of publishers in this Halo instance."""
+        return len(self._publishers)
+
+    @property
+    def campaign_spends(self):
+        """Returns the vector of campaign spends."""
+        return self._campaign_spends
+
+    @property
+    def max_spends(self):
+        """Returns the vector of per publisher max spends."""
+        return self._max_spends
 
     def true_reach_by_spend(
         self, spends: List[float], max_frequency: int = 1

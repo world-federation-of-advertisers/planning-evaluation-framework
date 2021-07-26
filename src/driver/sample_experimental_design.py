@@ -51,9 +51,8 @@ MODELING_STRATEGIES = [
 ]
 
 # Here we assume all data sets specify exactly two campaigns
-# of up to $1M each.
-CAMPAIGN_SPENDS = list(
-    itertools.product(np.arange(1, 10) * 100_000, np.arange(1, 10) * 100_000)
+CAMPAIGN_SPEND_FRACTIONS = list(
+    itertools.product(np.arange(1, 10) * 0.1, np.arange(1, 10) * 0.1)
 )
 
 LIQUID_LEGIONS_PARAMS = [
@@ -84,7 +83,7 @@ TEST_POINT_STRATEGIES = [
 
 LEVELS = {
     "modeling_strategies": MODELING_STRATEGIES,
-    "campaign_spends": CAMPAIGN_SPENDS,
+    "campaign_spend_fractions": CAMPAIGN_SPEND_FRACTIONS,
     "liquid_legions_params": LIQUID_LEGIONS_PARAMS,
     "privacy_budgets": PRIVACY_BUDGETS,
     "replica_ids": REPLICA_IDS,
@@ -113,7 +112,7 @@ def generate_experimental_design_config(
             design_parameters[key] = LEVELS[key][int(level * len(LEVELS[key]))]
         mstrategy = design_parameters["modeling_strategies"]
         sparams = SystemParameters(
-            design_parameters["campaign_spends"],
+            design_parameters["campaign_spend_fractions"],
             design_parameters["liquid_legions_params"],
             random_generator,
         )

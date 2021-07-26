@@ -50,7 +50,7 @@ class M3Strategy(ModelingStrategy):
             for reach and frequency estimates for arbitrary spend allocations.
         """
 
-        p = len(params.campaign_spend)
+        p = halo.publisher_count
 
         # TODO: Compute total budget usage with advanced composition or PLD's
         per_request_budget = PrivacyBudget(
@@ -58,14 +58,14 @@ class M3Strategy(ModelingStrategy):
         )
 
         total_reach = halo.simulated_reach_by_spend(
-            params.campaign_spend, per_request_budget
+            halo.campaign_spends, per_request_budget
         )
 
         # Compute reach for each publisher
         single_pub_reach_list = []
         for i in range(p):
             spend_vec = [0.0] * p
-            spend_vec[i] = params.campaign_spend[i]
+            spend_vec[i] = halo.campaign_spends[i]
             reach_point = halo.simulated_reach_by_spend(
                 spend_vec, per_request_budget, max_frequency=10
             )
@@ -81,7 +81,7 @@ class M3Strategy(ModelingStrategy):
         all_but_one_reach = []
         if p > 2:
             for i in range(p):
-                spend_vec = params.campaign_spend.copy()
+                spend_vec = list(halo.campaign_spends)
                 spend_vec[i] = 0.0
                 reach = halo.simulated_reach_by_spend(spend_vec, per_request_budget)
                 all_but_one_reach.append(reach)

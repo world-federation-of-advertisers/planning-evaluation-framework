@@ -42,8 +42,12 @@ class FakeHalo:
         self.curve._fit()
 
     @property
+    def publisher_count(self):
+        return 2
+
+    @property
     def campaign_spends(self):
-        return [100.0, 100.0]
+        return (100.0, 100.0)
 
     def simulated_reach_by_spend(
         self,

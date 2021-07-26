@@ -17,7 +17,9 @@ A reach curve is a mapping from scalar spend or impression value to reach.
 """
 
 import copy
+import numpy as np
 from typing import Callable
+from typing import List
 
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.models.reach_surface import ReachSurface
@@ -100,3 +102,7 @@ class ReachCurve(ReachSurface):
           possible reach.
         """
         return self._by_quantile(quantile, self.by_spend)
+
+    def _kplus_reaches_from_frequencies(self, hist: List[int]) -> List[int]:
+        """Converts a frequency histogram to a list of k+ reaches."""
+        return list(reversed(np.cumsum(list(reversed(hist)))))

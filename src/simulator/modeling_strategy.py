@@ -26,6 +26,9 @@ from wfa_planning_evaluation_framework.simulator.system_parameters import (
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
     PrivacyBudget,
 )
+from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
+    PrivacyBudget,
+)
 
 
 class ModelingStrategy:

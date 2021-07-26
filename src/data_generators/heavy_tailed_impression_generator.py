@@ -14,7 +14,7 @@
 """Generate a stream of impressions from a zeta distr."""
 
 from typing import List
-from numpy.random import RandomState
+import numpy as np
 
 from wfa_planning_evaluation_framework.data_generators.impression_generator import (
     ImpressionGenerator,
@@ -24,7 +24,9 @@ from wfa_planning_evaluation_framework.data_generators.impression_generator impo
 class HeavyTailedImpressionGenerator(ImpressionGenerator):
     """Generate impressions with heavy tailed impressions."""
 
-    def __init__(self, n: int, zeta_s: float = 2, random_state: RandomState = None):
+    def __init__(
+        self, n: int, zeta_s: float = 2, random_generator: np.random.Generator = None
+    ):
         """Constructor for the HeavyTailedImpressionGenerator.
 
         For each user, the number of impressions assigned to that user is
@@ -34,16 +36,16 @@ class HeavyTailedImpressionGenerator(ImpressionGenerator):
         Args:
           n:  The number of users.
           zeta_s:  The parameter of the zeta distribution.
-          random_state:  An instance of numpy.random.RandomState that is
-            used for making draws from the Poisson distribution.
+          random_generator:  An instance of numpy.random.Generator that is
+            used for making draws from the Zeta distribution.
         """
         assert zeta_s > 1, "Zeta distribution must have power parameter > 1."
         self._zeta_s = zeta_s
         self._n = n
-        if random_state:
-            self._random_state = random_state
+        if random_generator:
+            self._random_generator = random_generator
         else:
-            self._random_state = RandomState()
+            self._random_generator = np.random.default_rng(seed=1)
 
     def __call__(self) -> List[int]:
         """Generate a random sequence of impressions.
@@ -55,6 +57,6 @@ class HeavyTailedImpressionGenerator(ImpressionGenerator):
         """
         impressions = []
         for i in range(self._n):
-            impressions.extend([i] * self._random_state.zipf(self._zeta_s))
-        self._random_state.shuffle(impressions)
+            impressions.extend([i] * self._random_generator.zipf(self._zeta_s))
+        self._random_generator.shuffle(impressions)
         return impressions

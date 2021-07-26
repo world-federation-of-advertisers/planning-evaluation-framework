@@ -27,6 +27,7 @@ from wfa_planning_evaluation_framework.models.restricted_pairwise_union_reach_su
 )
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 
+
 class LinearCappedReachCurve(ReachCurve):
     """A curve of simple form that facilitates testing."""
 

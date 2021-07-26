@@ -127,6 +127,7 @@ class PairwiseUnionReachSurface(ReachSurface):
           G1: a_i_j >= 0 for all i,j -> all parameters are non negative
           G2: sum_{j=1..p} a_i_j <= 1 for all i -> row sums are no more than one
           G3: sum_{i=1..p} a_i_j <= 1 for all j -> col sums are no more than one
+
         Returns:
           (matrix G, vector h) cvxopt.solvers recognizes the constraint
           Gx <= h, where x is the parameter vector.

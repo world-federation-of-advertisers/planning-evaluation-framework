@@ -41,7 +41,7 @@ class HomogeneousImpressionGenerator(ImpressionGenerator):
           n:  The number of users.
           poisson_lambda:  The parameter of the Poisson distribution that
             determines viewing frequencies.
-          random_generator:  An instance of numpy.random.Generator that is used
+          random_state:  An instance of numpy.random.RandomState that is used
             for making draws from the Poisson distribution.
         """
         self._poisson_lambda = poisson_lambda

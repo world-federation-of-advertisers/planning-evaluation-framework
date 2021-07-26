@@ -51,3 +51,10 @@ class SimulationParameters(NamedTuple):
     campaign_spend: List[float]
     liquid_legions: LiquidLegionsParameters
     generator: Generator
+
+    def __str__(self) -> str:
+        spend_str = ",".join([f"{s}" for s in self.campaign_spend])
+        ll_str = "decay_rate={},sketch_size={}".format(
+            self.liquid_legions.decay_rate, self.liquid_legions.sketch_size
+        )
+        return "spends=[{}],{}".format(spend_str, ll_str)

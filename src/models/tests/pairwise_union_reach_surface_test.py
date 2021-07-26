@@ -26,7 +26,7 @@ from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 
 
 class LinearCappedReachCurve(ReachCurve):
-    """Linear ReachCurve that is capped at max_reach."""
+    """A curve of simple form that facilitates testing."""
 
     def _fit(self) -> None:
         self._max_reach = self._data[0].reach()
@@ -166,15 +166,21 @@ class PairwiseUnionReachSurfaceTest(absltest.TestCase):
         training_size = 50
         universe_size = 200000
         decay_rate = 0.8
-
+        # Generate simulated reach curves - one for each publisher -
+        # and with decaying universe sizes.
         reach_curves = self.generate_sample_reach_curves(
             num_publishers, decay_rate, universe_size
         )
+        # Generate a random matrix A - assuming the generating process for
+        # reach is actually a pairwise union model- we generate the model parameters
         true_a = self.generate_sample_matrix_a(num_publishers)
+        # Using reach_curves and model parameters (A), we can generate the
+        # reach points.
         training_reach_points = self.generate_reach_points(
             true_a, reach_curves, training_size, universe_size, 1
         )
-
+        # We then fit the model - since the generating process is the same
+        # model, the fitted model should have a really small error rate.
         surface = PairwiseUnionReachSurface(reach_curves, training_reach_points)
         test_reach_points = self.generate_reach_points(
             true_a, reach_curves, training_size, universe_size, 2

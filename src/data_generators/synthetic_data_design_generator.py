@@ -21,13 +21,13 @@ Example usage:
 
   python3 synthetic_data_design_generator.py \
     --output_dir=<output_dir>
-    --data_design=<data_design>
+    --data_design_config=<data_design>
     [--random_seed=<int>]
 
 where
 
   output_dir is the directory where the DataDesign will be written, and
-  data_design is the name of a python file that specifies the underlying
+  data_design_config is the name of a python file that specifies the underlying
     data design.  This file should contain a function with the following
     signature:
 

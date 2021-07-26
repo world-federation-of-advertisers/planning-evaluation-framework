@@ -119,14 +119,10 @@ class ExperimentalTrial:
 
         self._dataset = self._data_design.by_name(self._data_set_name)
         self._privacy_tracker = PrivacyTracker()
-        halo = HaloSimulator(
-            self._dataset, self._system_params, self._privacy_tracker
-        )
+        halo = HaloSimulator(self._dataset, self._system_params, self._privacy_tracker)
         privacy_budget = self._experiment_params.privacy_budget
         modeling_strategy = self._modeling_strategy_descriptor.instantiate_strategy()
-        reach_surface = modeling_strategy.fit(
-            halo, self._system_params, privacy_budget
-        )
+        reach_surface = modeling_strategy.fit(halo, self._system_params, privacy_budget)
 
         test_points = self._experiment_params.generate_test_points(self._dataset, rng)
         true_reach = [

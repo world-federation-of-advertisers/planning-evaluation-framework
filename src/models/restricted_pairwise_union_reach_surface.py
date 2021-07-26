@@ -14,7 +14,9 @@
 """Class for modeling Restricted Pairwise union reach surface."""
 
 import copy
+import warnings
 import numpy as np
+from typing import List
 from scipy.optimize import minimize
 import cvxpy as cp
 from cvxopt import solvers
@@ -29,20 +31,6 @@ from wfa_planning_evaluation_framework.models.pairwise_union_reach_surface impor
 class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
     """Models reach with the pairwise union overlap model."""
 
-    def __init__(
-        self, reach_curves: Iterable[ReachCurve], reach_points: Iterable[ReachPoint]
-    ):
-        """Constructor for RestrictedPaiwiseUnionReachSurface.
-
-        Args:
-          reach_curves: A list of ReachCurves to be used in model fitting and reach
-            prediction.
-          reach_points: A list of ReachPoints to which the model is to be fit. This
-            is parallel to the reach_curves list. The reach point at ith poisition
-            is drawn from ith reach curve.
-        """
-        super().__init__(reach_curves=reach_curves, reach_points=reach_points)
-
     def _fit(self) -> None:
         self._reach_vectors = np.array(
             [
@@ -50,17 +38,33 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
                 for reach_point in self._data
             ]
         )
-        cons = self.get_constraints()
-        res = minimize(
-            fun=lambda x: self.loss(x),
+        cons = self._get_constraints()
+        with warnings.catch_warnings(record=True) as w:
+            fit_result = self._fit_with_constraints(cons)
+            if len(w) > 1 or (
+                len(w) == 1 and not str(w[0].message).startswith("delta_grad == 0.0")
+            ):
+                raise RuntimeError(
+                    "Unexpected warning in RestrictedPairwiseUnionReachSurface: {}".format(
+                        ",".join([str(m) for m in w])
+                    )
+                )
+            if not fit_result.success:
+                raise RuntimeError(
+                    "Optimizer failure in RestrictedPairwiseUnionReachSurface"
+                )
+        self._construct_a_from_lambda(fit_result["x"])
+
+    def _fit_with_constraints(self, cons):
+        return minimize(
+            fun=lambda x: self._loss(x),
             x0=np.array([2 / self._p] * self._p) / 2,
             constraints=cons,
             method="trust-constr",
-            options={"disp": True},
+            options={"disp": False},
         )
-        self.construct_a_from_lambda(res["x"])
 
-    def construct_a_from_lambda(self, lbd):
+    def _construct_a_from_lambda(self, lbd: List[float]):
         """Get value of flattened a matrix from lamdas.
 
         Args:
@@ -69,12 +73,12 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
         Returns:
           the value of flattened a matrix.
         """
-        self._a = np.ones(self._p * self._p)
-        for i in range(self._p):
-            for j in range(self._p):
-                self._a[i * self._p + j] = lbd[i] * lbd[j] if i != j else 0
 
-    def get_constraints(self):
+        p = len(lbd)
+        self._a = lbd.reshape(p, 1) * lbd.reshape(1, p) - (np.eye(p) * lbd) ** 2
+        self._a = self._a.reshape(p * p, 1)
+
+    def _get_constraints(self):
         """Get constraints to be used in optimization.
 
         Returns:
@@ -89,7 +93,7 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
             cons.append({"type": "ineq", "fun": lambda x: 1 - x[i] * sum(x)})
         return cons
 
-    def evaluate_point(self, lbd, reach_vector):
+    def _evaluate_point(self, lbd: List[float], reach_vector: List[float]):
         """Evaluate reach at a point.
 
         Args:
@@ -116,7 +120,7 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
         )
         return reach_sum - overlap
 
-    def loss(self, lbd):
+    def _loss(self, lbd: List[float]):
         """Get value of loss function.
 
         Args:
@@ -129,7 +133,7 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
             [
                 (
                     self._data[k].reach()
-                    - self.evaluate_point(lbd, self._reach_vectors[k])
+                    - self._evaluate_point(lbd, self._reach_vectors[k])
                 )
                 ** 2
                 for k in range(self._n)

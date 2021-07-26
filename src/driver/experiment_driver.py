@@ -137,7 +137,7 @@ def main(argv):
         FLAGS.data_design_dir,
         FLAGS.experimental_design,
         FLAGS.output_file,
-        FLAGS.intermediate_dir,
+        FLAGS.intermediates_dir,
         FLAGS.seed,
     )
     experiment_driver.execute()

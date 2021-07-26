@@ -125,9 +125,9 @@ class ExperimentalTrial:
             halo, self._trial_descriptor.system_params, privacy_budget
         )
 
-        test_points = self._trial_descriptor.experiment_params.generate_test_points(
+        test_points = list(self._trial_descriptor.experiment_params.generate_test_points(
             self._dataset, rng
-        )
+        ))
         true_reach = [
             halo.true_reach_by_spend(
                 t, self._trial_descriptor.experiment_params.max_frequency

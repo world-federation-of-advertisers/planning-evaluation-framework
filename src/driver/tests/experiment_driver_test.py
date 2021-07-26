@@ -29,6 +29,7 @@ from wfa_planning_evaluation_framework.driver.experimental_trial import (
     ExperimentalTrial,
 )
 from wfa_planning_evaluation_framework.driver import sample_experimental_design
+from wfa_planning_evaluation_framework.driver import single_publisher_design
 
 
 class FakeExperimentalTrial(ExperimentalTrial):
@@ -47,6 +48,12 @@ class ExperimentDriverTest(absltest.TestCase):
             np.random.default_rng(seed=1)
         )
         self.assertLen(list(sample_design), 100)
+
+    def test_single_publisher_design(self):
+        sp_design = list(single_publisher_design.generate_experimental_design_config(
+            np.random.default_rng(seed=1)
+        ))
+        self.assertLen(sp_design, 100)
 
     @patch(
         "wfa_planning_evaluation_framework.driver.experiment.ExperimentalTrial",

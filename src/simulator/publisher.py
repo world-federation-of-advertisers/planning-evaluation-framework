@@ -30,8 +30,8 @@ from wfa_planning_evaluation_framework.data_generators.publisher_data import (
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyTracker
-from wfa_planning_evaluation_framework.simulator.simulation_parameters import (
-    SimulationParameters,
+from wfa_planning_evaluation_framework.simulator.system_parameters import (
+    SystemParameters,
 )
 
 
@@ -40,7 +40,7 @@ class Publisher:
         self,
         publisher_data: PublisherData,
         publisher_index: int,
-        params: SimulationParameters,
+        params: SystemParameters,
         privacy_tracker: PrivacyTracker,
     ):
         """Constructs a model for a single publisher and campaign.

@@ -36,7 +36,7 @@ class LiquidLegionsParameters(NamedTuple):
     random_seed: int = 1
 
 
-class SimulationParameters(NamedTuple):
+class SystemParameters(NamedTuple):
     """Parameters defining a simulation run.
 
     Attributes:

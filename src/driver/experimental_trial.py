@@ -14,7 +14,7 @@
 """Defines one experimental trial.
 
 An experimental trial represents running a specific ModelingStrategy
-against a specific DataSet, with specific SimulationParameters.
+against a specific DataSet, with specific SystemParameters.
 """
 
 import numpy as np
@@ -36,8 +36,8 @@ from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
 from wfa_planning_evaluation_framework.simulator.halo_simulator import (
     HaloSimulator,
 )
-from wfa_planning_evaluation_framework.simulator.simulation_parameters import (
-    SimulationParameters,
+from wfa_planning_evaluation_framework.simulator.system_parameters import (
+    SystemParameters,
 )
 from wfa_planning_evaluation_framework.driver.experiment_parameters import (
     ExperimentParameters,
@@ -59,20 +59,20 @@ class ExperimentalTrial:
         data_design: DataDesign,
         data_set_name: str,
         modeling_strategy_descriptor: ModelingStrategyDescriptor,
-        simulation_params: SimulationParameters,
+        system_params: SystemParameters,
         experiment_params: ExperimentParameters,
     ):
         """Constructs an object representing a trial.
 
         A trial represents a run of a specific ModelingStrategy against a
-        specific DataSet, with specific SimulationParameters.
+        specific DataSet, with specific SystemParameters and ExperimentParameters.
 
         Args:
           experiment_dir:  The name of a directory where intermediate results
             are stored.  The results for this specific trial will be stored in
             the file {experiment_dir}/{data_set_name}/{trial_name}.  The
             trial_name is constructed from the ModelingStrategyDescriptor and the
-            SimulationParameters.
+            SystemParameters.
           data_design:  A DataDesign object specifying the source of the data
             that will be used for this trial.
           data_set_name:  The name of the specific DataSet within the DataDesign
@@ -80,7 +80,7 @@ class ExperimentalTrial:
           modeling_strategy_descriptor:  A descriptor that specifies the specific
             modeling strategy that will be used as well as any configuration
             parameters specific to that modeling strategy.
-          simulation_params:  A descriptor that specifies the configuration of
+          system_params:  A descriptor that specifies the configuration of
             the Halo simulator that will be used for this trial.
           experiment_params:  A descriptor that specifies configuration parameters
             for this experiment.
@@ -89,7 +89,7 @@ class ExperimentalTrial:
         self._data_design = data_design
         self._data_set_name = data_set_name
         self._modeling_strategy_descriptor = modeling_strategy_descriptor
-        self._simulation_params = simulation_params
+        self._system_params = system_params
         self._experiment_params = experiment_params
 
     def evaluate(self, rng: np.random.Generator) -> pd.DataFrame:
@@ -119,14 +119,10 @@ class ExperimentalTrial:
 
         self._dataset = self._data_design.by_name(self._data_set_name)
         self._privacy_tracker = PrivacyTracker()
-        halo = HaloSimulator(
-            self._dataset, self._simulation_params, self._privacy_tracker
-        )
+        halo = HaloSimulator(self._dataset, self._system_params, self._privacy_tracker)
         privacy_budget = self._experiment_params.privacy_budget
         modeling_strategy = self._modeling_strategy_descriptor.instantiate_strategy()
-        reach_surface = modeling_strategy.fit(
-            halo, self._simulation_params, privacy_budget
-        )
+        reach_surface = modeling_strategy.fit(halo, self._system_params, privacy_budget)
 
         test_points = self._experiment_params.generate_test_points(self._dataset, rng)
         true_reach = [
@@ -152,7 +148,7 @@ class ExperimentalTrial:
         trial_name = (
             str(self._modeling_strategy_descriptor)
             + ","
-            + str(self._simulation_params)
+            + str(self._system_params)
             + ","
             + str(self._experiment_params)
         )
@@ -171,10 +167,10 @@ class ExperimentalTrial:
                 "multi_pub_model": [self._modeling_strategy_descriptor.multi_pub_model],
                 "strategy": [self._modeling_strategy_descriptor.strategy],
                 "liquid_legions_sketch_size": [
-                    self._simulation_params.liquid_legions.sketch_size
+                    self._system_params.liquid_legions.sketch_size
                 ],
                 "liquid_legions_decay_rate": [
-                    self._simulation_params.liquid_legions.decay_rate
+                    self._system_params.liquid_legions.decay_rate
                 ],
                 "maximum_reach": [data_set.maximum_reach],
                 "ncampaigns": [data_set.publisher_count],

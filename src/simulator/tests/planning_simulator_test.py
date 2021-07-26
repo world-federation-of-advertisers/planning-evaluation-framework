@@ -28,9 +28,9 @@ from wfa_planning_evaluation_framework.simulator.planner_simulator import (
 )
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyBudget
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyTracker
-from wfa_planning_evaluation_framework.simulator.simulation_parameters import (
+from wfa_planning_evaluation_framework.simulator.system_parameters import (
     LiquidLegionsParameters,
-    SimulationParameters,
+    SystemParameters,
 )
 
 
@@ -58,9 +58,7 @@ class PlanningSimulatorTest(absltest.TestCase):
         cls.simulator = PlannerSimulator(
             FakeHaloSimulator(),
             FakeModelingStrategy(),
-            SimulationParameters(
-                [], LiquidLegionsParameters(), np.random.default_rng(1)
-            ),
+            SystemParameters([], LiquidLegionsParameters(), np.random.default_rng(1)),
             PrivacyTracker(),
         )
 

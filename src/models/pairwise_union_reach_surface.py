@@ -19,6 +19,7 @@ import numpy as np
 from cvxopt import matrix
 from cvxopt import solvers
 from typing import Iterable
+from typing import List
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.models.reach_surface import ReachSurface
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
@@ -43,8 +44,6 @@ class PairwiseUnionReachSurface(ReachSurface):
 
     reference doc:
     https://docs.google.com/document/d/1YEEXv8xLBOZ69dWCdyVgyRkmCKu5Wa3AwFfFSFqKFBg/edit?resourcekey=0-NpbIK7OYXgWQCJgG3YAgYA#heading=h.cg5r5tr0crku
-
-
     """
 
     def __init__(

@@ -402,8 +402,13 @@ class GammaPoissonModel(ReachCurve):
         Returns:
           A ReachPoint specifying the estimated reach for this number of impressions.
         """
-        if not self._cpi:
-            raise ValueError("Impression cost is not known for this ReachPoint.")
         if len(spends) != 1:
             raise ValueError("Spend vector must have a length of 1.")
-        return self.by_impressions([int(spends[0] / self._cpi)], max_frequency)
+        return self.by_impressions([self.impressions_for_spend(spends[0])],
+                                   max_frequency)
+
+    def impressions_for_spend(self, spend: float) -> int:
+        if not self._cpi:
+            raise ValueError("Impression cost is not known for this ReachPoint.")
+        return spend / self._cpi
+        

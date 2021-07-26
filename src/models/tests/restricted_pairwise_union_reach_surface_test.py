@@ -250,6 +250,5 @@ class RestrictedPairwiseUnionReachSurfaceTest(absltest.TestCase):
                     surface, test_reach_points, tolerance=0.00001
                 )
 
-
 if __name__ == "__main__":
     absltest.main()

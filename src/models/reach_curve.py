@@ -28,7 +28,7 @@ from wfa_planning_evaluation_framework.models.reach_surface import ReachSurface
 class ReachCurve(ReachSurface):
     """Models reach as a function of scalar spend or impressions."""
 
-    def __init__(self, data: [ReachPoint], max_reach: int = None):
+    def __init__(self, data: List[ReachPoint], max_reach: int = None):
         """Constructor
 
         Args:
@@ -103,6 +103,11 @@ class ReachCurve(ReachSurface):
         """
         return self._by_quantile(quantile, self.by_spend)
 
+    def impressions_for_spend(self, spend: float) -> int:
+        """Converts spend to impressions."""
+        raise NotImplementedError()
+
     def _kplus_reaches_from_frequencies(self, hist: List[int]) -> List[int]:
         """Converts a frequency histogram to a list of k+ reaches."""
         return list(reversed(np.cumsum(list(reversed(hist)))))
+

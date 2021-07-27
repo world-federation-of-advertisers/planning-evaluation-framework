@@ -24,18 +24,12 @@ from wfa_planning_evaluation_framework.data_generators.synthetic_data_design_gen
     SyntheticDataDesignGenerator,
 )
 from wfa_planning_evaluation_framework.data_generators import simple_data_design_example
-from wfa_planning_evaluation_framework.data_generators import (
-    analysis_example_data_design,
-)
 from wfa_planning_evaluation_framework.driver.experiment_driver import ExperimentDriver
 from wfa_planning_evaluation_framework.driver.experimental_trial import (
     ExperimentalTrial,
 )
 from wfa_planning_evaluation_framework.driver import sample_experimental_design
 from wfa_planning_evaluation_framework.driver import m3_first_round_experimental_design
-from wfa_planning_evaluation_framework.driver import (
-    analysis_example_experimental_design,
-)
 from wfa_planning_evaluation_framework.driver import single_publisher_design
 
 
@@ -103,7 +97,7 @@ class ExperimentDriverTest(absltest.TestCase):
             output_file = d + "/output"
             intermediate_dir = d + "/intermediates"
             data_design_generator = SyntheticDataDesignGenerator(
-                data_design_dir, 1, simple_data_design_example.__file__, False
+                data_design_dir, simple_data_design_example.__file__, 1, False
             )
             data_design_generator()
             rng = np.random.default_rng(seed=1)
@@ -113,28 +107,6 @@ class ExperimentDriverTest(absltest.TestCase):
             )
             result = experiment_driver.execute()
             self.assertEqual(result.shape[0], 5184)
-
-    @patch(
-        "wfa_planning_evaluation_framework.driver.experiment.ExperimentalTrial",
-        new=FakeExperimentalTrial,
-    )
-    def test_experiment_driver_with_analysis_example_experimental_design(self):
-        with TemporaryDirectory() as d:
-            data_design_dir = d + "/data"
-            output_file = d + "/output"
-            intermediate_dir = d + "/intermediates"
-            data_design_generator = SyntheticDataDesignGenerator(
-                data_design_dir, 1, analysis_example_data_design.__file__, False
-            )
-            data_design_generator()
-            rng = np.random.default_rng(seed=1)
-            experimental_design = analysis_example_experimental_design.__file__
-            experiment_driver = ExperimentDriver(
-                data_design_dir, experimental_design, output_file, intermediate_dir, rng
-            )
-            result = experiment_driver.execute()
-            print(result.shape[0])
-            # self.assertEqual(result.shape[0], 1152)
 
 
 if __name__ == "__main__":

@@ -50,17 +50,14 @@ class GoergModel(ReachCurve):
 
     def _fit(self) -> None:
         """Fits a model to the data that was provided in the constructor."""
-        if abs(self._impressions - self._reach) < 0.001:
-            raise ValueError("Cannot fit Goerg model when impressions=reach")
-        else:
-            self._rho = (self._impressions * self._reach) / (
-                self._impressions - self._reach
-            )
+        self._rho = (self._impressions * self._reach) / (
+            self._impressions - self._reach
+        )
         self._beta = self._rho
 
     def by_impressions(self, impressions: [int], max_frequency: int = 1) -> ReachPoint:
         """Returns the estimated reach as a function of impressions.
-        
+
         Args:
           impressions: list of ints of length 1, specifying the hypothetical number
             of impressions that are shown.
@@ -85,7 +82,7 @@ class GoergModel(ReachCurve):
 
     def by_spend(self, spends: [int], max_frequency: int = 1) -> ReachPoint:
         """Returns the estimated reach as a function of spend assuming constant CPM
-        
+
         Args:
           spend: list of floats of length 1, specifying the hypothetical spend.
           max_frequency: int, specifies the number of frequencies for which reach

@@ -30,6 +30,9 @@ from wfa_planning_evaluation_framework.data_generators.independent_overlap_data_
 )
 from wfa_planning_evaluation_framework.data_generators import lhs_data_design_example
 from wfa_planning_evaluation_framework.data_generators import m3_data_design
+from wfa_planning_evaluation_framework.data_generators import (
+    analysis_example_data_design,
+)
 from wfa_planning_evaluation_framework.data_generators import simple_data_design_example
 from wfa_planning_evaluation_framework.data_generators import single_publisher_design
 
@@ -63,6 +66,14 @@ class SyntheticDataDesignGeneratorTest(absltest.TestCase):
             np.random.default_rng(seed=1)
         )
         self.assertLen(list(m3_design), 100)
+
+    def test_analysis_example_design_size(self):
+        analysis_example_design = (
+            analysis_example_data_design.generate_data_design_config(
+                np.random.default_rng(seed=1)
+            )
+        )
+        self.assertLen(list(analysis_example_design), 32)
 
     @patch(
         "wfa_planning_evaluation_framework.data_generators.m3_data_design.LEVELS",

@@ -28,6 +28,9 @@ from collections import defaultdict
 from itertools import chain, combinations
 import numpy as np
 
+from wfa_cardinality_estimation_evaluation_framework.estimators.base import (
+    EstimateNoiserBase,
+)
 from wfa_cardinality_estimation_evaluation_framework.estimators.same_key_aggregator import (
     StandardizedHistogramEstimator,
 )
@@ -312,47 +315,30 @@ class HaloSimulator:
         self,
         occupied_primitive_regions: Dict[int, List],
         num_all_primitive_regions: int,
-        budget: PrivacyBudget,
-        privacy_budget_ratio_for_reach: float,
+        noiser: EstimateNoiserBase,
+        noise_event: NoisingEvent,
     ) -> Dict[int, List]:
         """Add differential privacy noise to every primitive regions
 
         Args:
-            occupied_primitive_regions:  Contains k+ reaches in the regions. 
+            occupied_primitive_regions:  Contains k+ reaches in the regions.
               The k+ reaches for a given region is given as a list r[] where
               r[k] is the number of people who were reached AT LEAST k+1 times.
             num_all_primitive_regions:  The total number of primitive regions.
-            budget:  The amount of privacy budget that can be consumed while
-              satisfying the request.
-            privacy_budget_ratio_for_reach:  Specifies the proportion of the 
-              privacy budget that should be allocated to reach estimation.
+            noiser:  A callable noiser instance that adds noise to the reach
+              estimate.
+            noise_event:  Records the addition of differentially private noise
+              that is applied on the reach estimate.
         Returns:
             A dictionary in which each key are the binary representations of
               each primitive region of the Venn diagram, and each value is a
               list of the reach in the corresponding region.
         """
-        epsilon_for_reach = budget.epsilon * privacy_budget_ratio_for_reach
-        # TODO(jiayu,matthew): should delta be splitted in this way?
-        delta_for_reach = budget.delta * privacy_budget_ratio_for_reach
-
-        noiser = GeometricEstimateNoiser(
-            epsilon_for_reach,
-            np.random.RandomState(
-                seed=self._params.generator.integers(low=0, high=1e9)
-            ),
-        )
-
         noised_primitive_regions = {}
         for region_repr in range(1, num_all_primitive_regions + 1):
             reach = occupied_primitive_regions.get(region_repr, [0])[0]
             noised_primitive_regions[region_repr] = max(0, noiser(reach))
-            self._privacy_tracker.append(
-                NoisingEvent(
-                    PrivacyBudget(epsilon_for_reach, delta_for_reach),
-                    DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
-                    {"privacy_budget_ratio_for_reach": privacy_budget_ratio_for_reach},
-                )
-            )
+            self._privacy_tracker.append(noise_event)
 
         return noised_primitive_regions
 

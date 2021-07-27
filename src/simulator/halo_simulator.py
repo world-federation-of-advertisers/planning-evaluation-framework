@@ -337,7 +337,7 @@ class HaloSimulator:
         noised_primitive_regions = {}
         for region_repr in range(1, num_all_primitive_regions + 1):
             reach = occupied_primitive_regions.get(region_repr, [0])[0]
-            noised_primitive_regions[region_repr] = max(0, noiser(reach))
+            noised_primitive_regions[region_repr] = [max(0, noiser(reach))]
             self._privacy_tracker.append(noise_event)
 
         return noised_primitive_regions

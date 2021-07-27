@@ -37,7 +37,7 @@ class HeterogeneousImpressionGenerator(ImpressionGenerator):
         determined by drawing from a shifted (by +1) Poisson distribution with
         parameter lambda, with lambda drawn from a Gamma distribution. Explicitly,
         lambda is generated from a pdf
-        p(x) = x^{shape - 1} * exp(x / scale) / scale^shape / Gamma(shape),
+        p(x) = x^{shape - 1} * exp(-x / scale) / scale^shape / Gamma(shape),
         where shape and gamma are two parameters and Gamma is the Gamma function.
         In this way, lambda has a mean of shape * scale and a variance of
         shape * scale^2.

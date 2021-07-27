@@ -58,7 +58,7 @@ class SequentiallyCorrelatedOverlapDataSet(OverlapDataSet):
         random_generator: np.random.Generator = None,
         name: str = "sequentially_correlated",
     ) -> DataSet:
-        """Constructor for IndependentOverlapDataSet.
+        """Constructor for SequentiallyCorrelatedOverlapDataSet.
 
         Args:
           unlabeled_publisher_data_list:  a list of PublisherDataSet indicating the

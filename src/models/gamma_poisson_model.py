@@ -411,4 +411,4 @@ class GammaPoissonModel(ReachCurve):
         if not self._cpi:
             raise ValueError("Impression cost is not known for this ReachPoint.")
         return spend / self._cpi
-
+        

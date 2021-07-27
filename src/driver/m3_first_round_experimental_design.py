@@ -20,6 +20,7 @@ import math
 import numpy as np
 from pyDOE import lhs
 from typing import Iterable
+from itertools import cycle, islice
 
 from wfa_planning_evaluation_framework.driver.experiment_parameters import (
     ExperimentParameters,
@@ -50,71 +51,57 @@ MODELING_STRATEGIES = [
     ),
 ]
 
-# Here we assume all data sets specify exactly two campaigns
-CAMPAIGN_SPEND_FRACTIONS = list(
-    itertools.product(np.arange(1, 10) * 0.1, np.arange(1, 10) * 0.1)
-)
+CAMPAIGN_SPEND_FRACTIONS_GENERATORS = [
+    lambda npublishers: [0.2] * npublishers,
+    lambda npublishers: list(islice(cycle([0.1, 0.2, 0.3]), npublishers)),
+]
 
 LIQUID_LEGIONS_PARAMS = [
-    LiquidLegionsParameters(10, 1e5),
     LiquidLegionsParameters(12, 1e5),
-    LiquidLegionsParameters(17, 1e5),
-    LiquidLegionsParameters(10, 2e5),
-    LiquidLegionsParameters(12, 2e5),
-    LiquidLegionsParameters(17, 2e5),
 ]
 
 PRIVACY_BUDGETS = [
     PrivacyBudget(1.0, 1e-7),
-    PrivacyBudget(1.0, 1e-8),
+    PrivacyBudget(1.0, 1e-9),
     PrivacyBudget(0.1, 1e-7),
-    PrivacyBudget(0.1, 1e-8),
+    PrivacyBudget(0.1, 1e-9),
 ]
 
 REPLICA_IDS = [1, 2, 3]
 
-MAX_FREQUENCIES = [5, 10, 20]
+MAX_FREQUENCIES = [5, 20]
 
 TEST_POINT_STRATEGIES = [
-    ("latin_hypercube", {"npoints": 100}),
-    ("uniformly_random", {"npoints": 500}),
-    ("grid", {"grid_size": 5}),
+    ("latin_hypercube", {"npoints_generator": lambda npublishers: 100 * npublishers}),
+    ("uniformly_random", {"npoints_generator": lambda npublishers: 100 * npublishers}),
 ]
 
 LEVELS = {
     "modeling_strategies": MODELING_STRATEGIES,
-    "campaign_spend_fractions": CAMPAIGN_SPEND_FRACTIONS,
+    "campaign_spend_fractions_generators": CAMPAIGN_SPEND_FRACTIONS_GENERATORS,
     "liquid_legions_params": LIQUID_LEGIONS_PARAMS,
     "privacy_budgets": PRIVACY_BUDGETS,
     "replica_ids": REPLICA_IDS,
     "max_frequencies": MAX_FREQUENCIES,
     "test_point_strategies": TEST_POINT_STRATEGIES,
 }
-
-# Number of experimental trials that should be conducted per dataset
-NUM_TRIALS_PER_DATASET = 100
+# A total of 2 * 2 * 1 * 4 * 3 * 2 * 2 = 192 designs. Will evaluate all of them
+# per dataset.
 
 
 def generate_experimental_design_config(
     random_generator: np.random.Generator,
 ) -> Iterable[TrialDescriptor]:
-    """Generates a list of TrialDescriptors.
-
-    This examples illustrates a latin hypercube sampling strategy.
-    """
-    keys = LEVELS.keys()
-    levels = [len(LEVELS[k]) for k in keys]
-    for i, sample in enumerate(
-        lhs(n=len(levels), samples=NUM_TRIALS_PER_DATASET, criterion="maximin")
-    ):
-        design_parameters = {}
-        for key, level in zip(keys, sample):
-            design_parameters[key] = LEVELS[key][int(level * len(LEVELS[key]))]
+    """Generates a list of TrialDescriptors for the 1st round eval of M3."""
+    for level_combination in itertools.product(*LEVELS.values()):
+        design_parameters = dict(zip(LEVELS.keys(), level_combination))
         mstrategy = design_parameters["modeling_strategies"]
         sparams = SystemParameters(
-            design_parameters["campaign_spend_fractions"],
-            design_parameters["liquid_legions_params"],
-            random_generator,
+            liquid_legions=design_parameters["liquid_legions_params"],
+            generator=random_generator,
+            campaign_spend_fractions_generator=design_parameters[
+                "campaign_spend_fractions_generators"
+            ],
         )
         test_point_generator, test_point_params = design_parameters[
             "test_point_strategies"

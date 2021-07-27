@@ -29,6 +29,7 @@ from wfa_planning_evaluation_framework.driver.experimental_trial import (
     ExperimentalTrial,
 )
 from wfa_planning_evaluation_framework.driver import sample_experimental_design
+from wfa_planning_evaluation_framework.driver import m3_first_round_experimental_design
 from wfa_planning_evaluation_framework.driver import single_publisher_design
 
 
@@ -49,10 +50,20 @@ class ExperimentDriverTest(absltest.TestCase):
         )
         self.assertLen(list(sample_design), 100)
 
+    def test_m3_first_round_experimental_design(self):
+        sample_design = (
+            m3_first_round_experimental_design.generate_experimental_design_config(
+                np.random.default_rng(seed=1)
+            )
+        )
+        self.assertLen(list(sample_design), 192)
+
     def test_single_publisher_design(self):
-        sp_design = list(single_publisher_design.generate_experimental_design_config(
-            np.random.default_rng(seed=1)
-        ))
+        sp_design = list(
+            single_publisher_design.generate_experimental_design_config(
+                np.random.default_rng(seed=1)
+            )
+        )
         self.assertLen(sp_design, 100)
 
     @patch(
@@ -75,6 +86,27 @@ class ExperimentDriverTest(absltest.TestCase):
             )
             result = experiment_driver.execute()
             self.assertEqual(result.shape[0], 2700)
+
+    @patch(
+        "wfa_planning_evaluation_framework.driver.experiment.ExperimentalTrial",
+        new=FakeExperimentalTrial,
+    )
+    def test_experiment_driver_with_m3_first_round_experimental_design(self):
+        with TemporaryDirectory() as d:
+            data_design_dir = d + "/data"
+            output_file = d + "/output"
+            intermediate_dir = d + "/intermediates"
+            data_design_generator = SyntheticDataDesignGenerator(
+                data_design_dir, 1, simple_data_design_example.__file__, False
+            )
+            data_design_generator()
+            rng = np.random.default_rng(seed=1)
+            experimental_design = m3_first_round_experimental_design.__file__
+            experiment_driver = ExperimentDriver(
+                data_design_dir, experimental_design, output_file, intermediate_dir, rng
+            )
+            result = experiment_driver.execute()
+            self.assertEqual(result.shape[0], 5184)
 
 
 if __name__ == "__main__":

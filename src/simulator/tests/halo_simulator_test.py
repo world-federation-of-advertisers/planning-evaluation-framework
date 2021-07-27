@@ -17,7 +17,11 @@ from absl.testing import absltest
 from absl.testing import parameterized
 import numpy as np
 from unittest.mock import patch
+from dataclasses import dataclass
 
+from wfa_cardinality_estimation_evaluation_framework.estimators.base import (
+    EstimateNoiserBase,
+)
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
@@ -28,17 +32,45 @@ from wfa_planning_evaluation_framework.simulator.halo_simulator import (
     MAX_ACTIVE_PUBLISHERS,
 )
 from wfa_planning_evaluation_framework.simulator.publisher import Publisher
-from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyBudget
-from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyTracker
+from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
+    PrivacyBudget,
+    PrivacyTracker,
+    NoisingEvent,
+)
 from wfa_planning_evaluation_framework.simulator.system_parameters import (
     LiquidLegionsParameters,
     SystemParameters,
 )
 
 
+FAKE_DP_NOISE_MECHANISM = "Fake"
+
+
 class FakeLaplaceMechanism:
     def __call__(self, x):
         return [2 * y for y in x]
+
+
+class FakeRandomGenerator:
+    def multivariate_hypergeometric(self, colors, nsample):
+        samples = [0] * len(colors)
+        index = 0
+
+        while nsample:
+            if samples[index] < colors[index]:
+                samples[index] += 1
+                nsample -= 1
+            index = (index + 1) % len(samples)
+
+        return samples
+
+
+@dataclass
+class FakeNoiser(EstimateNoiserBase):
+    fix_noise: float
+
+    def __call__(self, estimate):
+        return estimate + self.fix_noise
 
 
 class HaloSimulatorTest(parameterized.TestCase):
@@ -227,6 +259,53 @@ class HaloSimulatorTest(parameterized.TestCase):
             pub_ids, regions
         )
         self.assertEqual(agg_reach, expected)
+
+    @parameterized.named_parameters(
+        # testcase_name, regions, num_all_regions, budget, expected
+        {
+            "testcase_name": "with_empty_regions",
+            "regions": {},
+            "num_all_regions": 3,
+            "budget": PrivacyBudget(0.1, 0.1),
+            "fix_noise": 1.0,
+            "expected_regions": {1: [1.0], 2: [1.0], 3: [1.0]},
+        },
+        {
+            "testcase_name": "with_1_regions",
+            "regions": {2: [4.0]},
+            "num_all_regions": 3,
+            "budget": PrivacyBudget(0.2, 0.4),
+            "fix_noise": 0.2,
+            "expected_regions": {1: [0.2], 2: [4.2], 3: [0.2]},
+        },
+    )
+    def test_add_dp_noise_to_primitive_regions(
+        self, regions, num_all_regions, budget, fix_noise, expected_regions
+    ):
+        halo = HaloSimulator(DataSet([], "test"), SystemParameters(), PrivacyTracker())
+
+        noiser_for_reach = FakeNoiser(fix_noise)
+        noise_event_for_reach = NoisingEvent(budget, FAKE_DP_NOISE_MECHANISM, {})
+
+        noised_regions = halo._add_dp_noise_to_primitive_regions(
+            regions, num_all_regions, noiser_for_reach, noise_event_for_reach
+        )
+
+        expected_privacy_tracker = PrivacyTracker()
+        for _ in range(num_all_regions):
+            expected_privacy_tracker.append(noise_event_for_reach)
+
+        self.assertEqual(noised_regions, expected_regions)
+        self.assertEqual(
+            halo.privacy_tracker._epsilon_sum, expected_privacy_tracker._epsilon_sum
+        )
+        self.assertEqual(
+            halo.privacy_tracker._delta_sum, expected_privacy_tracker._delta_sum
+        )
+        self.assertEqual(
+            halo.privacy_tracker._noising_events,
+            expected_privacy_tracker._noising_events,
+        )
 
     @parameterized.named_parameters(
         # testcase_name, num_publishers, spends, regions, expected

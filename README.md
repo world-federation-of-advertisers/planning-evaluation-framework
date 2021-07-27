@@ -68,7 +68,7 @@ colabs, see the `analyzers` directory.
 
 ### Quickstart
 
-It is recommended to use a virtual environment with this project. If you already
+It is recommended to use a virtual environment with Python version 3.8+ for this project. If you already
 have one, you can skip to the next step. The quickest way to set up a virtual
 environment is by running:
 
@@ -86,6 +86,23 @@ python setup.py install
 
 After these steps, the code and its dependencies will be installed as Python
 packages.
+
+For some unit tests, we need to set up additional PYTHONPATH and create a Symlink to the source code:
+
+1. Add PYTHONPATH to _.bash_profile_ (or _.zshrc_ depending which shell you use) as following:
+
+```
+PYTHONPATH=$HOME/dir_which_contains_planning_evaluation_framework_repo:.
+export PYTHONPATH
+```
+
+Then run `source path_to/.bash_profile` or `source path_to/.zshrc_` in the terminal.
+
+2. Create a Symlink named “wfa_planning_evaluation_framework” at the directory which contains your planning-evaluation-framework repo with command:
+    
+```
+ln -s path_to/planning-evaluation-framework/src/ dir_which_contains_planning_evaluation_framework_repo/wfa_planning_evaluation_framework
+```
 
 ### Example
 

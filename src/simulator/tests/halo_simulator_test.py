@@ -99,6 +99,21 @@ class HaloSimulatorTest(absltest.TestCase):
             ["Discrete Gaussian", "Discrete Gaussian"],
         )
 
+    def test_class_setup_with_campaign_spend_fractions_generator(self):
+        pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
+        pdf2 = PublisherData([(2, 0.03), (4, 0.06)], "pdf2")
+        data_set = DataSet([pdf1, pdf2], "test")
+        params = SystemParameters(
+            liquid_legions=LiquidLegionsParameters(),
+            generator=np.random.default_rng(1),
+            campaign_spend_fractions_generator=lambda npublishers: [0.2] * npublishers,
+        )
+        privacy_tracker = PrivacyTracker()
+        halo = HaloSimulator(data_set, params, privacy_tracker)
+        self.assertAlmostEqual(halo._campaign_spends[0], 0.01, 7)
+        # using assertAlmostEqual here because of a rounding error
+        self.assertAlmostEqual(halo._campaign_spends[1], 0.012, 7)
+
 
 if __name__ == "__main__":
     absltest.main()

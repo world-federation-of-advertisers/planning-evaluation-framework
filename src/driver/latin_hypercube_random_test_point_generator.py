@@ -15,6 +15,7 @@
 
 from typing import Iterable
 from typing import List
+from typing import Callable
 
 import numpy as np
 import pyDOE
@@ -40,6 +41,7 @@ class LatinHypercubeRandomTestPointGenerator(TestPointGenerator):
         self,
         dataset: DataSet,
         rng: np.random.Generator,
+        npoints_generator: Callable[[int], int] = lambda x: None,
         npoints: int = MINIMUM_NUMBER_OF_TEST_POINTS,
     ):
         """Returns a LatinHypercubeRandomTestPointGenerator.
@@ -48,11 +50,19 @@ class LatinHypercubeRandomTestPointGenerator(TestPointGenerator):
           dataset:  The DataSet for which test points are to be generated.
           rng:  A numpy Generator object that is used to seed the generation
             of random test points.
+          npoints_generator: A function that returns the number of test points
+            that should be generated. The argument of the function is the number
+            of publishers. Example is `lambda npublishers: 2 ** npublishers`.
+            If the function is an empty function, then obtain the number of test
+            points directly from the next argument.
           npoints: Number of points to generate.
         """
         super().__init__(dataset)
         self._rng = rng
-        self._npoints = npoints
+        if npoints_generator(1) is None:
+            self._npoints = npoints
+        else:
+            self._npoints = npoints_generator(self._npublishers)
 
     def test_points(self) -> Iterable[List[float]]:
         """Returns a generator for generating a list of test points.
@@ -64,7 +74,10 @@ class LatinHypercubeRandomTestPointGenerator(TestPointGenerator):
           was chosen heuristically on the belief that this would give an
           acceptably small sampling variance for the modeling errors.
         """
-        num_points = min(self._npoints, MAXIMUM_NUMBER_OF_TEST_POINTS)
+        num_points = min(
+            max(self._npoints, MINIMUM_NUMBER_OF_TEST_POINTS),
+            MAXIMUM_NUMBER_OF_TEST_POINTS,
+        )
         design = pyDOE.lhs(n=self._npublishers, samples=num_points, criterion="maximin")
         design = design[self._rng.permutation(num_points), :][
             :, self._rng.permutation(self._npublishers)

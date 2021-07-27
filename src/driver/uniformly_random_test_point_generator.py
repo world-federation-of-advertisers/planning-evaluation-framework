@@ -21,6 +21,7 @@ publisher independently and uniformly at random from the interval
 import numpy as np
 from typing import Iterable
 from typing import List
+from typing import Callable
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.driver.test_point_generator import (
     TestPointGenerator,
@@ -37,6 +38,7 @@ class UniformlyRandomTestPointGenerator(TestPointGenerator):
         self,
         dataset: DataSet,
         rng: np.random.Generator,
+        npoints_generator: Callable[[int], int] = lambda x: None,
         npoints: int = MINIMUM_NUMBER_OF_TEST_POINTS,
     ):
         """Returns a UniformlyRandomTestPointGenerator.
@@ -45,11 +47,19 @@ class UniformlyRandomTestPointGenerator(TestPointGenerator):
           dataset:  The DataSet for which test points are to be generated.
           rng:  A numpy Generator object that is used to seed the generation
             of random test points.
+          npoints_generator: a function from the number of publishers to the
+            number of test points. EΩxample is
+            lambda npublishers: 2 ** npublishers
+            If the function is an empty function, then obtain the number of test
+            points directly from the next argument.
           npoints: Number of points to generate.
         """
         super().__init__(dataset)
         self._rng = rng
-        self._npoints = npoints
+        if npoints_generator(1) is None:
+            self._npoints = npoints
+        else:
+            self._npoints = npoints_generator(self._npublishers)
 
     def test_points(self) -> Iterable[List[float]]:
         """Returns a generator for generating a list of test points.
@@ -59,5 +69,6 @@ class UniformlyRandomTestPointGenerator(TestPointGenerator):
           the true reach surface is to be compared to the modeled reach
           surface.
         """
+        num_points = max(self._npoints, MINIMUM_NUMBER_OF_TEST_POINTS)
         for i in range(self._npoints):
             yield list(self._max_spends * self._rng.random(size=self._npublishers))

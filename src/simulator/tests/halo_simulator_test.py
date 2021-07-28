@@ -51,20 +51,6 @@ class FakeLaplaceMechanism:
         return [2 * y for y in x]
 
 
-class FakeRandomGenerator:
-    def multivariate_hypergeometric(self, colors, nsample):
-        samples = [0] * len(colors)
-        index = 0
-
-        while nsample:
-            if samples[index] < colors[index]:
-                samples[index] += 1
-                nsample -= 1
-            index = (index + 1) % len(samples)
-
-        return samples
-
-
 @dataclass
 class FakeNoiser(EstimateNoiserBase):
     fix_noise: float

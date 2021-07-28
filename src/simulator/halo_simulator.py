@@ -255,9 +255,10 @@ class HaloSimulator:
               not be included in the Venn diagram reach.
             max_frequency:  The maximum frequency for which to report reach.
         Returns:
-            regions:  A dictionary in which each key are the binary
-              representations of each primitive region of the Venn diagram, and
-              each value is a list of the k+ reaches in the corresponding region.
+            regions:  A dictionary in which each key is the binary
+              representations of each non-empty primitive region of the Venn 
+              diagram, and each value is a list of the k+ reaches in the
+              corresponding region.
               Note that the binary representation of the key represents the
               formation of publisher IDs in that primitive region. For example,
               primitive_regions[key] with key = 5 = bin('101') is the region
@@ -320,10 +321,10 @@ class HaloSimulator:
         """Return primitive regions with sampled reaches.
 
         Args:
-            primitive_regions:  A dictionary in which each key are the binary
-              representations of each primitive region of the Venn diagram, and
-              each value is a list of the k+ reaches in the corresponding
-              region.
+            primitive_regions:  A dictionary in which each key is the binary
+              representations of each non-empty primitive region of the Venn 
+              diagram, and each value is a list of the k+ reaches in the 
+              corresponding region.
               Note that the binary representation of the key represents the
               formation of publisher IDs in that primitive region. For example,
               primitive_regions[key] with key = 5 = bin('101') is the region
@@ -336,9 +337,9 @@ class HaloSimulator:
               used for generating samples from a multivariate hypergeometric
               distribution.
         Returns:
-            A dictionary in which each key are the binary representations of
-              each primitive region of the Venn diagram, and each value is a
-              list with length 1 containing the sampled reach in the
+            A dictionary in which each key is the binary representations of
+              each non-empty primitive region of the Venn diagram, and each 
+              value is a list with length 1 containing the sampled reach in the
               corresponding region.
               Note that the binary representation of the key represents the
               formation of publisher IDs in that primitive region. For example,
@@ -389,7 +390,7 @@ class HaloSimulator:
         Args:
             pub_ids:  The list of target publisher IDs for computing aggregated
               reach.
-            primitive_regions:  A dictionary in which each key are the binary
+            primitive_regions:  A dictionary in which each key is the binary
               representations of each primitive region of the Venn diagram,
               and each value is a list with length 1 containing the reach in
               the corresponding region.
@@ -419,7 +420,7 @@ class HaloSimulator:
             spends:  The hypothetical spend vector, equal in length to the
               number of publishers.  spends[i] is the amount that is spent with
               publisher i.
-            primitive_regions:  A dictionary in which each key are the binary
+            primitive_regions:  A dictionary in which each key is the binary
               representations of each primitive region of the Venn diagram, and
               each value is a list with length 1 containing the reach in the
               corresponding region.

@@ -303,7 +303,6 @@ class ExperimentalTrialTest(absltest.TestCase):
             # We don't check each column in the resulting dataframe, because these have
             # been checked by the preceding unit tests.  However, we make a few strategic
             # probes.
-#            import pdb; pdb.set_trace()
             self.assertEqual(result.shape[0], 1)
             self.assertEqual(result["dataset"][0], "dataset")
             self.assertEqual(result["replica_id"][0], 3)

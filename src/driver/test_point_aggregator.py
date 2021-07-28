@@ -130,13 +130,13 @@ def aggregate(
     return pd.DataFrame(data=stats)
 
 
-def aggregate_on_failure(inst: Exception) -> pd.DataFrame:
-    """Returns a DataFrame of the same shape as aggregate but for case of failure.
+def aggregate_on_exception(inst: Exception) -> pd.DataFrame:
+    """Returns a DataFrame of the same shape as aggregate but for case of an exception.
 
     Args:
       inst:  The exception instance that was generated in the modeling attempt.
     Returns:
-      A single row DataFrame representing the values of the statistics listed in keys.
+      A single row DataFrame of NAs with columns being the statistics listed in keys.
     """
     stats = {"model_succeeded": [0], "model_exception": [str(inst)]}
     for key in AGGREGATORS:

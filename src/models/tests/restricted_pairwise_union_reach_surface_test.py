@@ -13,6 +13,11 @@
 # limitations under the License.
 """Tests for restricted_pairwise_union_reach_surface.py."""
 
+import warnings
+from unittest.mock import MagicMock
+from unittest.mock import Mock
+from unittest.mock import patch
+from unittest.mock import DEFAULT
 from absl.testing import absltest
 import numpy as np
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
@@ -22,8 +27,9 @@ from wfa_planning_evaluation_framework.models.restricted_pairwise_union_reach_su
 )
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 
+
 class LinearCappedReachCurve(ReachCurve):
-    """Linear ReachCurve that is capped at max_reach."""
+    """A curve of simple form that facilitates testing."""
 
     def _fit(self) -> None:
         self._max_reach = self._data[0].reach()
@@ -76,8 +82,8 @@ class RestrictedPairwiseUnionReachSurfaceTest(absltest.TestCase):
             for max_reach in max_reaches
         ]
 
-    def generate_sample_matrix_a(self, num_publishers):
-        lbd = np.array([[2 / num_publishers] for _ in range(num_publishers)])
+    def generate_sample_matrix_a(self, num_publishers, lbd_const=0):
+        lbd = np.array([[lbd_const] for _ in range(num_publishers)])
 
         true_a = np.ones(num_publishers * num_publishers)
         for i in range(num_publishers):
@@ -109,7 +115,7 @@ class RestrictedPairwiseUnionReachSurfaceTest(absltest.TestCase):
         reach_curves = self.generate_sample_reach_curves(
             num_publishers, decay_rate, universe_size
         )
-        true_a = self.generate_sample_matrix_a(num_publishers)
+        true_a = self.generate_sample_matrix_a(num_publishers, 2 / num_publishers)
         training_reach_points = self.generate_sample_reach_points(
             true_a, reach_curves, training_size, universe_size, 1
         )
@@ -123,6 +129,126 @@ class RestrictedPairwiseUnionReachSurfaceTest(absltest.TestCase):
         self.assertPointsAlmostEqualToPrediction(surface, training_reach_points)
         self.assertPointsAlmostEqualToPrediction(surface, test_reach_points)
 
+    def test_by_impressions_zero_lambda(self):
+        num_publishers = 3
+        training_size = 50
+        universe_size = 200000
+        decay_rate = 0.8
+
+        reach_curves = self.generate_sample_reach_curves(
+            num_publishers, decay_rate, universe_size
+        )
+        true_a = self.generate_sample_matrix_a(num_publishers)
+        training_reach_points = self.generate_sample_reach_points(
+            true_a, reach_curves, training_size, universe_size, 1
+        )
+
+        surface = RestrictedPairwiseUnionReachSurface(
+            reach_curves, training_reach_points
+        )
+        test_reach_points = self.generate_sample_reach_points(
+            true_a, reach_curves, training_size, universe_size, 2
+        )
+        self.assertPointsAlmostEqualToPrediction(
+            surface, training_reach_points, tolerance=0.00001
+        )
+        self.assertPointsAlmostEqualToPrediction(
+            surface, test_reach_points, tolerance=0.00001
+        )
+
+    def test_result_not_success(self):
+        num_publishers = 3
+        training_size = 50
+        universe_size = 200000
+        decay_rate = 0.8
+
+        reach_curves = self.generate_sample_reach_curves(
+            num_publishers, decay_rate, universe_size
+        )
+        true_a = self.generate_sample_matrix_a(num_publishers, 2 / num_publishers)
+        training_reach_points = self.generate_sample_reach_points(
+            true_a, reach_curves, training_size, universe_size, 1
+        )
+
+        class MockResult:
+            success = False
+
+        def my_side_effect(arg):
+            return MockResult()
+
+        with self.assertRaises(RuntimeError) as context:
+            with patch.object(
+                RestrictedPairwiseUnionReachSurface,
+                "_fit_with_constraints",
+                side_effect=my_side_effect,
+            ):
+                surface = RestrictedPairwiseUnionReachSurface(
+                    reach_curves, training_reach_points
+                )
+
+    def test_fit_warning_problem(self):
+        num_publishers = 3
+        training_size = 50
+        universe_size = 200000
+        decay_rate = 0.8
+
+        reach_curves = self.generate_sample_reach_curves(
+            num_publishers, decay_rate, universe_size
+        )
+        true_a = self.generate_sample_matrix_a(num_publishers, 2 / num_publishers)
+        training_reach_points = self.generate_sample_reach_points(
+            true_a, reach_curves, training_size, universe_size, 1
+        )
+
+        def my_side_effect(arg):
+            warnings.warn("Bad things happened in the optimizer")
+            return DEFAULT
+
+        with self.assertRaises(RuntimeError) as context:
+            with patch.object(
+                RestrictedPairwiseUnionReachSurface,
+                "_fit_with_constraints",
+                side_effect=my_side_effect,
+            ):
+                surface = RestrictedPairwiseUnionReachSurface(
+                    reach_curves, training_reach_points
+                )
+
+    def test_fit_warning_no_problem(self):
+        num_publishers = 3
+        training_size = 50
+        universe_size = 200000
+        decay_rate = 0.8
+
+        reach_curves = self.generate_sample_reach_curves(
+            num_publishers, decay_rate, universe_size
+        )
+        true_a = self.generate_sample_matrix_a(num_publishers, 2 / num_publishers)
+        training_reach_points = self.generate_sample_reach_points(
+            true_a, reach_curves, training_size, universe_size, 1
+        )
+
+        def my_side_effect(cons):
+            warnings.warn("delta_grad == 0.0 and some other things")
+            return DEFAULT
+
+            with patch.object(
+                RestrictedPairwiseUnionReachSurface,
+                "_fit_with_constraints",
+                side_effect=my_side_effect,
+            ):
+                surface = RestrictedPairwiseUnionReachSurface(
+                    reach_curves, training_reach_points
+                )
+                test_reach_points = self.generate_sample_reach_points(
+                    true_a, reach_curves, training_size, universe_size, 2
+                )
+                self.assertPointsAlmostEqualToPrediction(
+                    surface, training_reach_points, tolerance=0.00001
+                )
+                self.assertPointsAlmostEqualToPrediction(
+                    surface, test_reach_points, tolerance=0.00001
+                )
 
 if __name__ == "__main__":
     absltest.main()

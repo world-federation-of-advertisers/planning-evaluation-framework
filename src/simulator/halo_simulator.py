@@ -24,7 +24,7 @@ from typing import List
 from typing import Set
 from typing import Tuple
 from typing import Dict
-
+from collections import defaultdict
 import numpy as np
 
 from wfa_cardinality_estimation_evaluation_framework.estimators.same_key_aggregator import (
@@ -53,6 +53,9 @@ from wfa_planning_evaluation_framework.simulator.publisher import Publisher
 from wfa_planning_evaluation_framework.simulator.system_parameters import (
     SystemParameters,
 )
+
+
+MAX_ACTIVE_PUBLISHERS = 20
 
 
 class HaloSimulator:
@@ -224,7 +227,8 @@ class HaloSimulator:
         Args:
             spends:  The hypothetical spend vector, equal in length to
               the number of publishers.  spends[i] is the amount that is
-              spent with publisher i.
+              spent with publisher i. Note that publishers with 0 spends will
+              not be included in the Venn diagram reach.
             budget:  The amount of privacy budget that can be consumed while
               satisfying the request.
             max_frequency:  The maximum frequency for which to report reach.
@@ -234,6 +238,73 @@ class HaloSimulator:
             estimate of the number of people reached in this subset.
         """
         raise NotImplementedError()
+
+    def _form_venn_diagram_regions(
+        self, spends: List[float], max_frequency: int = 1
+    ) -> Dict[int, List]:
+        """Form Venn diagram regions that contain k+ reaches
+
+        For each subset of publishers, computes k+ reaches for those users
+        who are reached by the publishers in that subset.
+
+        Args:
+            spends:  The hypothetical spend vector, equal in length to
+              the number of publishers.  spends[i] is the amount that is
+              spent with publisher i. Note that publishers with 0 spends will
+              not be included in the Venn diagram reach.
+            max_frequency:  The maximum frequency for which to report reach.
+        Returns:
+            regions:  A dictionary in which each key are the binary
+              representations of each primitive region of the Venn diagram, and
+              each value is a list of the k+ reaches in the corresponding region.
+              The k+ reach for a given region is given as a list r[] where r[k]
+              is the number of people who were reached AT LEAST k+1 times.
+        """
+        # Get user counts by spend for each active publisher
+        user_counts_by_pub_id = {}
+        for pub_id, spend in enumerate(spends):
+            if not spend:
+                continue
+            user_counts_by_pub_id[pub_id] = self._publishers[
+                pub_id
+            ]._publisher_data.user_counts_by_spend(spend)
+
+        if len(user_counts_by_pub_id) > MAX_ACTIVE_PUBLISHERS:
+            raise ValueError(
+                f"There are {len(user_counts_by_pub_id)} publishers for the Venn "
+                f"diagram algorithm. The maximum limit is {MAX_ACTIVE_PUBLISHERS}."
+            )
+
+        # Locate user's region represented by a number and sum the impressions.
+        user_region = defaultdict(int)
+        user_impressions = defaultdict(int)
+
+        for pub_id, user_counts in user_counts_by_pub_id.items():
+            for user_id, impressions in user_counts.items():
+                # To update the user's located region, we use bit operation here.
+                # Ex: For a user reached by publisher id-0 and id-2, it's located
+                # at the region with the binary representation = bin('101') = 5.
+                # If the user is also reached by publisher id-1, then the updated
+                # representation will be bin('111') = 7.
+                user_region[user_id] |= 1 << pub_id
+                user_impressions[user_id] += impressions
+
+        # Compute frequencies in the occupied regions of the Venn diagram with
+        # capped user counts.
+        frequencies_by_region = {
+            r: [0] * (max_frequency + 1) for r in set(user_region.values())
+        }
+        for user_id, region in user_region.items():
+            impressions = min(max_frequency, user_impressions[user_id])
+            frequencies_by_region[region][impressions] += 1
+
+        # Compute k+ reaches in each region. Ignore 0 frequency.
+        regions = {
+            r: ReachPoint.frequencies_to_kplus_reaches(freq[1:])
+            for r, freq in frequencies_by_region.items()
+        }
+
+        return regions
 
     def _aggregate_reach_in_primitive_venn_diagram_regions(
         self, pub_ids: List[int], primitive_regions: Dict[int, List]

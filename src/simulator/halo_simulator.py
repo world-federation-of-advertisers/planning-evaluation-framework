@@ -256,7 +256,7 @@ class HaloSimulator:
             max_frequency:  The maximum frequency for which to report reach.
         Returns:
             regions:  A dictionary in which each key is the binary
-              representations of each non-empty primitive region of the Venn 
+              representations of each non-empty primitive region of the Venn
               diagram, and each value is a list of the k+ reaches in the
               corresponding region.
               Note that the binary representation of the key represents the
@@ -322,8 +322,8 @@ class HaloSimulator:
 
         Args:
             primitive_regions:  A dictionary in which each key is the binary
-              representations of each non-empty primitive region of the Venn 
-              diagram, and each value is a list of the k+ reaches in the 
+              representations of each non-empty primitive region of the Venn
+              diagram, and each value is a list of the k+ reaches in the
               corresponding region.
               Note that the binary representation of the key represents the
               formation of publisher IDs in that primitive region. For example,
@@ -338,8 +338,8 @@ class HaloSimulator:
               distribution.
         Returns:
             A dictionary in which each key is the binary representations of
-              each non-empty primitive region of the Venn diagram, and each 
-              value is a list with length 1 containing the sampled reach in the
+              each primitive region of the Venn diagram, and each value is a
+              list with length 1 containing the sampled reach in the
               corresponding region.
               Note that the binary representation of the key represents the
               formation of publisher IDs in that primitive region. For example,

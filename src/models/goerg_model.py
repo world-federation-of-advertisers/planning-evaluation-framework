@@ -39,6 +39,8 @@ class GoergModel(ReachCurve):
         """
         if len(data) != 1:
             raise ValueError("Exactly one ReachPoint must be specified")
+        if data[0].impressions[0] < 0.001:
+            raise ValueError("Attempt to create model with 0 impressions")
         self._impressions = data[0].impressions[0]
         self._reach = data[0].reach(1)
         self._fit()
@@ -50,9 +52,12 @@ class GoergModel(ReachCurve):
 
     def _fit(self) -> None:
         """Fits a model to the data that was provided in the constructor."""
-        self._rho = (self._impressions * self._reach) / (
-            self._impressions - self._reach
-        )
+        if abs(self._impressions - self._reach) < 0.001:
+            raise ValueError("Cannot fit Goerg model when impressions=reach")
+        else:
+            self._rho = (self._impressions * self._reach) / (
+                self._impressions - self._reach
+            )
         self._beta = self._rho
 
     def by_impressions(self, impressions: [int], max_frequency: int = 1) -> ReachPoint:

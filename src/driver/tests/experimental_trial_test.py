@@ -123,6 +123,31 @@ class FakeTestPointGenerator(TestPointGenerator):
         return [[1.0, 2.0]]
 
 
+class GoergModelingStrategy(ModelingStrategy):
+    """Models a single publisher using Goerg's model."""
+
+    def fit(
+        self, halo: HaloSimulator, params: SystemParameters, budget: PrivacyBudget
+    ) -> ReachSurface:
+        total_reach = ReachPoint(
+            [
+                2,
+            ],
+            [
+                2,
+            ],
+            [2.0],
+        )
+        curve = GoergModel([total_reach])
+        curve._fit()
+        return curve
+
+
+class GoergTestPointGenerator(TestPointGenerator):
+    def test_points(self) -> Iterable[List[float]]:
+        return [[1.0]]
+
+
 class ExperimentalTrialTest(absltest.TestCase):
     def test_privacy_tracking_vars_dataframe(self):
         tracker = PrivacyTracker()
@@ -280,6 +305,47 @@ class ExperimentalTrialTest(absltest.TestCase):
             self.assertEqual(result["replica_id"][0], 3)
             self.assertEqual(result["privacy_budget_epsilon"][0], 1.0)
             self.assertEqual(result["npoints"][0], 1)
+            self.assertEqual(result["model_succeeded"][0], 1)
+            self.assertEqual(result["model_exception"][0], "")
+
+    def test_evaluate_when_there_is_a_modeling_exception(self):
+        with TemporaryDirectory() as d:
+            pdf1 = PublisherData([(1, 0.01), (2, 0.02), (3, 0.04), (4, 0.05)], "pdf1")
+            data_set = DataSet([pdf1], "dataset")
+            data_design_dir = join(d, "data_design")
+            experiment_dir = join(d, "experiments")
+            data_design = DataDesign(data_design_dir)
+            data_design.add(data_set)
+
+            MODELING_STRATEGIES["fake"] = GoergModelingStrategy
+            TEST_POINT_STRATEGIES["fake_tps"] = GoergTestPointGenerator
+
+            msd = ModelingStrategyDescriptor(
+                "fake", {}, "goerg", {}, "pairwise_union", {}
+            )
+            sparams = SystemParameters(
+                [0.5],
+                LiquidLegionsParameters(13, 1e6, 1),
+                np.random.default_rng(),
+            )
+            eparams = ExperimentParameters(PrivacyBudget(1.0, 0.01), 3, 5, "fake_tps")
+            trial_descriptor = TrialDescriptor(msd, sparams, eparams)
+            trial = ExperimentalTrial(
+                experiment_dir, data_design, "dataset", trial_descriptor
+            )
+            result = trial.evaluate(rng=np.random.default_rng(seed=1))
+            # We don't check each column in the resulting dataframe, because these have
+            # been checked by the preceding unit tests.  However, we make a few strategic
+            # probes.
+            self.assertEqual(result.shape[0], 1)
+            self.assertEqual(result["dataset"][0], "dataset")
+            self.assertEqual(result["replica_id"][0], 3)
+            self.assertEqual(result["privacy_budget_epsilon"][0], 1.0)
+            self.assertEqual(result["model_succeeded"][0], 0)
+            self.assertEqual(
+                result["model_exception"][0],
+                "Cannot fit Goerg model when impressions=reach",
+            )
 
 
 if __name__ == "__main__":

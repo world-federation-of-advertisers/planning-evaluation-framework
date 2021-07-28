@@ -180,7 +180,7 @@ class TestPointAggregatorTest(absltest.TestCase):
     def test_aggregate(self):
         pd = aggregate(self.test_points1, self.model_points1)
         self.assertEqual(pd["npoints"][0], 3)
-        self.assertEqual(len(pd.columns), len(AGGREGATORS))
+        self.assertEqual(len(pd.columns), len(AGGREGATORS) + 2)
 
 
 if __name__ == "__main__":

@@ -213,7 +213,7 @@ class HaloSimulator:
         spends: List[float],
         budget: PrivacyBudget,
         max_frequency: int = 1,
-    ) -> List[Tuple[Set, ReachPoint]]:
+    ) -> List[ReachPoint]:
         """Returns a simulated differentially private Venn diagram reach estimate.
 
         For each subset of publishers, computes a differentially private
@@ -228,11 +228,9 @@ class HaloSimulator:
               satisfying the request.
             max_frequency:  The maximum frequency for which to report reach.
         Returns:
-            A list of pairs (S, R), where S specifies a subset of publishers
-            and R is a ReachPoint representing the differentially private
+            A list of ReachPoint. Each reach point represents the mapping from 
+            the spends of a subset of publishers to the differentially private
             estimate of the number of people reached in this subset.
-            The set S is given as a subset of the integers 0..p-1, where p
-            is the number of publishers.
         """
         raise NotImplementedError()
 

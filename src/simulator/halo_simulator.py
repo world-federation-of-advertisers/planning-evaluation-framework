@@ -306,6 +306,44 @@ class HaloSimulator:
 
         return regions
 
+    def _aggregate_reach_in_primitive_venn_diagram_regions(
+        self, pub_ids: List[int], primitive_regions: Dict[int, List]
+    ) -> int:
+        """Returns aggregated reach from Venn diagram primitive regions.
+
+        To obtain the union reach of the given subset of publishers, we sum up
+        the reaches from the primitive regions which belong to at least one of
+        the given publisher. Note that the binary representation of the index
+        of a primitive region represents the formation of publisher IDs in that
+        primitive region.
+
+        For example, given a subset of publisher ids, {0}, out of the whole set
+        {0, 1, 2}, the reaches in the following primitive regions will be summed
+        up:
+
+            region with index = 1 = bin('001'): belongs to pub_id-0
+            region with index = 3 = bin('011'): belongs to pub_id-0 and 1
+            region with index = 5 = bin('101'): belongs to pub_id-0 and 2
+            region with index = 7 = bin('111'): belongs to pub_id-0, 1, and 2
+
+        Args:
+            pub_ids:  The list of target publisher IDs for computing aggregated
+              reach.
+            primitive_regions:  Contains k+ reaches in the regions. The k+
+              reaches for a given region is given as a list r[] where r[k] is
+              the number of people who were reached AT LEAST k+1 times.
+        Returns:
+            aggregated_reach:  The total reach from the given publishers.
+        """
+        targeted_pub_repr = sum(1 << pub_id for pub_id in pub_ids)
+        aggregated_reach = sum(
+            primitive_regions[r][0]
+            for r in primitive_regions.keys()
+            if r & targeted_pub_repr
+        )
+
+        return aggregated_reach
+
     def simulated_reach_curve(
         self, publisher_index: int, budget: PrivacyBudget
     ) -> ReachCurve:

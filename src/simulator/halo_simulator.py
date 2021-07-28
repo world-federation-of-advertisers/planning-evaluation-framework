@@ -318,21 +318,29 @@ class HaloSimulator:
         noiser: EstimateNoiserBase,
         noise_event: NoisingEvent,
     ) -> Dict[int, List]:
-        """Add differential privacy noise to every primitive regions
+        """Add differential privacy noise to every primitive region
 
         Args:
-            occupied_primitive_regions:  Contains k+ reaches in the regions.
-              The k+ reaches for a given region is given as a list r[] where
-              r[k] is the number of people who were reached AT LEAST k+1 times.
-            num_all_primitive_regions:  The total number of primitive regions.
-            noiser:  A callable noiser instance that adds noise to the reach
-              estimate.
+            occupied_primitive_regions:  A dictionary in which each key is the 
+              binary representations of each primitive region of the Venn 
+              diagram, and each value is a list with length 1 containing the 
+              non-zero reach in the corresponding region.
+              Note that the binary representation of the key represents the
+              formation of publisher IDs in that primitive region. For example,
+              primitive_regions[key] with key = 5 = bin('101') is the region
+              which belongs to pub_id-0 and id-2.
             noise_event:  Records the addition of differentially private noise
               that is applied on the reach estimate.
         Returns:
-            A dictionary in which each key are the binary representations of
-              each primitive region of the Venn diagram, and each value is a
-              list of the reach in the corresponding region.
+            A dictionary that contains `num_all_primitive_regions` key-value 
+              pairs. Each key in the dictionary is the binary representations 
+              of each primitive region of the Venn diagram, and each value is a
+              list of the noised reach (can be zero) in the corresponding
+              region.
+              Note that the binary representation of the key represents the
+              formation of publisher IDs in that primitive region. For example,
+              primitive_regions[key] with key = 5 = bin('101') is the region
+              which belongs to pub_id-0 and id-2.
         """
         noised_primitive_regions = {}
         for region_repr in range(1, num_all_primitive_regions + 1):

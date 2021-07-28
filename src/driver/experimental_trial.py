@@ -22,6 +22,7 @@ import numpy as np
 import pandas as pd
 from os.path import isfile, join
 from pathlib import Path
+import traceback
 from typing import List
 from typing import NamedTuple
 
@@ -52,7 +53,7 @@ from wfa_planning_evaluation_framework.driver.trial_descriptor import (
 )
 from wfa_planning_evaluation_framework.driver.test_point_aggregator import (
     aggregate,
-    aggregate_on_failure,
+    aggregate_on_exception,
 )
 
 
@@ -140,19 +141,20 @@ class ExperimentalTrial:
                 )
                 for t in test_points
             ]
-            simulated_reach = [
+            fitted_reach = [
                 reach_surface.by_spend(
                     t, self._trial_descriptor.experiment_params.max_frequency
                 )
                 for t in test_points
             ]
-            metrics = aggregate(true_reach, simulated_reach)
+            metrics = aggregate(true_reach, fitted_reach)
         except Exception as inst:
             if not logging.vlog_is_on(2):
                 logging.vlog(1, f"Dataset {self._data_set_name}")
                 logging.vlog(1, f"Trial   {self._trial_descriptor}")
             logging.vlog(1, f"Modeling failure: {inst}")
-            metrics = aggregate_on_failure(inst)
+            logging.vlog(2, traceback.format_exc())
+            metrics = aggregate_on_exception(inst)
 
         independent_vars = self._make_independent_vars_dataframe()
         privacy_tracking_vars = self._make_privacy_tracking_vars_dataframe(

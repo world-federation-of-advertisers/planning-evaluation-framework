@@ -144,6 +144,9 @@ class GoergModelingStrategy(ModelingStrategy):
 
 
 class GoergTestPointGenerator(TestPointGenerator):
+    def __init__(self, dataset, rng):
+        pass
+
     def test_points(self) -> Iterable[List[float]]:
         return [[1.0]]
 
@@ -273,7 +276,7 @@ class ExperimentalTrialTest(absltest.TestCase):
     def test_evaluate(self):
         with TemporaryDirectory() as d:
             pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
-            pdf2 = PublisherData([(2, 0.03), (4, 0.06)], "pdf2")
+            pdf2 = PublisherData([(2, 0.02), (2, 0.03), (4, 0.06)], "pdf2")
             data_set = DataSet([pdf1, pdf2], "dataset")
             data_design_dir = join(d, "data_design")
             experiment_dir = join(d, "experiments")
@@ -287,7 +290,7 @@ class ExperimentalTrialTest(absltest.TestCase):
                 "fake", {"x": 1}, "goerg", {}, "pairwise_union", {}
             )
             sparams = SystemParameters(
-                [0.03, 0.05],
+                [0.9, 0.9],
                 LiquidLegionsParameters(13, 1e6, 1),
                 np.random.default_rng(),
             )

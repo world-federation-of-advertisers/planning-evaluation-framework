@@ -43,7 +43,8 @@ class SystemParameters(NamedTuple):
     Attributes:
         campaign_spend_fractions:  A list of values, each between 0 and 1,
             one per campaign, representing the amount spent on the campaign
-            as a fractrion of total possible.
+            as a fraction of total possible.  Note that 
+            len(campaign_spend_fractions) must equal the number of publishers.
         liquid_legions:  Parameters specific to constructing Liquid Legions
             sketches.
         generator:  The single source of randomness that will be used

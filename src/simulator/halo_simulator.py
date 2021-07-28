@@ -258,8 +258,12 @@ class HaloSimulator:
             regions:  A dictionary in which each key are the binary
               representations of each primitive region of the Venn diagram, and
               each value is a list of the k+ reaches in the corresponding region.
-              The k+ reach for a given region is given as a list r[] where r[k]
-              is the number of people who were reached AT LEAST k+1 times.
+              Note that the binary representation of the key represents the
+              formation of publisher IDs in that primitive region. For example,
+              primitive_regions[key] with key = 5 = bin('101') is the region
+              which belongs to pub_id-0 and id-2.
+              The k+ reaches for a given region is given as a list r[] where
+              r[k] is the number of people who were reached AT LEAST k+1 times.
         """
         # Get user counts by spend for each active publisher
         user_counts_by_pub_id = {}
@@ -316,9 +320,16 @@ class HaloSimulator:
         """Return primitive regions with sampled reaches.
 
         Args:
-            primitive_regions:  Contains k+ reaches in the regions. The k+
-              reaches for a given region is given as a list r[] where r[k] is
-              the number of people who were reached AT LEAST k+1 times.
+            primitive_regions:  A dictionary in which each key are the binary
+              representations of each primitive region of the Venn diagram, and
+              each value is a list of the k+ reaches in the corresponding
+              region.
+              Note that the binary representation of the key represents the
+              formation of publisher IDs in that primitive region. For example,
+              primitive_regions[key] with key = 5 = bin('101') is the region
+              which belongs to pub_id-0 and id-2.
+              The k+ reaches for a given region is given as a list r[] where
+              r[k] is the number of people who were reached AT LEAST k+1 times.
             sample_size:  The total number of sampled reach from the primitive
               regions.
             random_generator:  An instance of numpy.random.Generator that is
@@ -327,7 +338,12 @@ class HaloSimulator:
         Returns:
             A dictionary in which each key are the binary representations of
               each primitive region of the Venn diagram, and each value is a
-              list of the reach in the corresponding region.
+              list with length 1 containing the sampled reach in the
+              corresponding region.
+              Note that the binary representation of the key represents the
+              formation of publisher IDs in that primitive region. For example,
+              primitive_regions[key] with key = 5 = bin('101') is the region
+              which belongs to pub_id-0 and id-2.
         """
 
         region_repr_and_reach_pairs = [
@@ -373,9 +389,10 @@ class HaloSimulator:
         Args:
             pub_ids:  The list of target publisher IDs for computing aggregated
               reach.
-            primitive_regions:  Contains k+ reaches in the regions. The k+
-              reaches for a given region is given as a list r[] where r[k] is
-              the number of people who were reached AT LEAST k+1 times.
+            primitive_regions:  A dictionary in which each key are the binary
+              representations of each primitive region of the Venn diagram,
+              and each value is a list with length 1 containing the reach in
+              the corresponding region.
         Returns:
             aggregated_reach:  The total reach from the given publishers.
         """
@@ -402,13 +419,14 @@ class HaloSimulator:
             spends:  The hypothetical spend vector, equal in length to the
               number of publishers.  spends[i] is the amount that is spent with
               publisher i.
-            primitive_regions:  Contains k+ reaches in the regions. Note that
-              the binary representation of the key of a primitive region
-              represents the formation of publisher IDs in that primitive
-              region. For example, primitive_regions[key] with key = 5 = bin('101')
-              is the region which belongs to pub_id-0 and id-2.
-              The k+ reaches for a given region is given as a list r[] where
-              r[k] is the number of people who were reached AT LEAST k+1 times.
+            primitive_regions:  A dictionary in which each key are the binary
+              representations of each primitive region of the Venn diagram, and
+              each value is a list with length 1 containing the reach in the
+              corresponding region.
+              Note that the binary representation of the key represents the
+              formation of publisher IDs in that primitive region. For example,
+              primitive_regions[key] with key = 5 = bin('101') is the region
+              which belongs to pub_id-0 and id-2.
         Returns:
             A list of ReachPoint. Each reach point represents the mapping from
             the spends of a subset of publishers to the number of people reached

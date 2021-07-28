@@ -321,10 +321,10 @@ class HaloSimulator:
         """Add differential privacy noise to every primitive region
 
         Args:
-            occupied_primitive_regions:  A dictionary in which each key is the 
-              binary representations of each primitive region of the Venn 
-              diagram, and each value is a list with length 1 containing the 
-              non-zero reach in the corresponding region.
+            occupied_primitive_regions:  A dictionary in which each key is the
+              binary representations of each primitive region of the Venn
+              diagram, and each value is a list with length 1 containing the
+              reach in the corresponding region.
               Note that the binary representation of the key represents the
               formation of publisher IDs in that primitive region. For example,
               primitive_regions[key] with key = 5 = bin('101') is the region
@@ -332,11 +332,10 @@ class HaloSimulator:
             noise_event:  Records the addition of differentially private noise
               that is applied on the reach estimate.
         Returns:
-            A dictionary that contains `num_all_primitive_regions` key-value 
-              pairs. Each key in the dictionary is the binary representations 
+            A dictionary that contains `num_all_primitive_regions` key-value
+              pairs. Each key in the dictionary is the binary representations
               of each primitive region of the Venn diagram, and each value is a
-              list of the noised reach (can be zero) in the corresponding
-              region.
+              list of the noised reach in the corresponding region.
               Note that the binary representation of the key represents the
               formation of publisher IDs in that primitive region. For example,
               primitive_regions[key] with key = 5 = bin('101') is the region

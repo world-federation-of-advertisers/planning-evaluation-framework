@@ -271,28 +271,106 @@ class HaloSimulator:
         self,
         spends: List[float],
         budget: PrivacyBudget,
+        privacy_budget_split: float = 0.5,
         max_frequency: int = 1,
     ) -> List[ReachPoint]:
         """Returns a simulated differentially private Venn diagram reach estimate.
 
-        For each subset of publishers, computes a differentially private
-        reach and frequency estimate for those users who are reached by
-        all and only the publishers in that subset.
+        For each subset of publishers, computes a differentially private reach
+        and frequency estimate for those users who are reached by all and only
+        only the publishers in that subset. If user X is included, then X is
+        reached by at least one of the publishers in the set.  And, every user
+        that is reached by at least one of the publishers is included in the
+        count.
 
         Args:
             spends:  The hypothetical spend vector, equal in length to
               the number of publishers.  spends[i] is the amount that is
-              spent with publisher i. Note that publishers with 0 spends will
-              not be included in the Venn diagram reach.
+              spent with publisher i.
             budget:  The amount of privacy budget that can be consumed while
               satisfying the request.
+            privacy_budget_split:  Specifies the proportion of the privacy budget
+              that should be allocated to reach estimation.  The remainder is
+              allocated to cardinality estimation.
             max_frequency:  The maximum frequency for which to report reach.
         Returns:
             A list of ReachPoint. Each reach point represents the mapping from
             the spends of a subset of publishers to the differentially private
             estimate of the number of people reached in this subset.
         """
-        raise NotImplementedError()
+        if max_frequency != 1:
+            raise ValueError("Max frequency has to be 1.")
+
+        venn_diagram_regions = self._form_venn_diagram_regions(spends, max_frequency)
+
+        true_cardinality = self.true_reach_by_spend(spends).reach()
+        sample_size = self._num_active_registers(true_cardinality)
+        sampled_venn_diagram_regions = self._sampled_venn_diagram(
+            venn_diagram_regions, sample_size
+        )
+
+        noiser_for_reach = GeometricEstimateNoiser(
+            budget.epsilon * privacy_budget_split,
+            np.random.RandomState(
+                seed=self._params.generator.integers(low=0, high=1e9)
+            ),
+        )
+
+        noise_event_for_reach = NoisingEvent(
+            PrivacyBudget(
+                budget.epsilon * privacy_budget_split,
+                budget.delta * privacy_budget_split,
+            ),
+            DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
+            {"privacy_budget_split": privacy_budget_split},
+        )
+
+        noised_sampled_venn_diagram_regions = self._add_dp_noise_to_primitive_regions(
+            sampled_venn_diagram_regions,
+            1 << len(spends) - 1,
+            noiser_for_reach,
+            noise_event_for_reach,
+        )
+
+        noiser_for_cardinality = GeometricEstimateNoiser(
+            budget.epsilon * (1 - privacy_budget_split),
+            np.random.RandomState(
+                seed=self._params.generator.integers(low=0, high=1e9)
+            ),
+        )
+
+        noise_event_for_cardinality = NoisingEvent(
+            PrivacyBudget(
+                budget.epsilon * (1 - privacy_budget_split),
+                budget.delta * (1 - privacy_budget_split),
+            ),
+            DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
+            {"privacy_budget_split": (1 - privacy_budget_split)},
+        )
+
+        scaled_venn_diagram_regions = self._scale_up_venn_diagram_regions(
+            noised_sampled_venn_diagram_regions,
+            true_cardinality,
+            noiser_for_cardinality,
+            noise_event_for_cardinality,
+        )
+        # inside the function:
+        #    noiser = GeometricEstimateNoiser(
+        #        budget.epsilon * privacy_budget_split,
+        #        np.random.RandomState(seed=self._params.generator.integers(low=0, high=1e9))
+        #    )
+        #    total_reach = self._get_total_reach(noised_sampled_venn_diagram_regions)
+        #    var = self._cardinality_estimate_variance(true_cardinality)
+        #    estimated_cardinality = noiser(cardinality + np.random.randn() * np.sqrt(var))
+        #    scaling_factor = estimated_cardinality / total_reach
+        #    for i in range(len(noised_sampled_venn_diagram_regions)):
+        #        noised_sampled_venn_diagram_regions[i] *= scaling_factor
+
+        reach_points = self._generate_reach_points_from_venn_diagram(
+            spends, scaled_venn_diagram_regions
+        )
+
+        return reach_points
 
     def _form_venn_diagram_regions(
         self, spends: List[float], max_frequency: int = 1

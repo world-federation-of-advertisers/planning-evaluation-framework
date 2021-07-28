@@ -228,6 +228,100 @@ class HaloSimulatorTest(parameterized.TestCase):
         )
         self.assertEqual(agg_reach, expected)
 
+    @parameterized.named_parameters(
+        # testcase_name, num_publishers, spends, regions, expected
+        {
+            "testcase_name": "with_empty_regions",
+            "num_publishers": 2,
+            "spends": [0.005, 0.01],
+            "regions": {},
+            "expected": [
+                ReachPoint([0, 0], [0], [0.005, 0]),
+                ReachPoint([0, 0], [0], [0, 0.01]),
+                ReachPoint([0, 0], [0], [0.005, 0.01]),
+            ],
+        },
+        {
+            "testcase_name": "without_active_publishers",
+            "num_publishers": 2,
+            "spends": [0, 0],
+            "regions": {},
+            "expected": [],
+        },
+        {
+            "testcase_name": "with_1_active_pub_from_2_pubs",
+            "num_publishers": 2,
+            "spends": [0.04, 0.02],
+            "regions": {1: [2]},
+            "expected": [
+                ReachPoint([3, 0], [2], [0.04, 0]),
+                ReachPoint([0, 0], [0], [0, 0.02]),
+                ReachPoint([3, 0], [2], [0.04, 0.02]),
+            ],
+        },
+        {
+            "testcase_name": "with_2_active_pubs",
+            "num_publishers": 2,
+            "spends": [0.04, 0.04],
+            "regions": {1: [1], 3: [1]},
+            "expected": [
+                ReachPoint([3, 0], [2], [0.04, 0]),
+                ReachPoint([0, 1], [1], [0, 0.04]),
+                ReachPoint([3, 1], [2], [0.04, 0.04]),
+            ],
+        },
+        {
+            "testcase_name": "with_2_active_pubs_from_3_pubs",
+            "num_publishers": 3,
+            "spends": [0.05, 0.08, 0.0],
+            "regions": {1: [2, 1], 2: [1, 0], 3: [1, 1]},
+            "expected": [
+                ReachPoint([4, 0, 0], [3], [0.05, 0, 0]),
+                ReachPoint([0, 2, 0], [2], [0, 0.08, 0]),
+                ReachPoint([4, 2, 0], [4], [0.05, 0.08, 0]),
+            ],
+        },
+    )
+    def test_generate_reach_points_from_venn_diagram(
+        self, num_publishers, spends, regions, expected
+    ):
+        pdfs = [
+            PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1"),
+            PublisherData([(2, 0.03), (4, 0.06)], "pdf2"),
+            PublisherData([(2, 0.01), (3, 0.03), (4, 0.05)], "pdf3"),
+        ]
+        data_set = DataSet(pdfs[:num_publishers], "test")
+        params = SystemParameters(
+            [0.4] * num_publishers,
+            LiquidLegionsParameters(),
+            np.random.default_rng(1),
+        )
+        privacy_tracker = PrivacyTracker()
+        halo = HaloSimulator(data_set, params, privacy_tracker)
+
+        # Note that the reach points generated from the Venn diagram only 
+        # contain 1+ reaches.
+        reach_points = halo._generate_reach_points_from_venn_diagram(spends, regions)
+
+        self.assertEqual(len(reach_points), len(expected))
+
+        for i, (r_pt, expected_r_pt) in enumerate(zip(reach_points, expected)):
+            self.assertEqual(
+                r_pt.impressions,
+                expected_r_pt.impressions,
+                msg=f"The impressions of No.{i + 1} reach point is not correct",
+            )
+            self.assertEqual(
+                r_pt.reach(1),
+                expected_r_pt.reach(1),
+                msg=f"The reach of No.{i + 1} reach point is not correct",
+            )
+            self.assertEqual(
+                r_pt.spends,
+                expected_r_pt.spends,
+                msg=f"The spends of No.{i + 1} reach point is not correct",
+            )
+
     def test_privacy_tracker(self):
         self.assertEqual(self.halo.privacy_tracker.mechanisms, [])
         reach_point = self.halo.simulated_reach_by_spend(

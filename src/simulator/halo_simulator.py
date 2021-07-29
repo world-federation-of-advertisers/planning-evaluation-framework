@@ -315,8 +315,8 @@ class HaloSimulator:
         self,
         occupied_primitive_regions: Dict[int, List],
         num_all_primitive_regions: int,
-        noiser: EstimateNoiserBase,
-        noise_event: NoisingEvent,
+        budget: PrivacyBudget,
+        privacy_budget_split: float,
     ) -> Dict[int, List]:
         """Add differential privacy noise to every primitive region
 
@@ -329,8 +329,11 @@ class HaloSimulator:
               formation of publisher IDs in that primitive region. For example,
               primitive_regions[key] with key = 5 = bin('101') is the region
               which belongs to pub_id-0 and id-2.
-            noise_event:  Records the addition of differentially private noise
-              that is applied on the reach estimate.
+            num_all_primitive_regions:  The number of all primitive regions.
+            budget:  The amount of privacy budget that can be consumed while
+              satisfying the request.
+            privacy_budget_split:  Specifies the proportion of the privacy
+              budget that should be allocated to the operation in this function.
         Returns:
             A dictionary that contains `num_all_primitive_regions` key-value
               pairs. Each key in the dictionary is the binary representations
@@ -341,11 +344,28 @@ class HaloSimulator:
               primitive_regions[key] with key = 5 = bin('101') is the region
               which belongs to pub_id-0 and id-2.
         """
+        noiser = GeometricEstimateNoiser(
+            budget.epsilon * privacy_budget_split,
+            np.random.RandomState(
+                seed=self._params.generator.integers(low=0, high=1e9)
+            ),
+        )
+
+        noise_event = NoisingEvent(
+            PrivacyBudget(
+                budget.epsilon * privacy_budget_split,
+                budget.delta * privacy_budget_split,
+            ),
+            DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
+            {"privacy_budget_split": privacy_budget_split},
+        )
+
         noised_primitive_regions = {}
         for region_repr in range(1, num_all_primitive_regions + 1):
             reach = occupied_primitive_regions.get(region_repr, [0])[0]
             noised_primitive_regions[region_repr] = [max(0, noiser(reach))]
-            self._privacy_tracker.append(noise_event)
+
+        self._privacy_tracker.append(noise_event)
 
         return noised_primitive_regions
 

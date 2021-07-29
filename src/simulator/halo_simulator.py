@@ -375,9 +375,9 @@ class HaloSimulator:
         # for i in range(len(noised_sampled_venn_diagram_regions)):
         #     noised_sampled_venn_diagram_regions[i] *= scaling_factor
 
-        # reach_points = self._generate_reach_points_from_venn_diagram(
-        #     spends, scaled_venn_diagram_regions
-        # )
+        reach_points = self._generate_reach_points_from_venn_diagram(
+            spends, scaled_venn_diagram_regions
+        )
 
         return reach_points
 

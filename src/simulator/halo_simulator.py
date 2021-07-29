@@ -247,23 +247,28 @@ class HaloSimulator:
     def _form_venn_diagram_regions(
         self, spends: List[float], max_frequency: int = 1
     ) -> Dict[int, List]:
-        """Form Venn diagram regions that contain k+ reaches
+        """Form primitive Venn diagram regions that contain k+ reaches
 
-        For each subset of publishers, computes k+ reaches for those users
-        who are reached by the publishers in that subset.
+        For each subset in the powerset of publishers, computes k+ reaches for
+        those users who are reached by the publishers in that subset.
 
         Args:
-            spends:  The hypothetical spend vector, equal in length to
-              the number of publishers.  spends[i] is the amount that is
-              spent with publisher i. Note that publishers with 0 spends will
-              not be included in the Venn diagram reach.
+            spends:  The hypothetical spend vector, equal in length to the
+              number of publishers.  spends[i] is the amount that is spent with
+              publisher i. Note that the publishers with 0 spends, inactive
+              publishers, will not be included in the Venn diagram regions.
             max_frequency:  The maximum frequency for which to report reach.
         Returns:
-            regions:  A dictionary in which each key are the binary
+            regions:  A dictionary in which each key is the binary
               representations of each primitive region of the Venn diagram, and
-              each value is a list of the k+ reaches in the corresponding region.
-              The k+ reach for a given region is given as a list r[] where r[k]
-              is the number of people who were reached AT LEAST k+1 times.
+              each value is a list of the k+ reaches in the corresponding
+              region.
+              Note that the binary representation of a key represents the
+              formation of publisher IDs in that primitive region. For example,
+              primitive_regions[key] with key = 5 = bin('101') is the region
+              which belongs to pub_id-0 and id-2.
+              The k+ reaches for a given region is given as a list r[] where
+              r[k] is the number of people who were reached AT LEAST k+1 times.
         """
         # Get user counts by spend for each active publisher
         user_counts_by_pub_id = {}

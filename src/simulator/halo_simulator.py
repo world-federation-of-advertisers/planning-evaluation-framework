@@ -309,66 +309,75 @@ class HaloSimulator:
             venn_diagram_regions, sample_size
         )
 
-        noiser_for_reach = GeometricEstimateNoiser(
-            budget.epsilon * privacy_budget_split,
-            np.random.RandomState(
-                seed=self._params.generator.integers(low=0, high=1e9)
-            ),
-        )
-
-        noise_event_for_reach = NoisingEvent(
-            PrivacyBudget(
-                budget.epsilon * privacy_budget_split,
-                budget.delta * privacy_budget_split,
-            ),
-            DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
-            {"privacy_budget_split": privacy_budget_split},
-        )
-
         noised_sampled_venn_diagram_regions = self._add_dp_noise_to_primitive_regions(
             sampled_venn_diagram_regions,
             1 << len(spends) - 1,
-            noiser_for_reach,
-            noise_event_for_reach,
+            budget,
+            privacy_budget_split,
+            random_state,
         )
-
-        noiser_for_cardinality = GeometricEstimateNoiser(
-            budget.epsilon * (1 - privacy_budget_split),
-            np.random.RandomState(
-                seed=self._params.generator.integers(low=0, high=1e9)
-            ),
-        )
-
-        noise_event_for_cardinality = NoisingEvent(
-            PrivacyBudget(
-                budget.epsilon * (1 - privacy_budget_split),
-                budget.delta * (1 - privacy_budget_split),
-            ),
-            DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
-            {"privacy_budget_split": (1 - privacy_budget_split)},
-        )
+        # Inside the function:
+        # random_state = (
+        #     random_state
+        #     if random_state
+        #     else np.random.RandomState(
+        #         seed=self._params.generator.integers(low=0, high=1e9)
+        #     )
+        # )
+        # noiser = GeometricEstimateNoiser(
+        #     budget.epsilon * privacy_budget_split,
+        #     random_state,
+        # )
+        # noise_event_for_reach = NoisingEvent(
+        #     PrivacyBudget(
+        #         budget.epsilon * privacy_budget_split,
+        #         budget.delta * privacy_budget_split,
+        #     ),
+        #     DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
+        #     {"privacy_budget_split": privacy_budget_split},
+        # )
+        # ...
 
         scaled_venn_diagram_regions = self._scale_up_venn_diagram_regions(
             noised_sampled_venn_diagram_regions,
             true_cardinality,
-            noiser_for_cardinality,
-            noise_event_for_cardinality,
+            budget,
+            1 - privacy_budget_split,
+            random_state,
         )
-        # inside the function:
-        #    noiser = GeometricEstimateNoiser(
-        #        budget.epsilon * privacy_budget_split,
-        #        np.random.RandomState(seed=self._params.generator.integers(low=0, high=1e9))
-        #    )
-        #    total_reach = self._get_total_reach(noised_sampled_venn_diagram_regions)
-        #    var = self._cardinality_estimate_variance(true_cardinality)
-        #    estimated_cardinality = noiser(cardinality + np.random.randn() * np.sqrt(var))
-        #    scaling_factor = estimated_cardinality / total_reach
-        #    for i in range(len(noised_sampled_venn_diagram_regions)):
-        #        noised_sampled_venn_diagram_regions[i] *= scaling_factor
+        # Inside the function:
+        # random_state = (
+        #     random_state
+        #     if random_state
+        #     else np.random.RandomState(
+        #         seed=self._params.generator.integers(low=0, high=1e9)
+        #     )
+        # )
+        # noiser = GeometricEstimateNoiser(
+        #     budget.epsilon * privacy_budget_split, random_state
+        # )
+        # noise_event_for_cardinality = NoisingEvent(
+        #     PrivacyBudget(
+        #         budget.epsilon * privacy_budget_split,
+        #         budget.delta * privacy_budget_split,
+        #     ),
+        #     DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
+        #     {"privacy_budget_split": privacy_budget_split},
+        # )
+        # sum_of_reach_in_venn_diagram_regions = (
+        #     self._get_sum_of_reach_in_venn_diagram_regions(
+        #         noised_sampled_venn_diagram_regions
+        #     )
+        # )
+        # var = self._cardinality_estimate_variance(true_cardinality)
+        # estimated_cardinality = noiser(cardinality + np.random.randn() * np.sqrt(var))
+        # scaling_factor = estimated_cardinality / sum_of_reach_in_venn_diagram_regions
+        # for i in range(len(noised_sampled_venn_diagram_regions)):
+        #     noised_sampled_venn_diagram_regions[i] *= scaling_factor
 
-        reach_points = self._generate_reach_points_from_venn_diagram(
-            spends, scaled_venn_diagram_regions
-        )
+        # reach_points = self._generate_reach_points_from_venn_diagram(
+        #     spends, scaled_venn_diagram_regions
+        # )
 
         return reach_points
 

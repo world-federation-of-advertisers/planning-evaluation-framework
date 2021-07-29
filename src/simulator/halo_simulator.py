@@ -305,7 +305,7 @@ class HaloSimulator:
 
         true_cardinality = self.true_reach_by_spend(spends).reach()
         sample_size = self._num_active_registers(true_cardinality)
-        sampled_venn_diagram_regions = self._sampled_venn_diagram(
+        sampled_venn_diagram_regions = self._sample_venn_diagram(
             venn_diagram_regions, sample_size
         )
 

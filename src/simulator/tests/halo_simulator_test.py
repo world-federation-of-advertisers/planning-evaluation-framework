@@ -36,14 +36,12 @@ from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
     PrivacyBudget,
     PrivacyTracker,
     NoisingEvent,
+    DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
 )
 from wfa_planning_evaluation_framework.simulator.system_parameters import (
     LiquidLegionsParameters,
     SystemParameters,
 )
-
-
-FAKE_DP_NOISE_MECHANISM = "Fake"
 
 
 class FakeLaplaceMechanism:
@@ -53,10 +51,10 @@ class FakeLaplaceMechanism:
 
 @dataclass
 class FakeNoiser(EstimateNoiserBase):
-    fix_noise: float
+    fixed_noise: float
 
     def __call__(self, estimate):
-        return estimate + self.fix_noise
+        return estimate + self.fixed_noise
 
 
 class HaloSimulatorTest(parameterized.TestCase):
@@ -253,7 +251,8 @@ class HaloSimulatorTest(parameterized.TestCase):
             "regions": {},
             "num_all_regions": 3,
             "budget": PrivacyBudget(0.1, 0.1),
-            "fix_noise": 1.0,
+            "privacy_budget_split": 0.3,
+            "fixed_noise": 1.0,
             "expected_regions": {1: [1.0], 2: [1.0], 3: [1.0]},
         },
         {
@@ -261,36 +260,55 @@ class HaloSimulatorTest(parameterized.TestCase):
             "regions": {2: [4.0]},
             "num_all_regions": 3,
             "budget": PrivacyBudget(0.2, 0.4),
-            "fix_noise": 0.2,
+            "privacy_budget_split": 0.7,
+            "fixed_noise": 0.2,
             "expected_regions": {1: [0.2], 2: [4.2], 3: [0.2]},
         },
     )
+    @patch(
+        "wfa_planning_evaluation_framework.simulator.halo_simulator.GeometricEstimateNoiser"
+    )
     def test_add_dp_noise_to_primitive_regions(
-        self, regions, num_all_regions, budget, fix_noise, expected_regions
+        self,
+        mock_geometric_estimate_noiser,
+        regions,
+        num_all_regions,
+        budget,
+        privacy_budget_split,
+        fixed_noise,
+        expected_regions,
     ):
+        mock_geometric_estimate_noiser.return_value = FakeNoiser(fixed_noise)
+
         halo = HaloSimulator(DataSet([], "test"), SystemParameters(), PrivacyTracker())
 
-        noiser_for_reach = FakeNoiser(fix_noise)
-        noise_event_for_reach = NoisingEvent(budget, FAKE_DP_NOISE_MECHANISM, {})
-
         noised_regions = halo._add_dp_noise_to_primitive_regions(
-            regions, num_all_regions, noiser_for_reach, noise_event_for_reach
+            regions, num_all_regions, budget, privacy_budget_split
         )
-
-        expected_privacy_tracker = PrivacyTracker()
-        for _ in range(num_all_regions):
-            expected_privacy_tracker.append(noise_event_for_reach)
 
         self.assertEqual(noised_regions, expected_regions)
         self.assertEqual(
-            halo.privacy_tracker._epsilon_sum, expected_privacy_tracker._epsilon_sum
+            halo.privacy_tracker._epsilon_sum, budget.epsilon * privacy_budget_split
         )
         self.assertEqual(
-            halo.privacy_tracker._delta_sum, expected_privacy_tracker._delta_sum
+            halo.privacy_tracker._delta_sum, budget.delta * privacy_budget_split
+        )
+        self.assertEqual(len(halo.privacy_tracker._noising_events), 1)
+        self.assertEqual(
+            halo.privacy_tracker._noising_events[0].budget.epsilon,
+            budget.epsilon * privacy_budget_split,
         )
         self.assertEqual(
-            halo.privacy_tracker._noising_events,
-            expected_privacy_tracker._noising_events,
+            halo.privacy_tracker._noising_events[0].budget.delta,
+            budget.delta * privacy_budget_split,
+        )
+        self.assertEqual(
+            halo.privacy_tracker._noising_events[0].mechanism,
+            DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
+        )
+        self.assertEqual(
+            halo.privacy_tracker._noising_events[0].params,
+            {"privacy_budget_split": privacy_budget_split},
         )
 
     @parameterized.named_parameters(
@@ -364,7 +382,7 @@ class HaloSimulatorTest(parameterized.TestCase):
         privacy_tracker = PrivacyTracker()
         halo = HaloSimulator(data_set, params, privacy_tracker)
 
-        # Note that the reach points generated from the Venn diagram only 
+        # Note that the reach points generated from the Venn diagram only
         # contain 1+ reaches.
         reach_points = halo._generate_reach_points_from_venn_diagram(spends, regions)
 

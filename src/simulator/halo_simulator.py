@@ -249,13 +249,14 @@ class HaloSimulator:
     ) -> Dict[int, List]:
         """Form primitive Venn diagram regions that contain k+ reaches
 
-        For each subset in the powerset of publishers, computes k+ reaches for
-        those users who are reached by the publishers in that subset.
+        For each subset in the powerset of publishers with nonzero spend,
+        computes k+ reaches for those users who are reached by the publishers
+        in that subset.
 
         Args:
             spends:  The hypothetical spend vector, equal in length to the
               number of publishers.  spends[i] is the amount that is spent with
-              publisher i. Note that the publishers with 0 spends, inactive
+              publisher i. Note that the publishers with 0 spends, i.e. inactive
               publishers, will not be included in the Venn diagram regions.
             max_frequency:  The maximum frequency for which to report reach.
         Returns:
@@ -285,6 +286,9 @@ class HaloSimulator:
 
         # Generate the representations of all primitive regions from the
         # powerset of the active publishers, excluding the empty set.
+        # Ex: if active_pubs = [0, 2] among all publishers [0, 1, 2], then
+        # active_pub_powerset is [[0], [2], [0, 2]]. For the regions from the
+        # the powerset of the active publishers, they are: [2^0, 2^2, 2^0 + 2^2]
         active_pubs = list(user_counts_by_pub_id.keys())
         active_pub_powerset = chain.from_iterable(
             combinations(active_pubs, r) for r in range(1, len(active_pubs) + 1)

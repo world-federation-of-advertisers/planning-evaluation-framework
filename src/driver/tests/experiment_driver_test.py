@@ -31,7 +31,7 @@ from wfa_planning_evaluation_framework.driver.experimental_trial import (
 from wfa_planning_evaluation_framework.driver import sample_experimental_design
 from wfa_planning_evaluation_framework.driver import m3_first_round_experimental_design
 from wfa_planning_evaluation_framework.data_generators import (
-    analysis_example_data_design,
+    analysis_example_experimental_design,
 )
 from wfa_planning_evaluation_framework.driver import single_publisher_design
 

@@ -100,3 +100,8 @@ class GoergModel(ReachCurve):
         if len(spends) != 1:
             raise ValueError("Spend vector must have a length of 1.")
         return self.by_impressions([spends[0] / self._cpi], max_frequency)
+
+    def impressions_for_spend(self, spend: float) -> int:
+        if not self._cpi:
+            raise ValueError("Impression cost is not known for this ReachPoint.")
+        return spend / self._cpi

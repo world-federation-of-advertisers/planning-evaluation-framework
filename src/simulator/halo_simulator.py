@@ -363,7 +363,7 @@ class HaloSimulator:
         )
 
         return {
-            region_repr: [r] for region_repr, r in zip(region_repr_seq, sampled_reach)
+            region_repr: r for region_repr, r in zip(region_repr_seq, sampled_reach)
         }
 
     def _aggregate_reach_in_primitive_venn_diagram_regions(

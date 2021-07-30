@@ -52,8 +52,8 @@ class GoergModel(ReachCurve):
 
     def _fit(self) -> None:
         """Fits a model to the data that was provided in the constructor."""
-        if abs(self._impressions - self._reach) < 0.001:
-            raise ValueError("Cannot fit Goerg model when impressions=reach")
+        if self._impressions <= self._reach:
+            raise ValueError("Cannot fit Goerg model when impressions <= reach.")
         else:
             self._rho = (self._impressions * self._reach) / (
                 self._impressions - self._reach

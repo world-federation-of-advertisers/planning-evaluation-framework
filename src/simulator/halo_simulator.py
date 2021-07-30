@@ -194,7 +194,7 @@ class HaloSimulator:
             combined_sketch = StandardizedHistogramEstimator.merge_two_sketches(
                 combined_sketch, sketch
             )
-        frequencies = [
+        kplus_reaches = [
             round(x) for x in estimator.estimate_cardinality(combined_sketch)
         ]
 
@@ -211,7 +211,7 @@ class HaloSimulator:
         # convert result to a ReachPoint
         impressions = self._data_set.impressions_by_spend(spends)
         return ReachPoint(
-            impressions=impressions, kplus_reaches=frequencies, spends=spends
+            impressions=impressions, kplus_reaches=kplus_reaches, spends=spends
         )
 
     def simulated_venn_diagram_reach_by_spend(

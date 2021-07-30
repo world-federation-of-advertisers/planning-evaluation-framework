@@ -210,7 +210,9 @@ class HaloSimulator:
 
         # convert result to a ReachPoint
         impressions = self._data_set.impressions_by_spend(spends)
-        return ReachPoint(impressions, frequencies, spends)
+        return ReachPoint(
+            impressions=impressions, kplus_reaches=frequencies, spends=spends
+        )
 
     def simulated_venn_diagram_reach_by_spend(
         self,

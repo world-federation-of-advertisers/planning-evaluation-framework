@@ -317,15 +317,15 @@ class HaloSimulator:
         primitive_regions: Dict[int, List],
         sample_size: int,
         random_generator: np.random.Generator = np.random.default_rng(),
-    ) -> Dict[int, List]:
+    ) -> Dict[int, int]:
         """Return primitive regions with sampled reaches.
 
         Args:
             primitive_regions:  A dictionary in which each key is the binary
-              representations of each non-empty primitive region of the Venn
-              diagram, and each value is a list of the k+ reaches in the
-              corresponding region.
-              Note that the binary representation of the key represents the
+              representations of a primitive region of the Venn diagram, and
+              each value is a list of the k+ reaches in the corresponding
+              region.
+              Note that the binary representation of a key represents the
               formation of publisher IDs in that primitive region. For example,
               primitive_regions[key] with key = 5 = bin('101') is the region
               which belongs to pub_id-0 and id-2.
@@ -338,9 +338,8 @@ class HaloSimulator:
               distribution.
         Returns:
             A dictionary in which each key is the binary representations of
-              each primitive region of the Venn diagram, and each value is a
-              list with length 1 containing the sampled reach in the
-              corresponding region.
+              a primitive region of the Venn diagram, and each value is the
+              sampled reach in the corresponding gregion.
               Note that the binary representation of the key represents the
               formation of publisher IDs in that primitive region. For example,
               primitive_regions[key] with key = 5 = bin('101') is the region

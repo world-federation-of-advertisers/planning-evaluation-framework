@@ -16,6 +16,7 @@
 from absl.testing import absltest
 import numpy as np
 from typing import List
+from unittest.mock import patch
 
 from wfa_planning_evaluation_framework.models.gamma_poisson_model import (
     GammaPoissonModel,
@@ -43,7 +44,7 @@ class FakeHalo:
     @property
     def publisher_count(self):
         return 1
-    
+
     @property
     def campaign_spends(self):
         return [100.0]
@@ -59,7 +60,11 @@ class FakeHalo:
 
 
 class SinglePublisherStrategyTest(absltest.TestCase):
-    def test_single_publisher_strategy(self):
+    @patch(
+        "wfa_planning_evaluation_framework.models.gamma_poisson_model.GammaPoissonModel._fit_histogram_chi2_distance"
+    )
+    def test_single_publisher_strategy(self, mock_gamma_poisson_model):
+        mock_gamma_poisson_model.return_value = (30000, 10000, 1.0, 2.0)
         halo = FakeHalo()
         params = SystemParameters(
             [100.0], LiquidLegionsParameters(), np.random.default_rng(seed=1)

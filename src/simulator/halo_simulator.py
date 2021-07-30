@@ -271,13 +271,11 @@ class HaloSimulator:
               r[k] is the number of people who were reached AT LEAST k+1 times.
         """
         # Get user counts by spend for each active publisher
-        user_counts_by_pub_id = {}
-        for pub_id, spend in enumerate(spends):
-            if not spend:
-                continue
-            user_counts_by_pub_id[pub_id] = self._publishers[
-                pub_id
-            ]._publisher_data.user_counts_by_spend(spend)
+        user_counts_by_pub_id = {
+            pub_id: self._publishers[pub_id]._publisher_data.user_counts_by_spend(spend)
+            for pub_id, spend in enumerate(spends)
+            if spend
+        }
 
         if len(user_counts_by_pub_id) > MAX_ACTIVE_PUBLISHERS:
             raise ValueError(
@@ -285,7 +283,18 @@ class HaloSimulator:
                 f"diagram algorithm. The maximum limit is {MAX_ACTIVE_PUBLISHERS}."
             )
 
-        # Locate user's region represented by a number and sum the impressions.
+        # Generate the representations of all primitive regions from the
+        # powerset of the active publishers, excluding the empty set.
+        active_pubs = list(user_counts_by_pub_id.keys())
+        active_pub_powerset = chain.from_iterable(
+            combinations(active_pubs, r) for r in range(1, len(active_pubs) + 1)
+        )
+        regions_with_active_pubs = [
+            sum(1 << pub_id for pub_id in pub_ids) for pub_ids in active_pub_powerset
+        ]
+
+        # Locate user's region which is represented by the binary representation
+        # of a number, and sum the user's impressions.
         user_region = defaultdict(int)
         user_impressions = defaultdict(int)
 
@@ -299,18 +308,21 @@ class HaloSimulator:
                 user_region[user_id] |= 1 << pub_id
                 user_impressions[user_id] += impressions
 
-        # Compute frequencies in the occupied regions of the Venn diagram with
-        # capped user counts.
+        # Compute the frequencies in the occupied primitive Venn diagram regions
+        # with the user counts capped by max_frequency.
         frequencies_by_region = {
-            r: [0] * (max_frequency + 1) for r in set(user_region.values())
+            r: [0] * (max_frequency + 1) for r in regions_with_active_pubs
         }
         for user_id, region in user_region.items():
             impressions = min(max_frequency, user_impressions[user_id])
             frequencies_by_region[region][impressions] += 1
 
-        # Compute k+ reaches in each region. Ignore 0 frequency.
+        # Compute k+ reaches in the primitive regions. Ignore 0-frequency.
+        occupied_regions = set(user_region.values())
         regions = {
             r: ReachPoint.frequencies_to_kplus_reaches(freq[1:])
+            if r in occupied_regions
+            else freq[1:]  # i.e. zero vector
             for r, freq in frequencies_by_region.items()
         }
 

@@ -244,18 +244,27 @@ class HaloSimulatorTest(parameterized.TestCase):
 
     @parameterized.named_parameters(
         {
-            "testcase_name": "with_1_region",
+            "testcase_name": "with_1_region_and_1plus_reaches",
             "regions": {3: [1]},
             "sample_size": 1,
             "random_generator": np.random.default_rng(0),
-            "expected": {3: [1]},
+            "expected": {3: 1},
         },
+        # regions = [1, 2, 5, 10, 17]
         {
-            "testcase_name": "with_5_regions_and_fake_rng",
+            "testcase_name": "with_5_regions_1plus_reaches_and_fake_rng",
             "regions": {i: [i ** 2 + 1] for i in range(5)},
             "sample_size": 20,
             "random_generator": FakeRandomGenerator(),
-            "expected": {i: [n] for i, n in enumerate([1, 2, 5, 6, 6])},
+            "expected": {i: n for i, n in enumerate([1, 2, 5, 6, 6])},
+        },
+        # regions = [[0, 0], [2, 1], [0, 0], [10, 3], [0, 0], [26, 5]]
+        {
+            "testcase_name": "with_6_regions_2plus_reaches_and_fake_rng",
+            "regions": {i: [i ** 2 + 1, i] if i % 2 else [0, 0] for i in range(6)},
+            "sample_size": 20,
+            "random_generator": FakeRandomGenerator(),
+            "expected": {i: n for i, n in enumerate([0, 2, 0, 9, 0, 9])},
         },
     )
     def test_sample_venn_diagram(
@@ -341,7 +350,7 @@ class HaloSimulatorTest(parameterized.TestCase):
         privacy_tracker = PrivacyTracker()
         halo = HaloSimulator(data_set, params, privacy_tracker)
 
-        # Note that the reach points generated from the Venn diagram only 
+        # Note that the reach points generated from the Venn diagram only
         # contain 1+ reaches.
         reach_points = halo._generate_reach_points_from_venn_diagram(spends, regions)
 

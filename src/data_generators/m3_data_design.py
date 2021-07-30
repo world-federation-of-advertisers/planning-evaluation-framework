@@ -121,7 +121,9 @@ OVERLAP_GENERATORS = [
         "Seqential",
         SequentiallyCorrelatedOverlapDataSet,
         {
-            "order": OrderOptions.random,
+            "order": OrderOptions.original,
+            # The random and reversed orders are not supported in the current
+            # evaluation framework. Can add them if needed.
             "correlated_sets": CorrelatedSetsOptions.all,
             "shared_prop": 0.75,
             "random_generator": 6,
@@ -131,7 +133,7 @@ OVERLAP_GENERATORS = [
         "Seqential",
         SequentiallyCorrelatedOverlapDataSet,
         {
-            "order": OrderOptions.random,
+            "order": OrderOptions.original,
             "correlated_sets": CorrelatedSetsOptions.one,
             "shared_prop": 0.25,
             "random_generator": 7,

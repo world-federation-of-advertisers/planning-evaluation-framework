@@ -135,7 +135,7 @@ class GeneralizedMixtureReachSurfaceTest(absltest.TestCase):
         )
 
         surface = GeneralizedMixtureReachSurface(
-            reach_curves, training_reach_points, num_clusters
+            reach_curves, training_reach_points, num_clusters, N
         )
 
         test_reach_points = self.generate_sample_reach_points(

@@ -93,6 +93,31 @@ class HaloSimulatorTest(parameterized.TestCase):
         )
         self.assertTrue(reach_point.reach(1) >= 0)
 
+    @parameterized.parameters(
+        [1, 0],
+        [1e5, 731820],
+    )
+    def test_liquid_legions_cardinality_estimate_variance(self, cardinality, variance):
+        self.assertAlmostEqual(
+            self.halo._liquid_legions_cardinality_estimate_variance(cardinality),
+            variance,
+            0,
+            msg=f"The variance for estimating n={cardinality} is not correct.",
+        )
+
+    @parameterized.parameters(
+        [1, np.random.default_rng(0), 1],
+        [1e5, np.random.default_rng(0), 8259],
+    )
+    def test_liquid_legions_num_active_regions(
+        self, cardinality, random_state, num_active
+    ):
+        self.assertEqual(
+            self.halo._liquid_legions_num_active_regions(cardinality, random_state),
+            num_active,
+            msg=f"The number of active registers for n={cardinality} is not correct.",
+        )
+
     def test_form_venn_diagram_regions_with_publishers_more_than_limit(self):
         num_publishers = MAX_ACTIVE_PUBLISHERS + 1
         data_set = DataSet(
@@ -299,7 +324,7 @@ class HaloSimulatorTest(parameterized.TestCase):
         privacy_tracker = PrivacyTracker()
         halo = HaloSimulator(data_set, params, privacy_tracker)
 
-        # Note that the reach points generated from the Venn diagram only 
+        # Note that the reach points generated from the Venn diagram only
         # contain 1+ reaches.
         reach_points = halo._generate_reach_points_from_venn_diagram(spends, regions)
 

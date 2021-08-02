@@ -440,9 +440,9 @@ class HaloSimulator:
         return noised_primitive_regions
 
     def _aggregate_reach_in_primitive_venn_diagram_regions(
-        self, pub_ids: List[int], primitive_regions: Dict[int, List]
+        self, pub_ids: List[int], primitive_regions: Dict[int, int]
     ) -> int:
-        """Returns aggregated reach from Venn diagram primitive regions.
+        """Returns the aggregated reach from the primitive Venn diagram regions.
 
         To obtain the union reach of the given subset of publishers, we sum up
         the reaches from the primitive regions which belong to at least one of
@@ -462,17 +462,19 @@ class HaloSimulator:
         Args:
             pub_ids:  The list of target publisher IDs for computing aggregated
               reach.
-            primitive_regions:  Contains k+ reaches in the regions. The k+
-              reaches for a given region is given as a list r[] where r[k] is
-              the number of people who were reached AT LEAST k+1 times.
+            primitive_regions:  A dictionary in which each key is the binary
+              representation of a primitive region of the Venn diagram, and
+              each value is the reach in the corresponding region.
+              Note that the binary representation of the key represents the
+              formation of publisher IDs in that primitive region. For example,
+              primitive_regions[key] with key = 5 = bin('101') is the region
+              which belongs to pub_id-0 and id-2.
         Returns:
-            aggregated_reach:  The total reach from the given publishers.
+            The sum of reaches from the given publishers.
         """
         targeted_pub_repr = sum(1 << pub_id for pub_id in pub_ids)
         aggregated_reach = sum(
-            primitive_regions[r][0]
-            for r in primitive_regions.keys()
-            if r & targeted_pub_repr
+            reach for r, reach in primitive_regions.items() if r & targeted_pub_repr
         )
 
         return aggregated_reach
@@ -505,7 +507,8 @@ class HaloSimulator:
         """
         active_pub_set = [i for i in range(len(spends)) if spends[i]]
         active_pub_powerset = chain.from_iterable(
-            combinations(active_pub_set, r) for r in range(1, len(active_pub_set) + 1)
+            combinations(active_pub_set, set_size)
+            for set_size in range(1, len(active_pub_set) + 1)
         )
         impressions = self._data_set.impressions_by_spend(spends)
 
@@ -514,10 +517,12 @@ class HaloSimulator:
             sub_reach = self._aggregate_reach_in_primitive_venn_diagram_regions(
                 sub_pub_ids, primitive_regions
             )
+
             pub_subset = set(sub_pub_ids)
             pub_vector = np.array([int(i in pub_subset) for i in range(len(spends))])
             sub_imps = np.array(impressions) * pub_vector
             sub_spends = np.array(spends) * pub_vector
+
             reach_points.append(
                 ReachPoint(sub_imps.tolist(), [sub_reach], sub_spends.tolist())
             )

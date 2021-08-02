@@ -245,16 +245,12 @@ class HaloSimulatorTest(parameterized.TestCase):
 
     @parameterized.named_parameters(
         # testcase_name, pub_ids, regions, expected
-        ("without_publisher", [], {1: [1], 3: [1]}, 0),
+        ("without_publisher", [], {1: 1, 2: 0, 3: 1}, 0),
         ("without_region", [0, 1], {}, 0),
-        ("with_1R1P_1plus_reach", [0], {3: [1]}, 1),
-        ("with_1R2P_1plus_reach", [0, 1], {3: [1]}, 1),
-        ("with_3R1P_1plus_reach", [0], {1: [2], 2: [1], 3: [1]}, 3),
-        ("with_3R2P_1plus_reach", [0, 1], {1: [2], 2: [1], 3: [1]}, 4),
-        ("with_1R1P_2plus_reach", [0], {3: [1, 1]}, 1),
-        ("with_1R2P_2plus_reach", [0, 1], {3: [1, 1]}, 1),
-        ("with_3R1P_2plus_reach", [0], {1: [2, 1], 2: [1, 1], 3: [1, 1]}, 3),
-        ("with_3R2P_2plus_reach", [0, 1], {1: [2, 1], 2: [1, 1], 3: [1, 1]}, 4),
+        ("with_1_occupied_region_1_pub", [0], {1: 0, 2: 0, 3: 1}, 1),
+        ("with_1_occupied_region_2_pubs", [0, 1], {1: 0, 2: 0, 3: 1}, 1),
+        ("with_3_occupied_regions_1_pub", [0], {1: 2, 2: 1, 3: 1}, 3),
+        ("with_3_occupied_regions_2_pubs", [0, 1], {1: 2, 2: 1, 3: 1}, 4),
     )
     def test_aggregate_reach_in_primitive_venn_diagram_regions(
         self, pub_ids, regions, expected
@@ -385,10 +381,10 @@ class HaloSimulatorTest(parameterized.TestCase):
             "expected": [],
         },
         {
-            "testcase_name": "with_1_active_pub_from_2_pubs",
+            "testcase_name": "with_1_region_2_active_pubs",
             "num_publishers": 2,
             "spends": [0.04, 0.02],
-            "regions": {1: [2]},
+            "regions": {1: 2},
             "expected": [
                 ReachPoint([3, 0], [2], [0.04, 0]),
                 ReachPoint([0, 0], [0], [0, 0.02]),
@@ -396,25 +392,14 @@ class HaloSimulatorTest(parameterized.TestCase):
             ],
         },
         {
-            "testcase_name": "with_2_active_pubs",
+            "testcase_name": "with_3_regions_2_active_pubs",
             "num_publishers": 2,
             "spends": [0.04, 0.04],
-            "regions": {1: [1], 3: [1]},
+            "regions": {1: 1, 2: 0, 3: 1},
             "expected": [
                 ReachPoint([3, 0], [2], [0.04, 0]),
                 ReachPoint([0, 1], [1], [0, 0.04]),
                 ReachPoint([3, 1], [2], [0.04, 0.04]),
-            ],
-        },
-        {
-            "testcase_name": "with_2_active_pubs_from_3_pubs",
-            "num_publishers": 3,
-            "spends": [0.05, 0.08, 0.0],
-            "regions": {1: [2, 1], 2: [1, 0], 3: [1, 1]},
-            "expected": [
-                ReachPoint([4, 0, 0], [3], [0.05, 0, 0]),
-                ReachPoint([0, 2, 0], [2], [0, 0.08, 0]),
-                ReachPoint([4, 2, 0], [4], [0.05, 0.08, 0]),
             ],
         },
     )

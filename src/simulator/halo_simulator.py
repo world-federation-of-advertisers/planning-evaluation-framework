@@ -313,32 +313,28 @@ class HaloSimulator:
 
     def _add_dp_noise_to_primitive_regions(
         self,
-        occupied_primitive_regions: Dict[int, List],
-        num_all_primitive_regions: int,
+        primitive_regions: Dict[int, int],
         budget: PrivacyBudget,
         privacy_budget_split: float,
-    ) -> Dict[int, List]:
+    ) -> Dict[int, int]:
         """Add differential privacy noise to every primitive region
 
         Args:
-            occupied_primitive_regions:  A dictionary in which each key is the
-              binary representations of each primitive region of the Venn
-              diagram, and each value is a list with length 1 containing the
-              reach in the corresponding region.
+            primitive_regions:  A dictionary in which each key is the binary
+              representation of a primitive region of the Venn diagram, and
+              each value is the reach in the corresponding region.
               Note that the binary representation of the key represents the
               formation of publisher IDs in that primitive region. For example,
               primitive_regions[key] with key = 5 = bin('101') is the region
               which belongs to pub_id-0 and id-2.
-            num_all_primitive_regions:  The number of all primitive regions.
             budget:  The amount of privacy budget that can be consumed while
               satisfying the request.
             privacy_budget_split:  Specifies the proportion of the privacy
               budget that should be allocated to the operation in this function.
         Returns:
-            A dictionary that contains `num_all_primitive_regions` key-value
-              pairs. Each key in the dictionary is the binary representations
-              of each primitive region of the Venn diagram, and each value is a
-              list of the noised reach in the corresponding region.
+            A dictionary in which each key is the binary representation of a
+              primitive region of the Venn diagram, and each value is the
+              noised reach in the corresponding region.
               Note that the binary representation of the key represents the
               formation of publisher IDs in that primitive region. For example,
               primitive_regions[key] with key = 5 = bin('101') is the region
@@ -362,7 +358,7 @@ class HaloSimulator:
 
         noised_primitive_regions = {}
         for region_repr in range(1, num_all_primitive_regions + 1):
-            reach = occupied_primitive_regions.get(region_repr, [0])[0]
+            reach = primitive_regions.get(region_repr, [0])[0]
             noised_primitive_regions[region_repr] = [max(0, noiser(reach))]
 
         self._privacy_tracker.append(noise_event)

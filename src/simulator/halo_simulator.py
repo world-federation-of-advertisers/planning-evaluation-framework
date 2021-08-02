@@ -261,7 +261,7 @@ class HaloSimulator:
             max_frequency:  The maximum frequency for which to report reach.
         Returns:
             regions:  A dictionary in which each key is the binary
-              representations of each primitive region of the Venn diagram, and
+              representation of each primitive region of the Venn diagram, and
               each value is a list of the k+ reaches in the corresponding
               region.
               Note that the binary representation of a key represents the

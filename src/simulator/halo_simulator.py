@@ -311,48 +311,18 @@ class HaloSimulator:
 
         noised_sampled_venn_diagram_regions = self._add_dp_noise_to_primitive_regions(
             sampled_venn_diagram_regions,
-            1 << len(spends) - 1,
             budget,
             privacy_budget_split,
             random_state,
         )
-        # Inside the function:
-        # random_state = (
-        #     random_state
-        #     if random_state
-        #     else np.random.RandomState(
-        #         seed=self._params.generator.integers(low=0, high=1e9)
-        #     )
-        # )
-        # noiser = GeometricEstimateNoiser(
-        #     budget.epsilon * privacy_budget_split,
-        #     random_state,
-        # )
-        # noise_event_for_reach = NoisingEvent(
-        #     PrivacyBudget(
-        #         budget.epsilon * privacy_budget_split,
-        #         budget.delta * privacy_budget_split,
-        #     ),
-        #     DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
-        #     {"privacy_budget_split": privacy_budget_split},
-        # )
-        # ...
 
         scaled_venn_diagram_regions = self._scale_up_venn_diagram_regions(
             noised_sampled_venn_diagram_regions,
             true_cardinality,
             budget,
             1 - privacy_budget_split,
-            random_state,
         )
         # Inside the function:
-        # random_state = (
-        #     random_state
-        #     if random_state
-        #     else np.random.RandomState(
-        #         seed=self._params.generator.integers(low=0, high=1e9)
-        #     )
-        # )
         # noiser = GeometricEstimateNoiser(
         #     budget.epsilon * privacy_budget_split, random_state
         # )

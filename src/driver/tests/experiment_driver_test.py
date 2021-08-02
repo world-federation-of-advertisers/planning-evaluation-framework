@@ -30,7 +30,7 @@ from wfa_planning_evaluation_framework.driver.experimental_trial import (
 )
 from wfa_planning_evaluation_framework.driver import sample_experimental_design
 from wfa_planning_evaluation_framework.driver import m3_first_round_experimental_design
-from wfa_planning_evaluation_framework.data_generators import (
+from wfa_planning_evaluation_framework.driver import (
     analysis_example_experimental_design,
 )
 from wfa_planning_evaluation_framework.driver import single_publisher_design
@@ -111,6 +111,10 @@ class ExperimentDriverTest(absltest.TestCase):
             result = experiment_driver.execute()
             self.assertEqual(result.shape[0], 5184)
 
+    @patch(
+        "wfa_planning_evaluation_framework.driver.experiment.ExperimentalTrial",
+        new=FakeExperimentalTrial,
+    )
     def test_experiment_driver_with_analysis_example_experimental_design(self):
         with TemporaryDirectory() as d:
             data_design_dir = d + "/data"

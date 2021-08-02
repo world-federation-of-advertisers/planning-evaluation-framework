@@ -245,24 +245,21 @@ class HaloSimulatorTest(parameterized.TestCase):
         self.assertEqual(agg_reach, expected)
 
     @parameterized.named_parameters(
-        # testcase_name, regions, num_all_regions, budget, expected
-        {
-            "testcase_name": "with_empty_regions",
-            "regions": {},
-            "num_all_regions": 3,
-            "budget": PrivacyBudget(0.1, 0.1),
-            "privacy_budget_split": 0.3,
-            "fixed_noise": 1.0,
-            "expected_regions": {1: [1.0], 2: [1.0], 3: [1.0]},
-        },
         {
             "testcase_name": "with_1_regions",
-            "regions": {2: [4.0]},
-            "num_all_regions": 3,
+            "regions": {1: 1},
             "budget": PrivacyBudget(0.2, 0.4),
             "privacy_budget_split": 0.7,
-            "fixed_noise": 0.2,
-            "expected_regions": {1: [0.2], 2: [4.2], 3: [0.2]},
+            "fixed_noise": 1,
+            "expected_regions": {1: 2},
+        },
+        {
+            "testcase_name": "with_3_regions",
+            "regions": {1: 1, 2: 0, 3: 1},
+            "budget": PrivacyBudget(0.1, 0.1),
+            "privacy_budget_split": 0.3,
+            "fixed_noise": 2,
+            "expected_regions": {1: 3, 2: 2, 3: 3},
         },
     )
     @patch(
@@ -272,7 +269,6 @@ class HaloSimulatorTest(parameterized.TestCase):
         self,
         mock_geometric_estimate_noiser,
         regions,
-        num_all_regions,
         budget,
         privacy_budget_split,
         fixed_noise,
@@ -283,7 +279,7 @@ class HaloSimulatorTest(parameterized.TestCase):
         halo = HaloSimulator(DataSet([], "test"), SystemParameters(), PrivacyTracker())
 
         noised_regions = halo._add_dp_noise_to_primitive_regions(
-            regions, num_all_regions, budget, privacy_budget_split
+            regions, budget, privacy_budget_split
         )
 
         self.assertEqual(noised_regions, expected_regions)

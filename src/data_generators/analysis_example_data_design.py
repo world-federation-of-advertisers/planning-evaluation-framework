@@ -13,7 +13,6 @@
 # limitations under the License.
 """Data design for a quick eval to establish analysis practice."""
 
-from pyDOE import lhs
 from typing import Iterable
 import itertools
 import numpy as np

@@ -400,6 +400,11 @@ class GammaPoissonModel(ReachCurve):
         # starting points.
         Nvalues = Nmin / (np.arange(1, nstarting_points + 1) / (nstarting_points + 1))
 
+        # If the objective function for an optimization attempt is smaller than
+        # this value, then we have found a model that fits the data.  There is no
+        # need to continue searching for a better fit.
+        early_stopping_value = scipy.stats.chi2.ppf(0.98, len(h))
+
         for N0 in Nvalues:
             # Choose a reasonable starting point for optimization.
             Imax0, alpha0, beta0 = self._fit_histogram_fixed_N(
@@ -423,6 +428,9 @@ class GammaPoissonModel(ReachCurve):
             if result.fun < best_score:
                 best_alpha, best_beta, best_N = result.x
                 best_score = result.fun
+
+            if best_score < early_stopping_value:
+                break
 
         best_Imax = self._expected_impressions(best_N, best_alpha, best_beta)
         return best_Imax, best_N, best_alpha, best_beta

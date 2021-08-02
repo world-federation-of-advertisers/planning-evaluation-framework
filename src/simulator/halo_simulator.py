@@ -317,7 +317,7 @@ class HaloSimulator:
 
         Args:
             primitive_regions:  A dictionary in which each key is the binary
-              representations of a primitive region of the Venn diagram, and
+              representation of a primitive region of the Venn diagram, and
               each value is a list of the k+ reaches in the corresponding
               region.
               Note that the binary representation of a key represents the
@@ -332,8 +332,8 @@ class HaloSimulator:
               used for generating samples from a multivariate hypergeometric
               distribution.
         Returns:
-            A dictionary in which each key is the binary representations of
-              a primitive region of the Venn diagram, and each value is the
+            A dictionary in which each key is the binary representation of a
+              primitive region of the Venn diagram, and each value is the
               sampled reach in the corresponding gregion.
               Note that the binary representation of the key represents the
               formation of publisher IDs in that primitive region. For example,

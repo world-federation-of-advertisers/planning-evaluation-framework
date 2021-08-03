@@ -244,23 +244,6 @@ class HaloSimulatorTest(parameterized.TestCase):
         self.assertEqual(expected, regions)
 
     @parameterized.named_parameters(
-        # testcase_name, pub_ids, regions, expected
-        ("without_publisher", [], {1: 1, 2: 0, 3: 1}, 0),
-        ("without_region", [0, 1], {}, 0),
-        ("with_1_occupied_region_1_pub", [0], {1: 0, 2: 0, 3: 1}, 1),
-        ("with_1_occupied_region_2_pubs", [0, 1], {1: 0, 2: 0, 3: 1}, 1),
-        ("with_3_occupied_regions_1_pub", [0], {1: 2, 2: 1, 3: 1}, 3),
-        ("with_3_occupied_regions_2_pubs", [0, 1], {1: 2, 2: 1, 3: 1}, 4),
-    )
-    def test_aggregate_reach_in_primitive_venn_diagram_regions(
-        self, pub_ids, regions, expected
-    ):
-        agg_reach = self.halo._aggregate_reach_in_primitive_venn_diagram_regions(
-            pub_ids, regions
-        )
-        self.assertEqual(agg_reach, expected)
-
-    @parameterized.named_parameters(
         {
             "testcase_name": "with_1_region_and_1plus_reaches",
             "regions": {3: [1]},
@@ -359,6 +342,23 @@ class HaloSimulatorTest(parameterized.TestCase):
             halo.privacy_tracker._noising_events[0].params,
             {"privacy_budget_split": privacy_budget_split},
         )
+
+    @parameterized.named_parameters(
+        # testcase_name, pub_ids, regions, expected
+        ("without_publisher", [], {1: 1, 2: 0, 3: 1}, 0),
+        ("without_region", [0, 1], {}, 0),
+        ("with_1_occupied_region_1_pub", [0], {1: 0, 2: 0, 3: 1}, 1),
+        ("with_1_occupied_region_2_pubs", [0, 1], {1: 0, 2: 0, 3: 1}, 1),
+        ("with_3_occupied_regions_1_pub", [0], {1: 2, 2: 1, 3: 1}, 3),
+        ("with_3_occupied_regions_2_pubs", [0, 1], {1: 2, 2: 1, 3: 1}, 4),
+    )
+    def test_aggregate_reach_in_primitive_venn_diagram_regions(
+        self, pub_ids, regions, expected
+    ):
+        agg_reach = self.halo._aggregate_reach_in_primitive_venn_diagram_regions(
+            pub_ids, regions
+        )
+        self.assertEqual(agg_reach, expected)
 
     @parameterized.named_parameters(
         # testcase_name, num_publishers, spends, regions, expected

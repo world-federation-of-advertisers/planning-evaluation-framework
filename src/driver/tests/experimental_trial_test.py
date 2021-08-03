@@ -347,7 +347,7 @@ class ExperimentalTrialTest(absltest.TestCase):
             self.assertEqual(result["model_succeeded"][0], 0)
             self.assertEqual(
                 result["model_exception"][0],
-                "Cannot fit Goerg model when impressions=reach",
+                "Cannot fit Goerg model when impressions <= reach.",
             )
 
 

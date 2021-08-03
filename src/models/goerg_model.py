@@ -52,8 +52,8 @@ class GoergModel(ReachCurve):
 
     def _fit(self) -> None:
         """Fits a model to the data that was provided in the constructor."""
-        if abs(self._impressions - self._reach) < 0.001:
-            raise ValueError("Cannot fit Goerg model when impressions=reach")
+        if self._impressions <= self._reach:
+            raise ValueError("Cannot fit Goerg model when impressions <= reach.")
         else:
             self._rho = (self._impressions * self._reach) / (
                 self._impressions - self._reach
@@ -100,3 +100,8 @@ class GoergModel(ReachCurve):
         if len(spends) != 1:
             raise ValueError("Spend vector must have a length of 1.")
         return self.by_impressions([spends[0] / self._cpi], max_frequency)
+
+    def impressions_for_spend(self, spend: float) -> int:
+        if not self._cpi:
+            raise ValueError("Impression cost is not known for this ReachPoint.")
+        return spend / self._cpi

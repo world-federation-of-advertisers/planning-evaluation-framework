@@ -43,7 +43,7 @@ AGGREGATORS = {
     ),
     # Mean squared relative error in predicted reach
     "mean_squared_relative_error": lambda x, y: np.mean(
-        (_reach(x) - _reach(y)) ** 2 / _reach(x)
+        (_reach(x) - _reach(y)) ** 2 / _reach(x) ** 2
     ),
     # Error variance in predicted reach
     "var_error": lambda x, y: np.var(_reach(x) - _reach(y)),

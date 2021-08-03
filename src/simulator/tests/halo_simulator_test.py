@@ -70,6 +70,12 @@ class FakeRandomGenerator:
 
         return samples
 
+    def integers(self, low, high=None, size=None):
+        return np.random.default_rng().integers(low=low, high=high, size=size)
+
+    def normal(loc=0.0, scale=1.0):
+        return loc + scale
+
 
 class HaloSimulatorTest(parameterized.TestCase):
     @classmethod
@@ -364,6 +370,30 @@ class HaloSimulatorTest(parameterized.TestCase):
         self.assertEqual(
             halo.privacy_tracker._noising_events[0].params,
             {"privacy_budget_split": privacy_budget_split},
+        )
+
+    @parameterized.named_parameters(
+        {
+            "testcase_name": "with_1_regions",
+            "regions": {1: 1},
+            "true_cardinality": 20,
+            "std": 1.0,
+            "budget": PrivacyBudget(0.2, 0.4),
+            "privacy_budget_split": 0.7,
+            "expected": {1: 2},
+        },
+    )
+    @patch(
+        "wfa_planning_evaluation_framework.simulator.halo_simulator.GeometricEstimateNoiser"
+    )
+    def test_scale_up_reach_in_primitive_regions(
+        self, regions, true_cardinality, std, budget, privacy_budget_split, expected
+    ):
+        params = SystemParameters([0], LiquidLegionsParameters(), FakeRandomGenerator)
+        halo = HaloSimulator(DataSet([], "test"), params, PrivacyTracker())
+
+        scaled_regions = halo._scale_up_reach_in_primitive_regions(
+            regions, true_cardinality, std, budget, privacy_budget_split
         )
 
     @parameterized.named_parameters(

@@ -28,6 +28,9 @@ from collections import defaultdict
 from itertools import chain, combinations
 import numpy as np
 
+from wfa_cardinality_estimation_evaluation_framework.estimators.base import (
+    EstimateNoiserBase,
+)
 from wfa_cardinality_estimation_evaluation_framework.estimators.same_key_aggregator import (
     StandardizedHistogramEstimator,
 )
@@ -46,6 +49,7 @@ from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
     DP_NOISE_MECHANISM_DISCRETE_GAUSSIAN,
+    DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
 )
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import NoisingEvent
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyBudget
@@ -314,7 +318,6 @@ class HaloSimulator:
         random_generator: np.random.Generator = np.random.default_rng(),
     ) -> Dict[int, int]:
         """Return primitive regions with sampled reaches.
-
         Args:
             primitive_regions:  A dictionary in which each key is the binary
               representation of a primitive region of the Venn diagram, and
@@ -360,6 +363,60 @@ class HaloSimulator:
         return {
             region_repr: r for region_repr, r in zip(region_repr_seq, sampled_reach)
         }
+
+    def _add_dp_noise_to_primitive_regions(
+        self,
+        primitive_regions: Dict[int, int],
+        budget: PrivacyBudget,
+        privacy_budget_split: float,
+    ) -> Dict[int, int]:
+        """Add differential privacy noise to every primitive region
+
+        Args:
+            primitive_regions:  A dictionary in which each key is the binary
+              representation of a primitive region of the Venn diagram, and
+              each value is the reach in the corresponding region.
+              Note that the binary representation of the key represents the
+              formation of publisher IDs in that primitive region. For example,
+              primitive_regions[key] with key = 5 = bin('101') is the region
+              which belongs to pub_id-0 and id-2.
+            budget:  The amount of privacy budget that can be consumed while
+              satisfying the request.
+            privacy_budget_split:  Specifies the proportion of the privacy
+              budget that should be allocated to the operation in this function.
+        Returns:
+            A dictionary in which each key is the binary representation of a
+              primitive region of the Venn diagram, and each value is the
+              noised reach in the corresponding region.
+              Note that the binary representation of the key represents the
+              formation of publisher IDs in that primitive region. For example,
+              primitive_regions[key] with key = 5 = bin('101') is the region
+              which belongs to pub_id-0 and id-2.
+        """
+        noiser = GeometricEstimateNoiser(
+            budget.epsilon * privacy_budget_split,
+            np.random.RandomState(
+                seed=self._params.generator.integers(low=0, high=1e9)
+            ),
+        )
+
+        noise_event = NoisingEvent(
+            PrivacyBudget(
+                budget.epsilon * privacy_budget_split,
+                budget.delta * privacy_budget_split,
+            ),
+            DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
+            {"privacy_budget_split": privacy_budget_split},
+        )
+
+        noised_primitive_regions = {
+            region_repr: max(0, noiser(reach))
+            for region_repr, reach in primitive_regions.items()
+        }
+
+        self._privacy_tracker.append(noise_event)
+
+        return noised_primitive_regions
 
     def _aggregate_reach_in_primitive_venn_diagram_regions(
         self, pub_ids: List[int], primitive_regions: Dict[int, List]

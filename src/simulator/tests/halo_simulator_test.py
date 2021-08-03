@@ -17,7 +17,11 @@ from absl.testing import absltest
 from absl.testing import parameterized
 import numpy as np
 from unittest.mock import patch
+from dataclasses import dataclass
 
+from wfa_cardinality_estimation_evaluation_framework.estimators.base import (
+    EstimateNoiserBase,
+)
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
@@ -28,8 +32,12 @@ from wfa_planning_evaluation_framework.simulator.halo_simulator import (
     MAX_ACTIVE_PUBLISHERS,
 )
 from wfa_planning_evaluation_framework.simulator.publisher import Publisher
-from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyBudget
-from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyTracker
+from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
+    PrivacyBudget,
+    PrivacyTracker,
+    NoisingEvent,
+    DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
+)
 from wfa_planning_evaluation_framework.simulator.system_parameters import (
     LiquidLegionsParameters,
     SystemParameters,
@@ -39,6 +47,14 @@ from wfa_planning_evaluation_framework.simulator.system_parameters import (
 class FakeLaplaceMechanism:
     def __call__(self, x):
         return [2 * y for y in x]
+
+
+@dataclass
+class FakeNoiser(EstimateNoiserBase):
+    fixed_noise: float
+
+    def __call__(self, estimate):
+        return estimate + self.fixed_noise
 
 
 class FakeRandomGenerator:
@@ -278,6 +294,69 @@ class HaloSimulatorTest(parameterized.TestCase):
     def test_sample_venn_diagram_with_invalid_input(self):
         with self.assertRaises(ValueError):
             self.halo._sample_venn_diagram({3: [1]}, 20)
+
+    @parameterized.named_parameters(
+        {
+            "testcase_name": "with_1_regions",
+            "regions": {1: 1},
+            "budget": PrivacyBudget(0.2, 0.4),
+            "privacy_budget_split": 0.7,
+            "fixed_noise": 1,
+            "expected_regions": {1: 2},
+        },
+        {
+            "testcase_name": "with_3_regions",
+            "regions": {1: 1, 2: 0, 3: 1},
+            "budget": PrivacyBudget(0.1, 0.1),
+            "privacy_budget_split": 0.3,
+            "fixed_noise": 2,
+            "expected_regions": {1: 3, 2: 2, 3: 3},
+        },
+    )
+    @patch(
+        "wfa_planning_evaluation_framework.simulator.halo_simulator.GeometricEstimateNoiser"
+    )
+    def test_add_dp_noise_to_primitive_regions(
+        self,
+        mock_geometric_estimate_noiser,
+        regions,
+        budget,
+        privacy_budget_split,
+        fixed_noise,
+        expected_regions,
+    ):
+        mock_geometric_estimate_noiser.return_value = FakeNoiser(fixed_noise)
+
+        halo = HaloSimulator(DataSet([], "test"), SystemParameters(), PrivacyTracker())
+
+        noised_regions = halo._add_dp_noise_to_primitive_regions(
+            regions, budget, privacy_budget_split
+        )
+
+        self.assertEqual(noised_regions, expected_regions)
+        self.assertEqual(
+            halo.privacy_tracker._epsilon_sum, budget.epsilon * privacy_budget_split
+        )
+        self.assertEqual(
+            halo.privacy_tracker._delta_sum, budget.delta * privacy_budget_split
+        )
+        self.assertEqual(len(halo.privacy_tracker._noising_events), 1)
+        self.assertEqual(
+            halo.privacy_tracker._noising_events[0].budget.epsilon,
+            budget.epsilon * privacy_budget_split,
+        )
+        self.assertEqual(
+            halo.privacy_tracker._noising_events[0].budget.delta,
+            budget.delta * privacy_budget_split,
+        )
+        self.assertEqual(
+            halo.privacy_tracker._noising_events[0].mechanism,
+            DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
+        )
+        self.assertEqual(
+            halo.privacy_tracker._noising_events[0].params,
+            {"privacy_budget_split": privacy_budget_split},
+        )
 
     @parameterized.named_parameters(
         # testcase_name, num_publishers, spends, regions, expected

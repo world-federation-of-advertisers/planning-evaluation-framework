@@ -139,103 +139,109 @@ class HaloSimulatorTest(parameterized.TestCase):
         with self.assertRaises(ValueError):
             halo._form_venn_diagram_regions(spends)
 
-    def test_form_venn_diagram_regions_with_2_inactive_publishers_and_1plus_reach(self):
-        pdf1 = PublisherData([(1, 0.04)], "pdf1")
-        pdf2 = PublisherData([(1, 0.04)], "pdf2")
-        data_set = DataSet([pdf1, pdf2], "test")
+    @parameterized.named_parameters(
+        # testcase_name, num_publishers, spends, regions, expected
+        {
+            "testcase_name": "with_2_inactive_pubs_and_1plus_reaches",
+            "num_publishers": 2,
+            "spends": [0.005, 0.01],
+            "max_freq": 1,
+            "expected": {
+                1: [0],
+                2: [0],
+                3: [0],
+            },
+        },
+        {
+            "testcase_name": "with_2_active_pubs_and_1plus_reaches",
+            "num_publishers": 2,
+            "spends": [0.04, 0.04],
+            "max_freq": 1,
+            "expected": {
+                1: [1],
+                2: [0],
+                3: [1],
+            },
+        },
+        {
+            "testcase_name": "with_2_active_pubs_and_2plus_reaches",
+            "num_publishers": 2,
+            "spends": [0.05, 0.08],
+            "max_freq": 2,
+            "expected": {
+                1: [2, 1],
+                2: [1, 0],
+                3: [1, 1],
+            },
+        },
+        {
+            "testcase_name": "with_2_active_pubs_out_of_3_and_1plus_reaches",
+            "num_publishers": 3,
+            "spends": [0.04, 0.04, 0.0],
+            "max_freq": 1,
+            "expected": {
+                1: [1],
+                2: [0],
+                3: [1],
+            },
+        },
+        {
+            "testcase_name": "with_2_active_pubs_out_of_3_and_2plus_reaches",
+            "num_publishers": 3,
+            "spends": [0.05, 0.08, 0.0],
+            "max_freq": 2,
+            "expected": {1: [2, 1], 2: [1, 0], 3: [1, 1]},
+        },
+        {
+            "testcase_name": "with_3_active_pubs_and_1plus_reaches",
+            "num_publishers": 3,
+            "spends": [0.05, 0.08, 0.03],
+            "max_freq": 1,
+            "expected": {
+                1: [1],
+                2: [1],
+                3: [0],
+                4: [0],
+                5: [1],
+                6: [0],
+                7: [1],
+            },
+        },
+        {
+            "testcase_name": "with_3_active_pubs_and_2plus_reaches",
+            "num_publishers": 3,
+            "spends": [0.05, 0.08, 0.03],
+            "max_freq": 2,
+            "expected": {
+                1: [1, 1],
+                2: [1, 0],
+                3: [0, 0],
+                4: [0, 0],
+                5: [1, 1],
+                6: [0, 0],
+                7: [1, 1],
+            },
+        },
+    )
+    def test_form_venn_diagram_regions(
+        self, num_publishers, spends, max_freq, expected
+    ):
+        pdfs = [
+            PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1"),
+            PublisherData([(2, 0.03), (4, 0.06)], "pdf2"),
+            PublisherData([(2, 0.01), (3, 0.03), (4, 0.05)], "pdf3"),
+        ]
+        data_set = DataSet(pdfs[:num_publishers], "test")
         params = SystemParameters(
-            [0.4, 0.5], LiquidLegionsParameters(), np.random.default_rng(1)
+            [0.4] * num_publishers,
+            LiquidLegionsParameters(),
+            np.random.default_rng(1),
         )
         privacy_tracker = PrivacyTracker()
         halo = HaloSimulator(data_set, params, privacy_tracker)
 
-        spends = [0.01, 0.01]
-        max_freq = 1
-        expected_regions = {}
         regions = halo._form_venn_diagram_regions(spends, max_freq)
-        self.assertEqual(expected_regions, regions)
-
-    def test_form_venn_diagram_regions_with_simple_2_publishers_and_1plus_reach(self):
-        pdf1 = PublisherData([(1, 0.01)], "pdf1")
-        pdf2 = PublisherData([(1, 0.01)], "pdf2")
-        data_set = DataSet([pdf1, pdf2], "test")
-        params = SystemParameters(
-            [0.4, 0.5], LiquidLegionsParameters(), np.random.default_rng(1)
-        )
-        privacy_tracker = PrivacyTracker()
-        halo = HaloSimulator(data_set, params, privacy_tracker)
-
-        spends = [0.01, 0.01]
-        max_freq = 1
-        expected_regions = {3: [1]}
-        regions = halo._form_venn_diagram_regions(spends, max_freq)
-        self.assertEqual(expected_regions, regions)
-
-    def test_form_venn_diagram_regions_with_2_publishers_and_1plus_reach(self):
-        pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
-        pdf2 = PublisherData([(2, 0.03), (4, 0.06)], "pdf2")
-        data_set = DataSet([pdf1, pdf2], "test")
-        params = SystemParameters(
-            [0.4, 0.5], LiquidLegionsParameters(), np.random.default_rng(1)
-        )
-        privacy_tracker = PrivacyTracker()
-        halo = HaloSimulator(data_set, params, privacy_tracker)
-
-        spends = [0.04, 0.04]
-        max_freq = 1
-        expected_regions = {1: [1], 3: [1]}
-        regions = halo._form_venn_diagram_regions(spends, max_freq)
-        self.assertEqual(expected_regions, regions)
-
-    def test_form_venn_diagram_regions_with_2_publishers_and_2plus_reach(self):
-        pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
-        pdf2 = PublisherData([(2, 0.03), (4, 0.06)], "pdf2")
-        data_set = DataSet([pdf1, pdf2], "test")
-        params = SystemParameters(
-            [0.4, 0.5], LiquidLegionsParameters(), np.random.default_rng(1)
-        )
-        privacy_tracker = PrivacyTracker()
-        halo = HaloSimulator(data_set, params, privacy_tracker)
-
-        spends = [0.05, 0.08]
-        max_freq = 2
-        expected_regions = {1: [2, 1], 2: [1, 0], 3: [1, 1]}
-        regions = halo._form_venn_diagram_regions(spends, max_freq)
-        self.assertEqual(expected_regions, regions)
-
-    def test_form_venn_diagram_regions_with_3_publishers_and_1plus_reach(self):
-        pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
-        pdf2 = PublisherData([(2, 0.03), (4, 0.06)], "pdf2")
-        pdf3 = PublisherData([(2, 0.01), (3, 0.03), (4, 0.05)], "pdf3")
-        data_set = DataSet([pdf1, pdf2, pdf3], "test")
-        params = SystemParameters(
-            [0.4, 0.5, 0.4], LiquidLegionsParameters(), np.random.default_rng(1)
-        )
-        privacy_tracker = PrivacyTracker()
-        halo = HaloSimulator(data_set, params, privacy_tracker)
-
-        spends = [0.04, 0.04, 0.0]
-        max_freq = 1
-        expected_regions = {1: [1], 3: [1]}
-        regions = halo._form_venn_diagram_regions(spends, max_freq)
-        self.assertEqual(expected_regions, regions)
-
-    def test_form_venn_diagram_regions_with_3_publishers_and_2plus_reach(self):
-        pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
-        pdf2 = PublisherData([(2, 0.03), (4, 0.06)], "pdf2")
-        pdf3 = PublisherData([(2, 0.01), (3, 0.03), (4, 0.05)], "pdf3")
-        data_set = DataSet([pdf1, pdf2, pdf3], "test")
-        params = SystemParameters(
-            [0.4, 0.5, 0.4], LiquidLegionsParameters(), np.random.default_rng(1)
-        )
-        privacy_tracker = PrivacyTracker()
-        halo = HaloSimulator(data_set, params, privacy_tracker)
-
-        spends = [0.05, 0.08, 0.0]
-        max_freq = 2
-        expected_regions = {1: [2, 1], 2: [1, 0], 3: [1, 1]}
-        regions = halo._form_venn_diagram_regions(spends, max_freq)
-        self.assertEqual(expected_regions, regions)
+        self.assertEqual(expected, regions)
 
     @parameterized.named_parameters(
         # testcase_name, pub_ids, regions, expected

@@ -303,8 +303,15 @@ class HaloSimulator:
 
         venn_diagram_regions = self._form_venn_diagram_regions(spends, max_frequency)
 
+        if not venn_diagram_regions:
+            return []
+
         true_cardinality = self.true_reach_by_spend(spends).reach()
-        sample_size = self._num_active_registers(true_cardinality)
+        sample_size = self._liquid_legions_num_active_regions(true_cardinality)
+
+        if not sample_size:
+            return []
+
         sampled_venn_diagram_regions = self._sample_venn_diagram(
             venn_diagram_regions, sample_size
         )
@@ -313,37 +320,17 @@ class HaloSimulator:
             sampled_venn_diagram_regions,
             budget,
             privacy_budget_split,
-            random_state,
         )
 
         scaled_venn_diagram_regions = self._scale_up_venn_diagram_regions(
             noised_sampled_venn_diagram_regions,
             true_cardinality,
+            np.sqrt(
+                self._liquid_legions_cardinality_estimate_variance(true_cardinality)
+            ),
             budget,
             1 - privacy_budget_split,
         )
-        # Inside the function:
-        # noiser = GeometricEstimateNoiser(
-        #     budget.epsilon * privacy_budget_split, random_state
-        # )
-        # noise_event_for_cardinality = NoisingEvent(
-        #     PrivacyBudget(
-        #         budget.epsilon * privacy_budget_split,
-        #         budget.delta * privacy_budget_split,
-        #     ),
-        #     DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
-        #     {"privacy_budget_split": privacy_budget_split},
-        # )
-        # sum_of_reach_in_venn_diagram_regions = (
-        #     self._get_sum_of_reach_in_venn_diagram_regions(
-        #         noised_sampled_venn_diagram_regions
-        #     )
-        # )
-        # var = self._cardinality_estimate_variance(true_cardinality)
-        # estimated_cardinality = noiser(cardinality + np.random.randn() * np.sqrt(var))
-        # scaling_factor = estimated_cardinality / sum_of_reach_in_venn_diagram_regions
-        # for i in range(len(noised_sampled_venn_diagram_regions)):
-        #     noised_sampled_venn_diagram_regions[i] *= scaling_factor
 
         reach_points = self._generate_reach_points_from_venn_diagram(
             spends, scaled_venn_diagram_regions

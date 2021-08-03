@@ -311,6 +311,59 @@ class HaloSimulator:
 
         return regions
 
+    def _sample_venn_diagram(
+        self,
+        primitive_regions: Dict[int, List],
+        sample_size: int,
+        random_generator: np.random.Generator = np.random.default_rng(),
+    ) -> Dict[int, int]:
+        """Return primitive regions with sampled reaches.
+        Args:
+            primitive_regions:  A dictionary in which each key is the binary
+              representation of a primitive region of the Venn diagram, and
+              each value is a list of the k+ reaches in the corresponding
+              region.
+              Note that the binary representation of a key represents the
+              formation of publisher IDs in that primitive region. For example,
+              primitive_regions[key] with key = 5 = bin('101') is the region
+              which belongs to pub_id-0 and id-2.
+              The k+ reaches for a given region is given as a list r[] where
+              r[k] is the number of people who were reached AT LEAST k+1 times.
+            sample_size:  The total number of sampled reach from the primitive
+              regions.
+            random_generator:  An instance of numpy.random.Generator that is
+              used for generating samples from a multivariate hypergeometric
+              distribution.
+        Returns:
+            A dictionary in which each key is the binary representation of a
+              primitive region of the Venn diagram, and each value is the
+              sampled reach in the corresponding gregion.
+              Note that the binary representation of the key represents the
+              formation of publisher IDs in that primitive region. For example,
+              primitive_regions[key] with key = 5 = bin('101') is the region
+              which belongs to pub_id-0 and id-2.
+        """
+
+        region_repr_and_reach_pairs = [
+            (region_repr, kplus_reaches[0])
+            for region_repr, kplus_reaches in primitive_regions.items()
+        ]
+        region_repr_seq, reach_population = list(zip(*region_repr_and_reach_pairs))
+
+        if sample_size > sum(reach_population):
+            raise ValueError(
+                f"The given sample size is {sample_size} which is"
+                f" larger than the total number of reach = {sum(reach_population)}"
+            )
+
+        sampled_reach = random_generator.multivariate_hypergeometric(
+            reach_population, sample_size
+        )
+
+        return {
+            region_repr: r for region_repr, r in zip(region_repr_seq, sampled_reach)
+        }
+
     def _add_dp_noise_to_primitive_regions(
         self,
         primitive_regions: Dict[int, int],

@@ -389,6 +389,7 @@ class HaloSimulator:
         random_generator: np.random.Generator = np.random.default_rng(),
     ) -> Dict[int, int]:
         """Return primitive regions with sampled reaches.
+        
         Args:
             primitive_regions:  A dictionary in which each key is the binary
               representation of a primitive region of the Venn diagram, and
@@ -488,6 +489,72 @@ class HaloSimulator:
         self._privacy_tracker.append(noise_event)
 
         return noised_primitive_regions
+
+    def _scale_up_reach_in_primitive_regions(
+        self,
+        primitive_regions: Dict[int, int],
+        true_cardinality: int,
+        std_cardinality_estimate: float,
+        budget: PrivacyBudget,
+        privacy_budget_split: float,
+    ) -> Dict[int, int]:
+        """Scale up the reaches in the primitive regions
+
+        Given the primitive Venn diagram regions, we scale up all reaches in
+        the regions by a scaling factor to match the cardinality estimate
+        in the Halo system.
+
+        Args:
+            primitive_regions:  A dictionary in which each key is the binary
+              representation of a primitive region of the Venn diagram, and
+              each value is the reach in the corresponding region.
+              Note that the binary representation of the key represents the
+              formation of publisher IDs in that primitive region. For example,
+              primitive_regions[key] with key = 5 = bin('101') is the region
+              which belongs to pub_id-0 and id-2.
+            true_cardinality:  The true value of the reach given the dataset.
+            std_cardinality_estimate:  The standard deviation of the
+              cardinality estimate in the Halo system.
+            budget:  The amount of privacy budget that can be consumed while
+              satisfying the request.
+            privacy_budget_split:  Specifies the proportion of the privacy
+              budget that should be allocated to the operation in this function.
+        Returns:
+            A dictionary in which each key is the binary representation of a
+              primitive region of the Venn diagram, and each value is the
+              scaled reach in the corresponding region.
+              Note that the binary representation of the key represents the
+              formation of publisher IDs in that primitive region. For example,
+              primitive_regions[key] with key = 5 = bin('101') is the region
+              which belongs to pub_id-0 and id-2.
+        """
+        noiser = GeometricEstimateNoiser(
+            budget.epsilon * privacy_budget_split,
+            np.random.RandomState(
+                seed=self._params.generator.integers(low=0, high=1e9)
+            ),
+        )
+        cardinality_estimate = noiser(
+            self._params.generator.normal(true_cardinality, std_cardinality_estimate)
+        )
+        noise_event = NoisingEvent(
+            PrivacyBudget(
+                budget.epsilon * privacy_budget_split,
+                budget.delta * privacy_budget_split,
+            ),
+            DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
+            {"privacy_budget_split": privacy_budget_split},
+        )
+        self._privacy_tracker.append(noise_event)
+
+        # scaling factor = cardinality estimate / sum of reaches in the primitive regions
+        scaling_factor = cardinality_estimate / sum(primitive_regions.values())
+        scaled_primitive_regions = {
+            region: reach * scaling_factor
+            for region, reach in primitive_regions.items()
+        }
+
+        return scaled_primitive_regions
 
     def _aggregate_reach_in_primitive_venn_diagram_regions(
         self, pub_ids: List[int], primitive_regions: Dict[int, int]

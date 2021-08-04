@@ -106,14 +106,12 @@ class HaloSimulatorTest(parameterized.TestCase):
         )
 
     @parameterized.parameters(
-        [1, np.random.default_rng(0), 1],
-        [1e5, np.random.default_rng(0), 8259],
+        [1, 1],
+        [1e5, 8290],
     )
-    def test_liquid_legions_num_active_regions(
-        self, cardinality, random_state, num_active
-    ):
+    def test_liquid_legions_num_active_regions(self, cardinality, num_active):
         self.assertEqual(
-            self.halo._liquid_legions_num_active_regions(cardinality, random_state),
+            self.halo._liquid_legions_num_active_regions(cardinality),
             num_active,
             msg=f"The number of active registers for n={cardinality} is not correct.",
         )

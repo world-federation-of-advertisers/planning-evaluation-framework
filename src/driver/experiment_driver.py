@@ -106,7 +106,7 @@ class ExperimentDriver:
         output_file: str,
         intermediate_dir: str,
         random_seed: int,
-        cores: int
+        cores: int,
     ):
         self._data_design_dir = data_design_dir
         self._experimental_design = experimental_design
@@ -146,7 +146,7 @@ def main(argv):
         FLAGS.output_file,
         FLAGS.intermediates_dir,
         FLAGS.seed,
-        FLAGS.cores
+        FLAGS.cores,
     )
     experiment_driver.execute()
 

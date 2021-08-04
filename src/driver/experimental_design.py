@@ -92,13 +92,15 @@ class ExperimentalDesign:
         """Evaluates all trials in parallel."""
         if self._cores < 1:
             self._cores = cpu_count()
-        logging.vlog(2, f'Using {self._cores} workers')
+        logging.vlog(2, f"Using {self._cores} workers")
         ntrials = len(self._all_trials)
+
         def process_trial(i):
             self._all_trials[i].evaluate(self._rng)
+
         with ProcessPool(self._cores) as pool:
             list(tqdm(pool.uimap(process_trial, range(ntrials)), total=ntrials))
-        
+
     def load(self) -> pd.DataFrame:
         """Returns a DataFrame of all results from this ExperimentalDesign."""
         if not self._all_trials:

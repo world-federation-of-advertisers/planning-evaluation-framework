@@ -389,7 +389,7 @@ class HaloSimulator:
         random_generator: np.random.Generator = np.random.default_rng(),
     ) -> Dict[int, int]:
         """Return primitive regions with sampled reaches.
-        
+
         Args:
             primitive_regions:  A dictionary in which each key is the binary
               representation of a primitive region of the Venn diagram, and

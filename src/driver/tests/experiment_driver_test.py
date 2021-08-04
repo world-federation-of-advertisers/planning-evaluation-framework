@@ -82,10 +82,9 @@ class ExperimentDriverTest(absltest.TestCase):
                 data_design_dir, simple_data_design_example.__file__, 1, False
             )
             data_design_generator()
-            rng = np.random.default_rng(seed=1)
             experimental_design = sample_experimental_design.__file__
             experiment_driver = ExperimentDriver(
-                data_design_dir, experimental_design, output_file, intermediate_dir, rng
+                data_design_dir, experimental_design, output_file, intermediate_dir, 1
             )
             result = experiment_driver.execute()
             self.assertEqual(result.shape[0], 2700)
@@ -103,10 +102,9 @@ class ExperimentDriverTest(absltest.TestCase):
                 data_design_dir, simple_data_design_example.__file__, 1, False
             )
             data_design_generator()
-            rng = np.random.default_rng(seed=1)
             experimental_design = m3_first_round_experimental_design.__file__
             experiment_driver = ExperimentDriver(
-                data_design_dir, experimental_design, output_file, intermediate_dir, rng
+                data_design_dir, experimental_design, output_file, intermediate_dir, 1
             )
             result = experiment_driver.execute()
             self.assertEqual(result.shape[0], 5184)
@@ -124,10 +122,9 @@ class ExperimentDriverTest(absltest.TestCase):
                 data_design_dir, simple_data_design_example.__file__, 1, False
             )
             data_design_generator()
-            rng = np.random.default_rng(seed=1)
             experimental_design = analysis_example_experimental_design.__file__
             experiment_driver = ExperimentDriver(
-                data_design_dir, experimental_design, output_file, intermediate_dir, rng
+                data_design_dir, experimental_design, output_file, intermediate_dir, 1
             )
             result = experiment_driver.execute()
             self.assertEqual(result.shape[0], 2592)

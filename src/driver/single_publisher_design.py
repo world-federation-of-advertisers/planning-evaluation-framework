@@ -40,29 +40,30 @@ from wfa_planning_evaluation_framework.driver.trial_descriptor import (
 )
 
 MODELING_STRATEGIES = ["goerg", "gamma_poisson"]
-CAMPAIGN_SPEND_FRACTIONS = list(np.arange(1,20) * 0.05)
+CAMPAIGN_SPEND_FRACTIONS = list(np.arange(1, 20) * 0.05)
 LIQUID_LEGIONS_DECAY_RATES = [10, 12, 15]
 LIQUID_LEGIONS_SKETCH_SIZES = [50_000, 100_000]
 PRIVACY_BUDGET_EPSILONS = [np.log(3), 0.1 * np.log(3)]
-PRIVACY_BUDGET_DELTAS = [1e-5, 1e-9]
+PRIVACY_BUDGET_DELTAS = [1e-9]
 REPLICA_IDS = [1]
 TEST_POINTS = [20]
 MAX_FREQUENCIES = [5, 10, 20]
 
 LEVELS = {
-    'modeling_strategy': MODELING_STRATEGIES,
-    'campaign_spend_fraction': CAMPAIGN_SPEND_FRACTIONS,
-    'liquid_legions_decay_rate': LIQUID_LEGIONS_DECAY_RATES,
-    'liquid_legions_sketch_size': LIQUID_LEGIONS_SKETCH_SIZES,
-    'privacy_budget_epsilon': PRIVACY_BUDGET_EPSILONS,
-    'privacy_budget_delta': PRIVACY_BUDGET_DELTAS,
-    'replica_id': REPLICA_IDS,
-    'test_points': TEST_POINTS,
-    'max_frequency': MAX_FREQUENCIES,
+    "modeling_strategy": MODELING_STRATEGIES,
+    "campaign_spend_fraction": CAMPAIGN_SPEND_FRACTIONS,
+    "liquid_legions_decay_rate": LIQUID_LEGIONS_DECAY_RATES,
+    "liquid_legions_sketch_size": LIQUID_LEGIONS_SKETCH_SIZES,
+    "privacy_budget_epsilon": PRIVACY_BUDGET_EPSILONS,
+    "privacy_budget_delta": PRIVACY_BUDGET_DELTAS,
+    "replica_id": REPLICA_IDS,
+    "test_points": TEST_POINTS,
+    "max_frequency": MAX_FREQUENCIES,
 }
 
 # Number of experimental trials that should be conducted per dataset
 NUM_TRIALS_PER_DATASET = 100
+
 
 def generate_experimental_design_config(
     random_generator: np.random.Generator,
@@ -70,30 +71,36 @@ def generate_experimental_design_config(
     """Generates a list of TrialDescriptors for a single publisher model."""
     keys = LEVELS.keys()
     levels = [len(LEVELS[k]) for k in keys]
-    for sample in (
-        lhs(n=len(levels), samples=NUM_TRIALS_PER_DATASET, criterion="maximin")
+    for sample in lhs(
+        n=len(levels), samples=NUM_TRIALS_PER_DATASET, criterion="maximin"
     ):
         design_parameters = {}
         for key, level in zip(keys, sample):
             design_parameters[key] = LEVELS[key][int(level * len(LEVELS[key]))]
         mstrategy = ModelingStrategyDescriptor(
-            "single_publisher", {}, design_parameters['modeling_strategy'], {},
-            "none", {})
+            "single_publisher",
+            {},
+            design_parameters["modeling_strategy"],
+            {},
+            "none",
+            {},
+        )
         sparams = SystemParameters(
-            [design_parameters['campaign_spend_fraction']],
+            [design_parameters["campaign_spend_fraction"]],
             LiquidLegionsParameters(
-                design_parameters['liquid_legions_decay_rate'],
-                design_parameters['liquid_legions_sketch_size']
+                design_parameters["liquid_legions_decay_rate"],
+                design_parameters["liquid_legions_sketch_size"],
             ),
-            random_generator)
+            random_generator,
+        )
         eparams = ExperimentParameters(
             PrivacyBudget(
-                design_parameters['privacy_budget_epsilon'],
-                design_parameters['privacy_budget_delta']
+                design_parameters["privacy_budget_epsilon"],
+                design_parameters["privacy_budget_delta"],
             ),
-            design_parameters['replica_id'],
-            design_parameters['max_frequency'],
-            'grid',
-            {'grid_size': design_parameters['test_points']},
+            design_parameters["replica_id"],
+            design_parameters["max_frequency"],
+            "grid",
+            {"grid_size": design_parameters["test_points"]},
         )
         yield TrialDescriptor(mstrategy, sparams, eparams)

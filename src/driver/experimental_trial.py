@@ -111,8 +111,12 @@ class ExperimentalTrial:
           A single row DataFrame containing the results of the evaluation
           of this trial.
         """
+        logging.vlog(2, f"Dataset {self._data_set_name}")
+        logging.vlog(2, f"Trial   {self._trial_descriptor}")
+
         trial_results_path = self._compute_trial_results_path()
         if isfile(trial_results_path):
+            logging.vlog(2, "  --> Returning previously computed result")
             return pd.read_csv(trial_results_path)
 
         self._dataset = self._data_design.by_name(self._data_set_name)
@@ -124,8 +128,6 @@ class ExperimentalTrial:
         modeling_strategy = (
             self._trial_descriptor.modeling_strategy.instantiate_strategy()
         )
-        logging.vlog(2, f"Dataset {self._data_set_name}")
-        logging.vlog(2, f"Trial   {self._trial_descriptor}")
         try:
             reach_surface = modeling_strategy.fit(
                 halo, self._trial_descriptor.system_params, privacy_budget
@@ -194,6 +196,11 @@ class ExperimentalTrial:
                 "largest_pub_reach": [max([p.max_reach for p in data_set._data])],
                 "max_frequency": [
                     self._trial_descriptor.experiment_params.max_frequency
+                ],
+                "average_spend_fraction": [
+                    np.mean(
+                        self._trial_descriptor.system_params.campaign_spend_fractions
+                    )
                 ],
             }
         )

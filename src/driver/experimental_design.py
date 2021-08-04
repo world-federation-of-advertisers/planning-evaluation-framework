@@ -21,7 +21,7 @@ from absl import logging
 import numpy as np
 import pandas as pd
 from pathos.multiprocessing import ProcessPool, cpu_count
-from tqdm.contrib.concurrent import process_map
+from tqdm import tqdm
 from typing import List
 from typing import Tuple
 
@@ -93,13 +93,11 @@ class ExperimentalDesign:
         if self._cores < 1:
             self._cores = cpu_count()
         logging.vlog(2, f'Using {self._cores} workers')
-        # Progress visualization
         ntrials = len(self._all_trials)
         def process_trial(i):
             self._all_trials[i].evaluate(self._rng)
-        process_map(process_trial, range(ntrials), max_works=self._cores, chunksize=1)
-#        with ProcessPool(self._cores) as pool:
-#            list(tqdm(pool.imap(process_trial, range(ntrials)), total=ntrials))
+        with ProcessPool(self._cores) as pool:
+            list(tqdm(pool.uimap(process_trial, range(ntrials)), total=ntrials))
         
     def load(self) -> pd.DataFrame:
         """Returns a DataFrame of all results from this ExperimentalDesign."""

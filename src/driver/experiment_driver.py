@@ -108,6 +108,7 @@ class ExperimentDriver:
         self._output_file = output_file
         self._intermediate_dir = intermediate_dir
         self._rng = np.random.default_rng(seed=random_seed)
+        np.random.seed(random_seed)
 
     def execute(self) -> pd.DataFrame:
         """Performs all experiments defined in an experimental design."""

@@ -114,6 +114,7 @@ class SyntheticDataDesignGenerator:
         self._output_dir = output_dir
         self._data_design_config = data_design_config
         self._random_generator = np.random.default_rng(random_seed)
+        np.random.seed(random_seed)
         self._verbose = verbose
 
     def __call__(self) -> DataDesign:

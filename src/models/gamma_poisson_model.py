@@ -342,7 +342,9 @@ class GammaPoissonModel(ReachCurve):
 
         actual_oneplus = np.sum(h)
         predicted_oneplus = np.sum(hbar)
-        oneplus_error = one_plus_reach_weight * (actual_oneplus - predicted_oneplus) ** 2
+        oneplus_error = (
+            one_plus_reach_weight * (actual_oneplus - predicted_oneplus) ** 2
+        )
 
         obj = np.sum((hbar - h) ** 2 / (hbar + 1e-6)) + oneplus_error
 

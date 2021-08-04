@@ -39,8 +39,7 @@ from wfa_planning_evaluation_framework.driver.trial_descriptor import (
     TrialDescriptor,
 )
 
-# MODELING_STRATEGIES = ["goerg", "gamma_poisson"]
-MODELING_STRATEGIES = ["goerg"]
+MODELING_STRATEGIES = ["goerg", "gamma_poisson"]
 CAMPAIGN_SPEND_FRACTIONS = list(np.arange(1,20) * 0.05)
 LIQUID_LEGIONS_DECAY_RATES = [10, 12, 15]
 LIQUID_LEGIONS_SKETCH_SIZES = [50_000, 100_000]

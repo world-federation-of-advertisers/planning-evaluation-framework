@@ -393,6 +393,16 @@ class HaloSimulatorTest(parameterized.TestCase):
             "fixed_noise": 2,
             "expected": {1: 8, 2: 8, 3: 4},  # cardinality estimate = 16 + 2 + 2 = 20
         },
+        {
+            "testcase_name": "with_empty_regions",
+            "regions": {1: 0, 2: 0, 3: 0},
+            "true_cardinality": 20,
+            "std": 1,
+            "budget": PrivacyBudget(0.2, 0.4),
+            "privacy_budget_split": 0.7,
+            "fixed_noise": 1,
+            "expected": {1: 0, 2: 0, 3: 0},
+        },
     )
     @patch(
         "wfa_planning_evaluation_framework.simulator.halo_simulator.GeometricEstimateNoiser"

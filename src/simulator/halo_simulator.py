@@ -507,7 +507,7 @@ class HaloSimulator:
         Args:
             primitive_regions:  A dictionary in which each key is the binary
               representation of a primitive region of the Venn diagram, and
-              each value is the reach in the corresponding region.
+              each value is the non-negative reach in the corresponding region.
               Note that the binary representation of the key represents the
               formation of publisher IDs in that primitive region. For example,
               primitive_regions[key] with key = 5 = bin('101') is the region
@@ -547,8 +547,12 @@ class HaloSimulator:
         )
         self._privacy_tracker.append(noise_event)
 
+        sum_sampled_reach = sum(primitive_regions.values())
+
         # scaling factor = cardinality estimate / sum of reaches in the primitive regions
-        scaling_factor = cardinality_estimate / sum(primitive_regions.values())
+        scaling_factor = (
+            cardinality_estimate / sum_sampled_reach if sum_sampled_reach else 0
+        )
         scaled_primitive_regions = {
             region: reach * scaling_factor
             for region, reach in primitive_regions.items()

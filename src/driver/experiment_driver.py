@@ -106,7 +106,7 @@ class ExperimentDriver:
         output_file: str,
         intermediate_dir: str,
         random_seed: int,
-        cores: int,
+        cores: int = 1,
     ):
         self._data_design_dir = data_design_dir
         self._experimental_design = experimental_design

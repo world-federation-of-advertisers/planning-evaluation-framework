@@ -120,49 +120,69 @@ class FakeTestPointGenerator(TestPointGenerator):
 
 
 class ExperimentalDesignTest(absltest.TestCase):
+    def _setup(self, tempdir):
+        pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
+        data_set1 = DataSet([pdf1], "dataset1")
+        pdf2 = PublisherData([(2, 0.03), (4, 0.06)], "pdf2")
+        data_set2 = DataSet([pdf2], "dataset2")
+        data_design_dir = join(tempdir, "data_design")
+        self.experiment_dir = join(tempdir, "experiments")
+        self.data_design = DataDesign(data_design_dir)
+        self.data_design.add(data_set1)
+        self.data_design.add(data_set2)
+
+        MODELING_STRATEGIES["fake"] = FakeModelingStrategy
+        TEST_POINT_STRATEGIES["fake_tps"] = FakeTestPointGenerator
+
+        msd = ModelingStrategyDescriptor(
+            "fake", {"x": 1}, "goerg", {}, "pairwise_union", {}
+        )
+        sparams1 = SystemParameters(
+            [0.03],
+            LiquidLegionsParameters(13, 1e6, 1),
+            np.random.default_rng(),
+        )
+        sparams2 = SystemParameters(
+            [0.05],
+            LiquidLegionsParameters(13, 1e6, 1),
+            np.random.default_rng(),
+        )
+        eparams1 = ExperimentParameters(PrivacyBudget(1.0, 0.01), 1, 5, "fake_tps")
+        eparams2 = ExperimentParameters(PrivacyBudget(0.5, 0.001), 1, 5, "fake_tps")
+
+        self.trial_descriptors = [
+            TrialDescriptor(msd, sparams1, eparams1),
+            TrialDescriptor(msd, sparams1, eparams2),
+            TrialDescriptor(msd, sparams2, eparams1),
+            TrialDescriptor(msd, sparams2, eparams2),
+        ]
+
     def test_evaluate(self):
         with TemporaryDirectory() as d:
-            pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
-            data_set1 = DataSet([pdf1], "dataset1")
-            pdf2 = PublisherData([(2, 0.03), (4, 0.06)], "pdf2")
-            data_set2 = DataSet([pdf2], "dataset2")
-            data_design_dir = join(d, "data_design")
-            experiment_dir = join(d, "experiments")
-            data_design = DataDesign(data_design_dir)
-            data_design.add(data_set1)
-            data_design.add(data_set2)
-
-            MODELING_STRATEGIES["fake"] = FakeModelingStrategy
-            TEST_POINT_STRATEGIES["fake_tps"] = FakeTestPointGenerator
-
-            msd = ModelingStrategyDescriptor(
-                "fake", {"x": 1}, "goerg", {}, "pairwise_union", {}
-            )
-            sparams1 = SystemParameters(
-                [0.03],
-                LiquidLegionsParameters(13, 1e6, 1),
-                np.random.default_rng(),
-            )
-            sparams2 = SystemParameters(
-                [0.05],
-                LiquidLegionsParameters(13, 1e6, 1),
-                np.random.default_rng(),
-            )
-            eparams1 = ExperimentParameters(PrivacyBudget(1.0, 0.01), 1, 5, "fake_tps")
-            eparams2 = ExperimentParameters(PrivacyBudget(0.5, 0.001), 1, 5, "fake_tps")
-
-            trial_descriptors = [
-                TrialDescriptor(msd, sparams1, eparams1),
-                TrialDescriptor(msd, sparams1, eparams2),
-                TrialDescriptor(msd, sparams2, eparams1),
-                TrialDescriptor(msd, sparams2, eparams2),
-            ]
+            self._setup(d)
 
             exp = ExperimentalDesign(
-                experiment_dir,
-                data_design,
-                trial_descriptors,
+                self.experiment_dir,
+                self.data_design,
+                self.trial_descriptors,
                 np.random.default_rng(seed=1),
+            )
+            trials = exp.generate_trials()
+            self.assertLen(trials, 8)
+
+            results = exp.load()
+            self.assertEqual(results.shape[0], 8)
+
+    def test_evaluate_with_two_cores(self):
+        with TemporaryDirectory() as d:
+            self._setup(d)
+
+            exp = ExperimentalDesign(
+                self.experiment_dir,
+                self.data_design,
+                self.trial_descriptors,
+                np.random.default_rng(seed=1),
+                cores=2,
             )
             trials = exp.generate_trials()
             self.assertLen(trials, 8)

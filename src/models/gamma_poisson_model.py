@@ -227,7 +227,8 @@ class GammaPoissonModel(ReachCurve):
         Returns:
           Expected size of impression inventory for a population of N users.
         """
-        return N * (1.0 + alpha * beta)
+        # N * (1.0 + alpha * beta)
+        return N * (1 + scipy.stats.nbinom.mean(alpha, 1.0 / (1.0 + beta)))
 
     def _expected_histogram(self, I, Imax, N, alpha, beta, max_freq=10):
         """Computes an estimated histogram.

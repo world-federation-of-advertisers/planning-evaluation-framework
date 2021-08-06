@@ -58,6 +58,11 @@ class FakeNoiser(EstimateNoiserBase):
 
 
 class FakeRandomGenerator:
+    def multinomial(self, n, pval, size=None):
+        result = np.zeros_like(pval)
+        result[0] = 1
+        return result
+
     def multivariate_hypergeometric(self, colors, nsample):
         samples = [0] * len(colors)
         index = 0
@@ -152,16 +157,54 @@ class HaloSimulatorTest(parameterized.TestCase):
             msg=f"The number of active registers for n={cardinality} is not correct.",
         )
 
+    def test_simulated_venn_diagram_reach_by_spend_without_active_pub(self):
+        pdfs = [
+            PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1"),
+            PublisherData([(2, 0.03), (4, 0.06)], "pdf2"),
+            PublisherData([(2, 0.01), (3, 0.03), (4, 0.05)], "pdf3"),
+        ]
+        data_set = DataSet(pdfs, "test")
+        params = SystemParameters(
+            [0.4, 0.5, 0.4],
+            LiquidLegionsParameters(),
+            FakeRandomGenerator(),
+        )
+        privacy_tracker = PrivacyTracker()
+        halo = HaloSimulator(data_set, params, privacy_tracker)
+
+        spends = [0, 0, 0]
+        budget = PrivacyBudget(0.2, 0.4)
+        privacy_budget_split = 0.5
+        max_freq = 1
+
+        reach_points = halo.simulated_venn_diagram_reach_by_spend(
+            spends, budget, privacy_budget_split, max_freq
+        )
+
+        expected_reach_points = []
+
+        self.assertEqual(expected_reach_points, reach_points)
+        self.assertEqual(halo.privacy_tracker._epsilon_sum, 0)
+        self.assertEqual(halo.privacy_tracker._delta_sum, 0)
+        self.assertEqual(len(halo.privacy_tracker._noising_events), 0)
+
     @parameterized.named_parameters(
         {
-            "testcase_name": "without_active_pub_and_1plus_reaches",
-            "num_publishers": 2,
-            "spends": [0, 0],
+            "testcase_name": "with_1_active_pub_and_1plus_reaches",
+            "num_publishers": 3,
+            "spends": [0, 0, 0.05],     # true cardinality = 3
             "budget": PrivacyBudget(0.2, 0.4),
             "privacy_budget_split": 0.5,
             "max_freq": 1,
-            "expected": [],
+            "expected_reach_points": [
+                ReachPoint([0,0,3], [5], [0, 0, 0.05])
+            ],
         },
+    )
+    @patch.object(
+        HaloSimulator, 
+        "_liquid_legions_cardinality_estimate_variance", 
+        return_value=1.0
     )
     @patch(
         "wfa_planning_evaluation_framework.simulator.halo_simulator.GeometricEstimateNoiser"
@@ -169,12 +212,13 @@ class HaloSimulatorTest(parameterized.TestCase):
     def test_simulated_venn_diagram_reach_by_spend(
         self,
         mock_geometric_estimate_noiser,
+        mock_cardinality_estimate_variance,
         num_publishers,
         spends,
         budget,
         privacy_budget_split,
         max_freq,
-        expected,
+        expected_reach_points,
     ):
         mock_geometric_estimate_noiser.return_value = FakeNoiser()
 
@@ -196,7 +240,46 @@ class HaloSimulatorTest(parameterized.TestCase):
             spends, budget, privacy_budget_split, max_freq
         )
 
-        self.assertEqual(expected, reach_points)
+        for i, (r_pt, expected_r_pt) in enumerate(zip(reach_points, expected_reach_points)):
+            self.assertEqual(
+                r_pt.impressions,
+                expected_r_pt.impressions,
+                msg=f"The impressions of No.{i + 1} reach point is not correct",
+            )
+            self.assertEqual(
+                r_pt.reach(1),
+                expected_r_pt.reach(1),
+                msg=f"The reach of No.{i + 1} reach point is not correct",
+            )
+            self.assertEqual(
+                r_pt.spends,
+                expected_r_pt.spends,
+                msg=f"The spends of No.{i + 1} reach point is not correct",
+            )
+
+        # self.assertEqual(
+        #     halo.privacy_tracker._epsilon_sum, budget.epsilon * privacy_budget_split
+        # )
+        # self.assertEqual(
+        #     halo.privacy_tracker._delta_sum, budget.delta * privacy_budget_split
+        # )
+        # self.assertEqual(len(halo.privacy_tracker._noising_events), 2)
+        # self.assertEqual(
+        #     halo.privacy_tracker._noising_events[0].budget.epsilon,
+        #     budget.epsilon * privacy_budget_split,
+        # )
+        # self.assertEqual(
+        #     halo.privacy_tracker._noising_events[0].budget.delta,
+        #     budget.delta * privacy_budget_split,
+        # )
+        # self.assertEqual(
+        #     halo.privacy_tracker._noising_events[0].mechanism,
+        #     DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
+        # )
+        # self.assertEqual(
+        #     halo.privacy_tracker._noising_events[0].params,
+        #     {"privacy_budget_split": privacy_budget_split},
+        # )
 
     def test_form_venn_diagram_regions_with_publishers_more_than_limit(self):
         num_publishers = MAX_ACTIVE_PUBLISHERS + 1

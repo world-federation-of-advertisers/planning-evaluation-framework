@@ -309,9 +309,6 @@ class HaloSimulator:
         true_cardinality = self.true_reach_by_spend(spends).reach()
         sample_size = self._liquid_legions_num_active_regions(true_cardinality)
 
-        if not sample_size:
-            return []
-
         sampled_venn_diagram_regions = self._sample_venn_diagram(
             venn_diagram_regions, sample_size
         )
@@ -430,7 +427,6 @@ class HaloSimulator:
         self,
         primitive_regions: Dict[int, List],
         sample_size: int,
-        random_generator: np.random.Generator = np.random.default_rng(),
     ) -> Dict[int, int]:
         """Return primitive regions with sampled reaches.
 
@@ -447,9 +443,6 @@ class HaloSimulator:
               r[k] is the number of people who were reached AT LEAST k+1 times.
             sample_size:  The total number of sampled reach from the primitive
               regions.
-            random_generator:  An instance of numpy.random.Generator that is
-              used for generating samples from a multivariate hypergeometric
-              distribution.
         Returns:
             A dictionary in which each key is the binary representation of a
               primitive region of the Venn diagram, and each value is the
@@ -472,7 +465,7 @@ class HaloSimulator:
                 f" larger than the total number of reach = {sum(reach_population)}"
             )
 
-        sampled_reach = random_generator.multivariate_hypergeometric(
+        sampled_reach = self._params.generator.multivariate_hypergeometric(
             reach_population, sample_size
         )
 

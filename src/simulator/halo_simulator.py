@@ -298,11 +298,7 @@ class HaloSimulator:
             the spends of a subset of publishers to the differentially private
             estimate of the number of people reached in this subset.
         """
-        if max_frequency != 1:
-            raise ValueError("Max frequency has to be 1.")
-
         venn_diagram_regions = self._form_venn_diagram_regions(spends, max_frequency)
-
         # Happen when there is no active publishers, i.e. 0 spend vector.
         if not venn_diagram_regions:
             return []

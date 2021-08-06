@@ -107,7 +107,7 @@ class HaloSimulatorTest(parameterized.TestCase):
 
     @parameterized.parameters(
         [1, 1],
-        [1e5, 8290],
+        [1e5, 8251],
     )
     def test_liquid_legions_num_active_regions(self, cardinality, num_active):
         self.assertEqual(

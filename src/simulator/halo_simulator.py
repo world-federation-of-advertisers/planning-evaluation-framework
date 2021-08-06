@@ -216,7 +216,7 @@ class HaloSimulator:
 
     def _liquid_legions_cardinality_estimate_variance(self, n: int) -> float:
         """Variance of cardinality estimate by unnoised LiquidLegions.
-        
+
         TODO(jiayu): add a link of the paper to explain the variance formula,
         once the paper is published.
 
@@ -253,10 +253,14 @@ class HaloSimulator:
         a = self._params.liquid_legions.decay_rate
         register_probs = np.exp(-a * np.arange(m) / m)
         register_probs /= sum(register_probs)
-        random_generator = np.random.default_rng(
-            seed=self._params.generator.integers(low=0, high=1e9)
+        num_active_regs = sum(
+            self._params.generator.multinomial(n, register_probs) == 1
         )
-        return sum(random_generator.multinomial(n, register_probs) == 1)
+        if num_active_regs == 0:
+            raise RuntimeError(
+                "Zero active registers. Please change the LiquidLegions configuration."
+            )
+        return num_active_regs
 
     def simulated_venn_diagram_reach_by_spend(
         self,

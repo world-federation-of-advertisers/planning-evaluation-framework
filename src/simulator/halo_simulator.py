@@ -303,6 +303,7 @@ class HaloSimulator:
 
         venn_diagram_regions = self._form_venn_diagram_regions(spends, max_frequency)
 
+        # Happen when there is no active publishers, i.e. 0 spend vector.
         if not venn_diagram_regions:
             return []
 
@@ -319,7 +320,7 @@ class HaloSimulator:
             privacy_budget_split,
         )
 
-        scaled_venn_diagram_regions = self._scale_up_venn_diagram_regions(
+        scaled_venn_diagram_regions = self._scale_up_reach_in_primitive_regions(
             noised_sampled_venn_diagram_regions,
             true_cardinality,
             np.sqrt(

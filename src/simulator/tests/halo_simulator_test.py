@@ -154,9 +154,9 @@ class HaloSimulatorTest(parameterized.TestCase):
 
     @parameterized.named_parameters(
         {
-            "testcase_name": "with_1_active_pub_and_1plus_reaches",
-            "num_publishers": 1,
-            "spends": [0.001],
+            "testcase_name": "without_active_pub_and_1plus_reaches",
+            "num_publishers": 2,
+            "spends": [0, 0],
             "budget": PrivacyBudget(0.2, 0.4),
             "privacy_budget_split": 0.5,
             "max_freq": 1,
@@ -195,6 +195,8 @@ class HaloSimulatorTest(parameterized.TestCase):
         reach_points = halo.simulated_venn_diagram_reach_by_spend(
             spends, budget, privacy_budget_split, max_freq
         )
+
+        self.assertEqual(expected, reach_points)
 
     def test_form_venn_diagram_regions_with_publishers_more_than_limit(self):
         num_publishers = MAX_ACTIVE_PUBLISHERS + 1

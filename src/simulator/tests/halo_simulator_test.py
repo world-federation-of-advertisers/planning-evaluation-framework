@@ -70,6 +70,12 @@ class FakeRandomGenerator:
 
         return samples
 
+    def integers(self, low, high=None, size=None):
+        return np.random.default_rng().integers(low=low, high=high, size=size)
+
+    def normal(self, loc=0.0, scale=1.0):
+        return loc + scale
+
 
 class HaloSimulatorTest(parameterized.TestCase):
     @classmethod
@@ -342,6 +348,87 @@ class HaloSimulatorTest(parameterized.TestCase):
         )
 
         self.assertEqual(noised_regions, expected_regions)
+        self.assertEqual(
+            halo.privacy_tracker._epsilon_sum, budget.epsilon * privacy_budget_split
+        )
+        self.assertEqual(
+            halo.privacy_tracker._delta_sum, budget.delta * privacy_budget_split
+        )
+        self.assertEqual(len(halo.privacy_tracker._noising_events), 1)
+        self.assertEqual(
+            halo.privacy_tracker._noising_events[0].budget.epsilon,
+            budget.epsilon * privacy_budget_split,
+        )
+        self.assertEqual(
+            halo.privacy_tracker._noising_events[0].budget.delta,
+            budget.delta * privacy_budget_split,
+        )
+        self.assertEqual(
+            halo.privacy_tracker._noising_events[0].mechanism,
+            DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
+        )
+        self.assertEqual(
+            halo.privacy_tracker._noising_events[0].params,
+            {"privacy_budget_split": privacy_budget_split},
+        )
+
+    @parameterized.named_parameters(
+        {
+            "testcase_name": "with_1_regions",
+            "regions": {1: 1},
+            "true_cardinality": 20,
+            "std": 1,
+            "budget": PrivacyBudget(0.2, 0.4),
+            "privacy_budget_split": 0.7,
+            "fixed_noise": 1,
+            "expected": {1: 22},  # cardinality estimate = 20 + 1 + 1 = 22
+        },
+        {
+            "testcase_name": "with_3_regions",
+            "regions": {1: 2, 2: 2, 3: 1},
+            "true_cardinality": 16,
+            "std": 2,
+            "budget": PrivacyBudget(0.1, 0.1),
+            "privacy_budget_split": 0.5,
+            "fixed_noise": 2,
+            "expected": {1: 8, 2: 8, 3: 4},  # cardinality estimate = 16 + 2 + 2 = 20
+        },
+        {
+            "testcase_name": "with_empty_regions",
+            "regions": {1: 0, 2: 0, 3: 0},
+            "true_cardinality": 20,
+            "std": 1,
+            "budget": PrivacyBudget(0.2, 0.4),
+            "privacy_budget_split": 0.7,
+            "fixed_noise": 1,
+            "expected": {1: 0, 2: 0, 3: 0},
+        },
+    )
+    @patch(
+        "wfa_planning_evaluation_framework.simulator.halo_simulator.GeometricEstimateNoiser"
+    )
+    def test_scale_up_reach_in_primitive_regions(
+        self,
+        mock_geometric_estimate_noiser,
+        regions,
+        true_cardinality,
+        std,
+        budget,
+        privacy_budget_split,
+        fixed_noise,
+        expected,
+    ):
+        mock_geometric_estimate_noiser.return_value = FakeNoiser(fixed_noise)
+
+        params = SystemParameters([0], LiquidLegionsParameters(), FakeRandomGenerator())
+        halo = HaloSimulator(DataSet([], "test"), params, PrivacyTracker())
+
+        scaled_regions = halo._scale_up_reach_in_primitive_regions(
+            regions, true_cardinality, std, budget, privacy_budget_split
+        )
+
+        self.assertEqual(scaled_regions, expected)
+
         self.assertEqual(
             halo.privacy_tracker._epsilon_sum, budget.epsilon * privacy_budget_split
         )

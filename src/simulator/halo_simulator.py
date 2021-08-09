@@ -27,7 +27,11 @@ from typing import Dict
 from collections import defaultdict
 from itertools import chain, combinations
 import numpy as np
+from scipy.special import expi
 
+from wfa_cardinality_estimation_evaluation_framework.estimators.base import (
+    EstimateNoiserBase,
+)
 from wfa_cardinality_estimation_evaluation_framework.estimators.same_key_aggregator import (
     StandardizedHistogramEstimator,
 )
@@ -46,6 +50,7 @@ from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
     DP_NOISE_MECHANISM_DISCRETE_GAUSSIAN,
+    DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
 )
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import NoisingEvent
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyBudget
@@ -194,7 +199,7 @@ class HaloSimulator:
             combined_sketch = StandardizedHistogramEstimator.merge_two_sketches(
                 combined_sketch, sketch
             )
-        frequencies = [
+        kplus_reaches = [
             round(x) for x in estimator.estimate_cardinality(combined_sketch)
         ]
 
@@ -210,8 +215,57 @@ class HaloSimulator:
 
         # convert result to a ReachPoint
         impressions = self._data_set.impressions_by_spend(spends)
-        kplus_reaches = ReachPoint.frequencies_to_kplus_reaches(frequencies)
-        return ReachPoint(impressions, kplus_reaches, spends)
+        return ReachPoint(
+            impressions=impressions, kplus_reaches=kplus_reaches, spends=spends
+        )
+
+    def _liquid_legions_cardinality_estimate_variance(self, n: int) -> float:
+        """Variance of cardinality estimate by unnoised LiquidLegions.
+
+        TODO(jiayu): add a link of the paper to explain the variance formula,
+        once the paper is published.
+
+        Args:
+          n:  Carinality of the items contained in a LiquidLegions.
+
+        Returns:
+          var(n-hat) where n-hat is the cardinality estimate from a
+          LiquidLegions which contains n distinct items and has the system
+          parameters (decay rate and sketch size) in this halo.
+        """
+        m = self._params.liquid_legions.sketch_size
+        a = self._params.liquid_legions.decay_rate
+        c = a * n / m / (1 - np.exp(-a))
+        variance = (
+            expi(-c) - expi(-c * np.exp(-a)) - expi(-2 * c) + expi(-2 * c * np.exp(-a))
+        )
+        variance *= a * n ** 2 / m / (np.exp(-c) - np.exp(-c * np.exp(-a))) ** 2
+        variance -= n
+        return variance
+
+    def _liquid_legions_num_active_regions(self, n: int) -> int:
+        """Simulate an observation of the number of active registers.
+
+        Args:
+          n:  Carinality of the items contained in a LiquidLegions.
+          random_generator:  An instance of numpy.random.Generator that is
+            used for assigning different items into different registers.
+
+        Returns:
+          An observation of the number of active registers in the LiquidLegions.
+        """
+        m = self._params.liquid_legions.sketch_size
+        a = self._params.liquid_legions.decay_rate
+        register_probs = np.exp(-a * np.arange(m) / m)
+        register_probs /= sum(register_probs)
+        num_active_regs = sum(
+            self._params.generator.multinomial(n, register_probs) == 1
+        )
+        if num_active_regs == 0:
+            raise RuntimeError(
+                "Zero active registers. Please change the LiquidLegions configuration."
+            )
+        return num_active_regs
 
     def simulated_venn_diagram_reach_by_spend(
         self,
@@ -243,32 +297,36 @@ class HaloSimulator:
     def _form_venn_diagram_regions(
         self, spends: List[float], max_frequency: int = 1
     ) -> Dict[int, List]:
-        """Form Venn diagram regions that contain k+ reaches
+        """Form primitive Venn diagram regions that contain k+ reaches
 
-        For each subset of publishers, computes k+ reaches for those users
-        who are reached by the publishers in that subset.
+        For each subset in the powerset of publishers with nonzero spend,
+        computes k+ reaches for those users who are reached by the publishers
+        in that subset.
 
         Args:
-            spends:  The hypothetical spend vector, equal in length to
-              the number of publishers.  spends[i] is the amount that is
-              spent with publisher i. Note that publishers with 0 spends will
-              not be included in the Venn diagram reach.
+            spends:  The hypothetical spend vector, equal in length to the
+              number of publishers.  spends[i] is the amount that is spent with
+              publisher i. Note that the publishers with 0 spends, i.e. inactive
+              publishers, will not be included in the Venn diagram regions.
             max_frequency:  The maximum frequency for which to report reach.
         Returns:
-            regions:  A dictionary in which each key are the binary
-              representations of each primitive region of the Venn diagram, and
-              each value is a list of the k+ reaches in the corresponding region.
-              The k+ reach for a given region is given as a list r[] where r[k]
-              is the number of people who were reached AT LEAST k+1 times.
+            regions:  A dictionary in which each key is the binary
+              representation of each primitive region of the Venn diagram, and
+              each value is a list of the k+ reaches in the corresponding
+              region.
+              Note that the binary representation of a key represents the
+              formation of publisher IDs in that primitive region. For example,
+              primitive_regions[key] with key = 5 = bin('101') is the region
+              which belongs to pub_id-0 and id-2.
+              The k+ reaches for a given region is given as a list r[] where
+              r[k] is the number of people who were reached AT LEAST k+1 times.
         """
         # Get user counts by spend for each active publisher
-        user_counts_by_pub_id = {}
-        for pub_id, spend in enumerate(spends):
-            if not spend:
-                continue
-            user_counts_by_pub_id[pub_id] = self._publishers[
-                pub_id
-            ]._publisher_data.user_counts_by_spend(spend)
+        user_counts_by_pub_id = {
+            pub_id: self._publishers[pub_id]._publisher_data.user_counts_by_spend(spend)
+            for pub_id, spend in enumerate(spends)
+            if spend
+        }
 
         if len(user_counts_by_pub_id) > MAX_ACTIVE_PUBLISHERS:
             raise ValueError(
@@ -276,7 +334,21 @@ class HaloSimulator:
                 f"diagram algorithm. The maximum limit is {MAX_ACTIVE_PUBLISHERS}."
             )
 
-        # Locate user's region represented by a number and sum the impressions.
+        # Generate the representations of all primitive regions from the
+        # powerset of the active publishers, excluding the empty set.
+        # Ex: if active_pubs = [0, 2] among all publishers [0, 1, 2], then
+        # active_pub_powerset is [[0], [2], [0, 2]]. For the regions from the
+        # the powerset of the active publishers, they are: [2^0, 2^2, 2^0 + 2^2]
+        active_pubs = list(user_counts_by_pub_id.keys())
+        active_pub_powerset = chain.from_iterable(
+            combinations(active_pubs, r) for r in range(1, len(active_pubs) + 1)
+        )
+        regions_with_active_pubs = [
+            sum(1 << pub_id for pub_id in pub_ids) for pub_ids in active_pub_powerset
+        ]
+
+        # Locate user's region which is represented by the binary representation
+        # of a number, and sum the user's impressions.
         user_region = defaultdict(int)
         user_impressions = defaultdict(int)
 
@@ -290,27 +362,137 @@ class HaloSimulator:
                 user_region[user_id] |= 1 << pub_id
                 user_impressions[user_id] += impressions
 
-        # Compute frequencies in the occupied regions of the Venn diagram with
-        # capped user counts.
+        # Compute the frequencies in the occupied primitive Venn diagram regions
+        # with the user counts capped by max_frequency.
         frequencies_by_region = {
-            r: [0] * (max_frequency + 1) for r in set(user_region.values())
+            r: [0] * (max_frequency + 1) for r in regions_with_active_pubs
         }
         for user_id, region in user_region.items():
             impressions = min(max_frequency, user_impressions[user_id])
             frequencies_by_region[region][impressions] += 1
 
-        # Compute k+ reaches in each region. Ignore 0 frequency.
+        # Compute k+ reaches in the primitive regions. Ignore 0-frequency.
+        occupied_regions = set(user_region.values())
         regions = {
             r: ReachPoint.frequencies_to_kplus_reaches(freq[1:])
+            if r in occupied_regions
+            else freq[1:]  # i.e. zero vector
             for r, freq in frequencies_by_region.items()
         }
 
         return regions
 
+    def _sample_venn_diagram(
+        self,
+        primitive_regions: Dict[int, List],
+        sample_size: int,
+        random_generator: np.random.Generator = np.random.default_rng(),
+    ) -> Dict[int, int]:
+        """Return primitive regions with sampled reaches.
+        Args:
+            primitive_regions:  A dictionary in which each key is the binary
+              representation of a primitive region of the Venn diagram, and
+              each value is a list of the k+ reaches in the corresponding
+              region.
+              Note that the binary representation of a key represents the
+              formation of publisher IDs in that primitive region. For example,
+              primitive_regions[key] with key = 5 = bin('101') is the region
+              which belongs to pub_id-0 and id-2.
+              The k+ reaches for a given region is given as a list r[] where
+              r[k] is the number of people who were reached AT LEAST k+1 times.
+            sample_size:  The total number of sampled reach from the primitive
+              regions.
+            random_generator:  An instance of numpy.random.Generator that is
+              used for generating samples from a multivariate hypergeometric
+              distribution.
+        Returns:
+            A dictionary in which each key is the binary representation of a
+              primitive region of the Venn diagram, and each value is the
+              sampled reach in the corresponding gregion.
+              Note that the binary representation of the key represents the
+              formation of publisher IDs in that primitive region. For example,
+              primitive_regions[key] with key = 5 = bin('101') is the region
+              which belongs to pub_id-0 and id-2.
+        """
+
+        region_repr_and_reach_pairs = [
+            (region_repr, kplus_reaches[0])
+            for region_repr, kplus_reaches in primitive_regions.items()
+        ]
+        region_repr_seq, reach_population = list(zip(*region_repr_and_reach_pairs))
+
+        if sample_size > sum(reach_population):
+            raise ValueError(
+                f"The given sample size is {sample_size} which is"
+                f" larger than the total number of reach = {sum(reach_population)}"
+            )
+
+        sampled_reach = random_generator.multivariate_hypergeometric(
+            reach_population, sample_size
+        )
+
+        return {
+            region_repr: r for region_repr, r in zip(region_repr_seq, sampled_reach)
+        }
+
+    def _add_dp_noise_to_primitive_regions(
+        self,
+        primitive_regions: Dict[int, int],
+        budget: PrivacyBudget,
+        privacy_budget_split: float,
+    ) -> Dict[int, int]:
+        """Add differential privacy noise to every primitive region
+
+        Args:
+            primitive_regions:  A dictionary in which each key is the binary
+              representation of a primitive region of the Venn diagram, and
+              each value is the reach in the corresponding region.
+              Note that the binary representation of the key represents the
+              formation of publisher IDs in that primitive region. For example,
+              primitive_regions[key] with key = 5 = bin('101') is the region
+              which belongs to pub_id-0 and id-2.
+            budget:  The amount of privacy budget that can be consumed while
+              satisfying the request.
+            privacy_budget_split:  Specifies the proportion of the privacy
+              budget that should be allocated to the operation in this function.
+        Returns:
+            A dictionary in which each key is the binary representation of a
+              primitive region of the Venn diagram, and each value is the
+              noised reach in the corresponding region.
+              Note that the binary representation of the key represents the
+              formation of publisher IDs in that primitive region. For example,
+              primitive_regions[key] with key = 5 = bin('101') is the region
+              which belongs to pub_id-0 and id-2.
+        """
+        noiser = GeometricEstimateNoiser(
+            budget.epsilon * privacy_budget_split,
+            np.random.RandomState(
+                seed=self._params.generator.integers(low=0, high=1e9)
+            ),
+        )
+
+        noise_event = NoisingEvent(
+            PrivacyBudget(
+                budget.epsilon * privacy_budget_split,
+                budget.delta * privacy_budget_split,
+            ),
+            DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
+            {"privacy_budget_split": privacy_budget_split},
+        )
+
+        noised_primitive_regions = {
+            region_repr: max(0, noiser(reach))
+            for region_repr, reach in primitive_regions.items()
+        }
+
+        self._privacy_tracker.append(noise_event)
+
+        return noised_primitive_regions
+
     def _aggregate_reach_in_primitive_venn_diagram_regions(
-        self, pub_ids: List[int], primitive_regions: Dict[int, List]
+        self, pub_ids: List[int], primitive_regions: Dict[int, int]
     ) -> int:
-        """Returns aggregated reach from Venn diagram primitive regions.
+        """Returns the aggregated reach from the primitive Venn diagram regions.
 
         To obtain the union reach of the given subset of publishers, we sum up
         the reaches from the primitive regions which belong to at least one of
@@ -330,50 +512,53 @@ class HaloSimulator:
         Args:
             pub_ids:  The list of target publisher IDs for computing aggregated
               reach.
-            primitive_regions:  Contains k+ reaches in the regions. The k+
-              reaches for a given region is given as a list r[] where r[k] is
-              the number of people who were reached AT LEAST k+1 times.
+            primitive_regions:  A dictionary in which each key is the binary
+              representation of a primitive region of the Venn diagram, and
+              each value is the reach in the corresponding region.
+              Note that the binary representation of the key represents the
+              formation of publisher IDs in that primitive region. For example,
+              primitive_regions[key] with key = 5 = bin('101') is the region
+              which belongs to pub_id-0 and id-2.
         Returns:
-            aggregated_reach:  The total reach from the given publishers.
+            The sum of reaches from the given publishers.
         """
         targeted_pub_repr = sum(1 << pub_id for pub_id in pub_ids)
         aggregated_reach = sum(
-            primitive_regions[r][0]
-            for r in primitive_regions.keys()
-            if r & targeted_pub_repr
+            reach for r, reach in primitive_regions.items() if r & targeted_pub_repr
         )
 
         return aggregated_reach
 
     def _generate_reach_points_from_venn_diagram(
-        self, spends: List[float], primitive_regions: Dict[int, List]
+        self, spends: List[float], primitive_regions: Dict[int, int]
     ) -> List[ReachPoint]:
         """Return the reach points of the powerset of active publishers.
 
-        For each subset of active publishers, compute reach and frequency
-        estimate for those users who are reached by at least one of the
-        publishers in the subset. Note that the reach points generated by
-        the implementation contain 1+ reaches.
+        For each subset of active publishers, compute reach estimate for those
+        users who are reached by at least one of the active publishers in the
+        subset. Note that the reach points generated by the implementation
+        contain 1+ reaches.
 
         Args:
             spends:  The hypothetical spend vector, equal in length to the
               number of publishers.  spends[i] is the amount that is spent with
               publisher i.
-            primitive_regions:  Contains k+ reaches in the regions. Note that
-              the binary representation of the key of a primitive region
-              represents the formation of publisher IDs in that primitive
-              region. For example, primitive_regions[key] with key = 5 = bin('101')
-              is the region which belongs to pub_id-0 and id-2.
-              The k+ reaches for a given region is given as a list r[] where
-              r[k] is the number of people who were reached AT LEAST k+1 times.
+            primitive_regions:  A dictionary in which each key is the binary
+              representation of a primitive region of the Venn diagram, and
+              each value is the reach in the corresponding region.
+              Note that the binary representation of the key represents the
+              formation of publisher IDs in that primitive region. For example,
+              primitive_regions[key] with key = 5 = bin('101') is the region
+              which belongs to pub_id-0 and id-2.
         Returns:
             A list of ReachPoint. Each reach point represents the mapping from
-            the spends of a subset of publishers to the number of people reached
-            in this subset.
+            the spends of a subset of active publishers to the number of people
+            reached in this subset.
         """
         active_pub_set = [i for i in range(len(spends)) if spends[i]]
         active_pub_powerset = chain.from_iterable(
-            combinations(active_pub_set, r) for r in range(1, len(active_pub_set) + 1)
+            combinations(active_pub_set, set_size)
+            for set_size in range(1, len(active_pub_set) + 1)
         )
         impressions = self._data_set.impressions_by_spend(spends)
 
@@ -382,10 +567,12 @@ class HaloSimulator:
             sub_reach = self._aggregate_reach_in_primitive_venn_diagram_regions(
                 sub_pub_ids, primitive_regions
             )
+
             pub_subset = set(sub_pub_ids)
             pub_vector = np.array([int(i in pub_subset) for i in range(len(spends))])
             sub_imps = np.array(impressions) * pub_vector
             sub_spends = np.array(spends) * pub_vector
+
             reach_points.append(
                 ReachPoint(sub_imps.tolist(), [sub_reach], sub_spends.tolist())
             )

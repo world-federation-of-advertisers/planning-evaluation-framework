@@ -84,7 +84,11 @@ class TestPointAggregatorTest(absltest.TestCase):
             AGGREGATORS["mean_squared_relative_error"](
                 self.test_points1, self.model_points1
             ),
-            1.0 / 3 * (10.0 ** 2 / 200.0 + 20.0 ** 2 / 300.0 + 30.0 ** 2 / 400.0),
+            1.0
+            / 3
+            * (
+                10.0 ** 2 / 200.0 ** 2 + 20.0 ** 2 / 300.0 ** 2 + 30.0 ** 2 / 400.0 ** 2
+            ),
         )
 
     def test_var_error(self):

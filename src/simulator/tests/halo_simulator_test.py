@@ -17,7 +17,11 @@ from absl.testing import absltest
 from absl.testing import parameterized
 import numpy as np
 from unittest.mock import patch
+from dataclasses import dataclass
 
+from wfa_cardinality_estimation_evaluation_framework.estimators.base import (
+    EstimateNoiserBase,
+)
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
@@ -28,8 +32,12 @@ from wfa_planning_evaluation_framework.simulator.halo_simulator import (
     MAX_ACTIVE_PUBLISHERS,
 )
 from wfa_planning_evaluation_framework.simulator.publisher import Publisher
-from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyBudget
-from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyTracker
+from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
+    PrivacyBudget,
+    PrivacyTracker,
+    NoisingEvent,
+    DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
+)
 from wfa_planning_evaluation_framework.simulator.system_parameters import (
     LiquidLegionsParameters,
     SystemParameters,
@@ -39,6 +47,28 @@ from wfa_planning_evaluation_framework.simulator.system_parameters import (
 class FakeLaplaceMechanism:
     def __call__(self, x):
         return [2 * y for y in x]
+
+
+@dataclass
+class FakeNoiser(EstimateNoiserBase):
+    fixed_noise: float
+
+    def __call__(self, estimate):
+        return estimate + self.fixed_noise
+
+
+class FakeRandomGenerator:
+    def multivariate_hypergeometric(self, colors, nsample):
+        samples = [0] * len(colors)
+        index = 0
+
+        while nsample:
+            if samples[index] < colors[index]:
+                samples[index] += 1
+                nsample -= 1
+            index = (index + 1) % len(samples)
+
+        return samples
 
 
 class HaloSimulatorTest(parameterized.TestCase):
@@ -79,7 +109,7 @@ class HaloSimulatorTest(parameterized.TestCase):
         reach_point = self.halo.simulated_reach_by_spend(
             [0.04, 0.04], PrivacyBudget(100.0, 0.0), 0.5, 3
         )
-        self.assertEqual(reach_point.reach(1), 3)
+        self.assertEqual(reach_point.reach(1), 2)
         self.assertEqual(reach_point.reach(2), 1)
         self.assertEqual(reach_point.reach(3), 0)
 
@@ -92,6 +122,29 @@ class HaloSimulatorTest(parameterized.TestCase):
             [0.04, 0.04], PrivacyBudget(1.0, 0.0), 0.5, 3
         )
         self.assertTrue(reach_point.reach(1) >= 0)
+
+    @parameterized.parameters(
+        [1, 0],
+        [1e5, 731820],
+    )
+    def test_liquid_legions_cardinality_estimate_variance(self, cardinality, variance):
+        self.assertAlmostEqual(
+            self.halo._liquid_legions_cardinality_estimate_variance(cardinality),
+            variance,
+            0,
+            msg=f"The variance for estimating n={cardinality} is not correct.",
+        )
+
+    @parameterized.parameters(
+        [1, 1],
+        [1e5, 8251],
+    )
+    def test_liquid_legions_num_active_regions(self, cardinality, num_active):
+        self.assertEqual(
+            self.halo._liquid_legions_num_active_regions(cardinality),
+            num_active,
+            msg=f"The number of active registers for n={cardinality} is not correct.",
+        )
 
     def test_form_venn_diagram_regions_with_publishers_more_than_limit(self):
         num_publishers = MAX_ACTIVE_PUBLISHERS + 1
@@ -109,116 +162,218 @@ class HaloSimulatorTest(parameterized.TestCase):
         with self.assertRaises(ValueError):
             halo._form_venn_diagram_regions(spends)
 
-    def test_form_venn_diagram_regions_with_2_inactive_publishers_and_1plus_reach(self):
-        pdf1 = PublisherData([(1, 0.04)], "pdf1")
-        pdf2 = PublisherData([(1, 0.04)], "pdf2")
-        data_set = DataSet([pdf1, pdf2], "test")
+    @parameterized.named_parameters(
+        # testcase_name, num_publishers, spends, regions, expected
+        {
+            "testcase_name": "with_2_inactive_pubs_and_1plus_reaches",
+            "num_publishers": 2,
+            "spends": [0.005, 0.01],
+            "max_freq": 1,
+            "expected": {
+                1: [0],
+                2: [0],
+                3: [0],
+            },
+        },
+        {
+            "testcase_name": "with_2_active_pubs_and_1plus_reaches",
+            "num_publishers": 2,
+            "spends": [0.04, 0.04],
+            "max_freq": 1,
+            "expected": {
+                1: [1],
+                2: [0],
+                3: [1],
+            },
+        },
+        {
+            "testcase_name": "with_2_active_pubs_and_2plus_reaches",
+            "num_publishers": 2,
+            "spends": [0.05, 0.08],
+            "max_freq": 2,
+            "expected": {
+                1: [2, 1],
+                2: [1, 0],
+                3: [1, 1],
+            },
+        },
+        {
+            "testcase_name": "with_2_active_pubs_out_of_3_and_1plus_reaches",
+            "num_publishers": 3,
+            "spends": [0.04, 0.04, 0.0],
+            "max_freq": 1,
+            "expected": {
+                1: [1],
+                2: [0],
+                3: [1],
+            },
+        },
+        {
+            "testcase_name": "with_2_active_pubs_out_of_3_and_2plus_reaches",
+            "num_publishers": 3,
+            "spends": [0.05, 0.08, 0.0],
+            "max_freq": 2,
+            "expected": {1: [2, 1], 2: [1, 0], 3: [1, 1]},
+        },
+        {
+            "testcase_name": "with_3_active_pubs_and_1plus_reaches",
+            "num_publishers": 3,
+            "spends": [0.05, 0.08, 0.03],
+            "max_freq": 1,
+            "expected": {
+                1: [1],
+                2: [1],
+                3: [0],
+                4: [0],
+                5: [1],
+                6: [0],
+                7: [1],
+            },
+        },
+        {
+            "testcase_name": "with_3_active_pubs_and_2plus_reaches",
+            "num_publishers": 3,
+            "spends": [0.05, 0.08, 0.03],
+            "max_freq": 2,
+            "expected": {
+                1: [1, 1],
+                2: [1, 0],
+                3: [0, 0],
+                4: [0, 0],
+                5: [1, 1],
+                6: [0, 0],
+                7: [1, 1],
+            },
+        },
+    )
+    def test_form_venn_diagram_regions(
+        self, num_publishers, spends, max_freq, expected
+    ):
+        pdfs = [
+            PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1"),
+            PublisherData([(2, 0.03), (4, 0.06)], "pdf2"),
+            PublisherData([(2, 0.01), (3, 0.03), (4, 0.05)], "pdf3"),
+        ]
+        data_set = DataSet(pdfs[:num_publishers], "test")
         params = SystemParameters(
-            [0.4, 0.5], LiquidLegionsParameters(), np.random.default_rng(1)
+            [0.4] * num_publishers,
+            LiquidLegionsParameters(),
+            np.random.default_rng(1),
         )
         privacy_tracker = PrivacyTracker()
         halo = HaloSimulator(data_set, params, privacy_tracker)
 
-        spends = [0.01, 0.01]
-        max_freq = 1
-        expected_regions = {}
         regions = halo._form_venn_diagram_regions(spends, max_freq)
-        self.assertEqual(expected_regions, regions)
+        self.assertEqual(expected, regions)
 
-    def test_form_venn_diagram_regions_with_simple_2_publishers_and_1plus_reach(self):
-        pdf1 = PublisherData([(1, 0.01)], "pdf1")
-        pdf2 = PublisherData([(1, 0.01)], "pdf2")
-        data_set = DataSet([pdf1, pdf2], "test")
-        params = SystemParameters(
-            [0.4, 0.5], LiquidLegionsParameters(), np.random.default_rng(1)
+    @parameterized.named_parameters(
+        {
+            "testcase_name": "with_1_region_and_1plus_reaches",
+            "regions": {3: [1]},
+            "sample_size": 1,
+            "random_generator": np.random.default_rng(0),
+            "expected": {3: 1},
+        },
+        # regions = [1, 2, 5, 10, 17]
+        {
+            "testcase_name": "with_5_regions_1plus_reaches_and_fake_rng",
+            "regions": {i: [i ** 2 + 1] for i in range(5)},
+            "sample_size": 20,
+            "random_generator": FakeRandomGenerator(),
+            "expected": {i: n for i, n in enumerate([1, 2, 5, 6, 6])},
+        },
+        # regions = [[0, 0], [2, 1], [0, 0], [10, 3], [0, 0], [26, 5]]
+        {
+            "testcase_name": "with_6_regions_2plus_reaches_and_fake_rng",
+            "regions": {i: [i ** 2 + 1, i] if i % 2 else [0, 0] for i in range(6)},
+            "sample_size": 20,
+            "random_generator": FakeRandomGenerator(),
+            "expected": {i: n for i, n in enumerate([0, 2, 0, 9, 0, 9])},
+        },
+    )
+    def test_sample_venn_diagram(
+        self, regions, sample_size, random_generator, expected
+    ):
+        self.assertEqual(
+            self.halo._sample_venn_diagram(regions, sample_size, random_generator),
+            expected,
         )
-        privacy_tracker = PrivacyTracker()
-        halo = HaloSimulator(data_set, params, privacy_tracker)
 
-        spends = [0.01, 0.01]
-        max_freq = 1
-        expected_regions = {3: [1]}
-        regions = halo._form_venn_diagram_regions(spends, max_freq)
-        self.assertEqual(expected_regions, regions)
+    def test_sample_venn_diagram_with_invalid_input(self):
+        with self.assertRaises(ValueError):
+            self.halo._sample_venn_diagram({3: [1]}, 20)
 
-    def test_form_venn_diagram_regions_with_2_publishers_and_1plus_reach(self):
-        pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
-        pdf2 = PublisherData([(2, 0.03), (4, 0.06)], "pdf2")
-        data_set = DataSet([pdf1, pdf2], "test")
-        params = SystemParameters(
-            [0.4, 0.5], LiquidLegionsParameters(), np.random.default_rng(1)
+    @parameterized.named_parameters(
+        {
+            "testcase_name": "with_1_regions",
+            "regions": {1: 1},
+            "budget": PrivacyBudget(0.2, 0.4),
+            "privacy_budget_split": 0.7,
+            "fixed_noise": 1,
+            "expected_regions": {1: 2},
+        },
+        {
+            "testcase_name": "with_3_regions",
+            "regions": {1: 1, 2: 0, 3: 1},
+            "budget": PrivacyBudget(0.1, 0.1),
+            "privacy_budget_split": 0.3,
+            "fixed_noise": 2,
+            "expected_regions": {1: 3, 2: 2, 3: 3},
+        },
+    )
+    @patch(
+        "wfa_planning_evaluation_framework.simulator.halo_simulator.GeometricEstimateNoiser"
+    )
+    def test_add_dp_noise_to_primitive_regions(
+        self,
+        mock_geometric_estimate_noiser,
+        regions,
+        budget,
+        privacy_budget_split,
+        fixed_noise,
+        expected_regions,
+    ):
+        mock_geometric_estimate_noiser.return_value = FakeNoiser(fixed_noise)
+
+        halo = HaloSimulator(DataSet([], "test"), SystemParameters(), PrivacyTracker())
+
+        noised_regions = halo._add_dp_noise_to_primitive_regions(
+            regions, budget, privacy_budget_split
         )
-        privacy_tracker = PrivacyTracker()
-        halo = HaloSimulator(data_set, params, privacy_tracker)
 
-        spends = [0.04, 0.04]
-        max_freq = 1
-        expected_regions = {1: [1], 3: [1]}
-        regions = halo._form_venn_diagram_regions(spends, max_freq)
-        self.assertEqual(expected_regions, regions)
-
-    def test_form_venn_diagram_regions_with_2_publishers_and_2plus_reach(self):
-        pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
-        pdf2 = PublisherData([(2, 0.03), (4, 0.06)], "pdf2")
-        data_set = DataSet([pdf1, pdf2], "test")
-        params = SystemParameters(
-            [0.4, 0.5], LiquidLegionsParameters(), np.random.default_rng(1)
+        self.assertEqual(noised_regions, expected_regions)
+        self.assertEqual(
+            halo.privacy_tracker._epsilon_sum, budget.epsilon * privacy_budget_split
         )
-        privacy_tracker = PrivacyTracker()
-        halo = HaloSimulator(data_set, params, privacy_tracker)
-
-        spends = [0.05, 0.08]
-        max_freq = 2
-        expected_regions = {1: [2, 1], 2: [1, 0], 3: [1, 1]}
-        regions = halo._form_venn_diagram_regions(spends, max_freq)
-        self.assertEqual(expected_regions, regions)
-
-    def test_form_venn_diagram_regions_with_3_publishers_and_1plus_reach(self):
-        pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
-        pdf2 = PublisherData([(2, 0.03), (4, 0.06)], "pdf2")
-        pdf3 = PublisherData([(2, 0.01), (3, 0.03), (4, 0.05)], "pdf3")
-        data_set = DataSet([pdf1, pdf2, pdf3], "test")
-        params = SystemParameters(
-            [0.4, 0.5, 0.4], LiquidLegionsParameters(), np.random.default_rng(1)
+        self.assertEqual(
+            halo.privacy_tracker._delta_sum, budget.delta * privacy_budget_split
         )
-        privacy_tracker = PrivacyTracker()
-        halo = HaloSimulator(data_set, params, privacy_tracker)
-
-        spends = [0.04, 0.04, 0.0]
-        max_freq = 1
-        expected_regions = {1: [1], 3: [1]}
-        regions = halo._form_venn_diagram_regions(spends, max_freq)
-        self.assertEqual(expected_regions, regions)
-
-    def test_form_venn_diagram_regions_with_3_publishers_and_2plus_reach(self):
-        pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
-        pdf2 = PublisherData([(2, 0.03), (4, 0.06)], "pdf2")
-        pdf3 = PublisherData([(2, 0.01), (3, 0.03), (4, 0.05)], "pdf3")
-        data_set = DataSet([pdf1, pdf2, pdf3], "test")
-        params = SystemParameters(
-            [0.4, 0.5, 0.4], LiquidLegionsParameters(), np.random.default_rng(1)
+        self.assertEqual(len(halo.privacy_tracker._noising_events), 1)
+        self.assertEqual(
+            halo.privacy_tracker._noising_events[0].budget.epsilon,
+            budget.epsilon * privacy_budget_split,
         )
-        privacy_tracker = PrivacyTracker()
-        halo = HaloSimulator(data_set, params, privacy_tracker)
-
-        spends = [0.05, 0.08, 0.0]
-        max_freq = 2
-        expected_regions = {1: [2, 1], 2: [1, 0], 3: [1, 1]}
-        regions = halo._form_venn_diagram_regions(spends, max_freq)
-        self.assertEqual(expected_regions, regions)
+        self.assertEqual(
+            halo.privacy_tracker._noising_events[0].budget.delta,
+            budget.delta * privacy_budget_split,
+        )
+        self.assertEqual(
+            halo.privacy_tracker._noising_events[0].mechanism,
+            DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
+        )
+        self.assertEqual(
+            halo.privacy_tracker._noising_events[0].params,
+            {"privacy_budget_split": privacy_budget_split},
+        )
 
     @parameterized.named_parameters(
         # testcase_name, pub_ids, regions, expected
-        ("without_publisher", [], {1: [1], 3: [1]}, 0),
+        ("without_publisher", [], {1: 1, 2: 0, 3: 1}, 0),
         ("without_region", [0, 1], {}, 0),
-        ("with_1R1P_1plus_reach", [0], {3: [1]}, 1),
-        ("with_1R2P_1plus_reach", [0, 1], {3: [1]}, 1),
-        ("with_3R1P_1plus_reach", [0], {1: [2], 2: [1], 3: [1]}, 3),
-        ("with_3R2P_1plus_reach", [0, 1], {1: [2], 2: [1], 3: [1]}, 4),
-        ("with_1R1P_2plus_reach", [0], {3: [1, 1]}, 1),
-        ("with_1R2P_2plus_reach", [0, 1], {3: [1, 1]}, 1),
-        ("with_3R1P_2plus_reach", [0], {1: [2, 1], 2: [1, 1], 3: [1, 1]}, 3),
-        ("with_3R2P_2plus_reach", [0, 1], {1: [2, 1], 2: [1, 1], 3: [1, 1]}, 4),
+        ("with_1_occupied_region_1_pub", [0], {1: 0, 2: 0, 3: 1}, 1),
+        ("with_1_occupied_region_2_pubs", [0, 1], {1: 0, 2: 0, 3: 1}, 1),
+        ("with_3_occupied_regions_1_pub", [0], {1: 2, 2: 1, 3: 1}, 3),
+        ("with_3_occupied_regions_2_pubs", [0, 1], {1: 2, 2: 1, 3: 1}, 4),
     )
     def test_aggregate_reach_in_primitive_venn_diagram_regions(
         self, pub_ids, regions, expected
@@ -249,10 +404,10 @@ class HaloSimulatorTest(parameterized.TestCase):
             "expected": [],
         },
         {
-            "testcase_name": "with_1_active_pub_from_2_pubs",
+            "testcase_name": "with_1_region_2_active_pubs",
             "num_publishers": 2,
             "spends": [0.04, 0.02],
-            "regions": {1: [2]},
+            "regions": {1: 2},
             "expected": [
                 ReachPoint([3, 0], [2], [0.04, 0]),
                 ReachPoint([0, 0], [0], [0, 0.02]),
@@ -260,25 +415,14 @@ class HaloSimulatorTest(parameterized.TestCase):
             ],
         },
         {
-            "testcase_name": "with_2_active_pubs",
+            "testcase_name": "with_3_regions_2_active_pubs",
             "num_publishers": 2,
             "spends": [0.04, 0.04],
-            "regions": {1: [1], 3: [1]},
+            "regions": {1: 1, 2: 0, 3: 1},
             "expected": [
                 ReachPoint([3, 0], [2], [0.04, 0]),
                 ReachPoint([0, 1], [1], [0, 0.04]),
                 ReachPoint([3, 1], [2], [0.04, 0.04]),
-            ],
-        },
-        {
-            "testcase_name": "with_2_active_pubs_from_3_pubs",
-            "num_publishers": 3,
-            "spends": [0.05, 0.08, 0.0],
-            "regions": {1: [2, 1], 2: [1, 0], 3: [1, 1]},
-            "expected": [
-                ReachPoint([4, 0, 0], [3], [0.05, 0, 0]),
-                ReachPoint([0, 2, 0], [2], [0, 0.08, 0]),
-                ReachPoint([4, 2, 0], [4], [0.05, 0.08, 0]),
             ],
         },
     )
@@ -299,7 +443,7 @@ class HaloSimulatorTest(parameterized.TestCase):
         privacy_tracker = PrivacyTracker()
         halo = HaloSimulator(data_set, params, privacy_tracker)
 
-        # Note that the reach points generated from the Venn diagram only 
+        # Note that the reach points generated from the Venn diagram only
         # contain 1+ reaches.
         reach_points = halo._generate_reach_points_from_venn_diagram(spends, regions)
 

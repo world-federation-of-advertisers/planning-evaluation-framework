@@ -143,7 +143,7 @@ class GammaPoissonModel(ReachCurve):
         This implementation makes use of the equivalence between the
         Gamma-Poisson distribution with parameters (alpha, beta) and
         the negative binomial distribution with parameters (p, r) =
-        (beta / (1 + beta), alpha).
+        (1 / (1 + beta), alpha).
 
         Args:
           n:  Value(s) at which the distribution is to be evaluated.
@@ -227,7 +227,8 @@ class GammaPoissonModel(ReachCurve):
         Returns:
           Expected size of impression inventory for a population of N users.
         """
-        return N * (1.0 + alpha * beta)
+        # N * (1.0 + alpha * beta)
+        return N * (1 + scipy.stats.nbinom.mean(alpha, 1.0 / (1.0 + beta)))
 
     def _expected_histogram(self, I, Imax, N, alpha, beta, max_freq=10):
         """Computes an estimated histogram.
@@ -342,7 +343,9 @@ class GammaPoissonModel(ReachCurve):
 
         actual_oneplus = np.sum(h)
         predicted_oneplus = np.sum(hbar)
-        oneplus_error = (actual_oneplus - predicted_oneplus) ** 2
+        oneplus_error = (
+            one_plus_reach_weight * (actual_oneplus - predicted_oneplus) ** 2
+        )
 
         obj = np.sum((hbar - h) ** 2 / (hbar + 1e-6)) + oneplus_error
 

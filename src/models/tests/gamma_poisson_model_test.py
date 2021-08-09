@@ -150,7 +150,7 @@ class GammaPoissonModelTest(absltest.TestCase):
     @patch(
         "wfa_planning_evaluation_framework.models.gamma_poisson_model.GammaPoissonModel._fit_histogram_fixed_N"
     )
-    def test_fit_histogram_fixed_N(self, mock_gamma_poisson_model):
+    def test_fit_fixed_N(self, mock_gamma_poisson_model):
         mock_gamma_poisson_model.return_value = (30000, 1.0, 2.0)
         # Imax = 4000, N = 10000, alpha = 1, beta = 1
         h_actual = [2853, 813, 230, 64, 17, 4, 1, 0, 0, 0]

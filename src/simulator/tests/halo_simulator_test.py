@@ -157,30 +157,6 @@ class HaloSimulatorTest(parameterized.TestCase):
             msg=f"The number of active registers for n={cardinality} is not correct.",
         )
 
-    def test_form_venn_diagram_regions_with_publishers_more_than_limit(self):
-        pdfs = [
-            PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1"),
-            PublisherData([(2, 0.03), (4, 0.06)], "pdf2"),
-            PublisherData([(2, 0.01), (3, 0.03), (4, 0.05)], "pdf3"),
-        ]
-        data_set = DataSet(pdfs, "test")
-        params = SystemParameters(
-            [0.4, 0.5, 0.4],
-            LiquidLegionsParameters(),
-            FakeRandomGenerator(),
-        )
-        privacy_tracker = PrivacyTracker()
-        halo = HaloSimulator(data_set, params, privacy_tracker)
-
-        spends = [0, 0, 0]
-        budget = PrivacyBudget(0.2, 0.4)
-        privacy_budget_split = 0.5
-        max_freq = 2
-        with self.assertRaises(ValueError):
-            halo.simulated_venn_diagram_reach_by_spend(
-                spends, budget, privacy_budget_split, max_freq
-            )
-
     def test_simulated_venn_diagram_reach_by_spend_without_active_pub(self):
         pdfs = [
             PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1"),

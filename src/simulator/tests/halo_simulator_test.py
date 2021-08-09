@@ -123,6 +123,29 @@ class HaloSimulatorTest(parameterized.TestCase):
         )
         self.assertTrue(reach_point.reach(1) >= 0)
 
+    @parameterized.parameters(
+        [1, 0],
+        [1e5, 731820],
+    )
+    def test_liquid_legions_cardinality_estimate_variance(self, cardinality, variance):
+        self.assertAlmostEqual(
+            self.halo._liquid_legions_cardinality_estimate_variance(cardinality),
+            variance,
+            0,
+            msg=f"The variance for estimating n={cardinality} is not correct.",
+        )
+
+    @parameterized.parameters(
+        [1, 1],
+        [1e5, 8251],
+    )
+    def test_liquid_legions_num_active_regions(self, cardinality, num_active):
+        self.assertEqual(
+            self.halo._liquid_legions_num_active_regions(cardinality),
+            num_active,
+            msg=f"The number of active registers for n={cardinality} is not correct.",
+        )
+
     def test_form_venn_diagram_regions_with_publishers_more_than_limit(self):
         num_publishers = MAX_ACTIVE_PUBLISHERS + 1
         data_set = DataSet(

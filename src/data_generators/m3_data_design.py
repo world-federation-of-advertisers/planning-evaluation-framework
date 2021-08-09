@@ -108,7 +108,7 @@ OVERLAP_GENERATORS = [
         {"largest_pub_to_universe_ratio": 0.25, "random_generator": 4},
     ),
     GeneratorParameters(
-        "Seqential",
+        "Sequential",
         SequentiallyCorrelatedOverlapDataSet,
         {
             "order": OrderOptions.random,
@@ -118,7 +118,7 @@ OVERLAP_GENERATORS = [
         },
     ),
     GeneratorParameters(
-        "Seqential",
+        "Sequential",
         SequentiallyCorrelatedOverlapDataSet,
         {
             "order": OrderOptions.original,
@@ -130,7 +130,7 @@ OVERLAP_GENERATORS = [
         },
     ),
     GeneratorParameters(
-        "Seqential",
+        "Sequential",
         SequentiallyCorrelatedOverlapDataSet,
         {
             "order": OrderOptions.original,
@@ -140,7 +140,7 @@ OVERLAP_GENERATORS = [
         },
     ),
     GeneratorParameters(
-        "Seqential",
+        "Sequential",
         SequentiallyCorrelatedOverlapDataSet,
         {
             "order": OrderOptions.random,

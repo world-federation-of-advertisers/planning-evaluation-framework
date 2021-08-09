@@ -27,6 +27,7 @@ from typing import Dict
 from collections import defaultdict
 from itertools import chain, combinations
 import numpy as np
+from scipy.special import expi
 
 from wfa_cardinality_estimation_evaluation_framework.estimators.base import (
     EstimateNoiserBase,
@@ -217,6 +218,54 @@ class HaloSimulator:
         return ReachPoint(
             impressions=impressions, kplus_reaches=kplus_reaches, spends=spends
         )
+
+    def _liquid_legions_cardinality_estimate_variance(self, n: int) -> float:
+        """Variance of cardinality estimate by unnoised LiquidLegions.
+
+        TODO(jiayu): add a link of the paper to explain the variance formula,
+        once the paper is published.
+
+        Args:
+          n:  Carinality of the items contained in a LiquidLegions.
+
+        Returns:
+          var(n-hat) where n-hat is the cardinality estimate from a
+          LiquidLegions which contains n distinct items and has the system
+          parameters (decay rate and sketch size) in this halo.
+        """
+        m = self._params.liquid_legions.sketch_size
+        a = self._params.liquid_legions.decay_rate
+        c = a * n / m / (1 - np.exp(-a))
+        variance = (
+            expi(-c) - expi(-c * np.exp(-a)) - expi(-2 * c) + expi(-2 * c * np.exp(-a))
+        )
+        variance *= a * n ** 2 / m / (np.exp(-c) - np.exp(-c * np.exp(-a))) ** 2
+        variance -= n
+        return variance
+
+    def _liquid_legions_num_active_regions(self, n: int) -> int:
+        """Simulate an observation of the number of active registers.
+
+        Args:
+          n:  Carinality of the items contained in a LiquidLegions.
+          random_generator:  An instance of numpy.random.Generator that is
+            used for assigning different items into different registers.
+
+        Returns:
+          An observation of the number of active registers in the LiquidLegions.
+        """
+        m = self._params.liquid_legions.sketch_size
+        a = self._params.liquid_legions.decay_rate
+        register_probs = np.exp(-a * np.arange(m) / m)
+        register_probs /= sum(register_probs)
+        num_active_regs = sum(
+            self._params.generator.multinomial(n, register_probs) == 1
+        )
+        if num_active_regs == 0:
+            raise RuntimeError(
+                "Zero active registers. Please change the LiquidLegions configuration."
+            )
+        return num_active_regs
 
     def simulated_venn_diagram_reach_by_spend(
         self,

@@ -44,131 +44,136 @@ class GammaPoissonModelTest(absltest.TestCase):
                 lambda x: gamma_poisson_integrand(k, x, alpha, beta), 0.0, np.Inf
             )[0]
 
-        gpm = GammaPoissonModel([ReachPoint([], [])])
+        gpm = GammaPoissonModel([ReachPoint([20], [10])])
         self.assertAlmostEqual(
-            gpm._logpmf(1, 1.0, 1.0), np.log(gamma_poisson_pmf(1, 1.0, 1.0))
+            gpm._logpmf(1, 1.0, 1.0), np.log(gamma_poisson_pmf(0, 1.0, 1.0))
         )
 
         self.assertAlmostEqual(
-            gpm._logpmf(2, 1.0, 1.0), np.log(gamma_poisson_pmf(2, 1.0, 1.0))
+            gpm._logpmf(2, 1.0, 1.0), np.log(gamma_poisson_pmf(1, 1.0, 1.0))
         )
 
         self.assertAlmostEqual(
-            gpm._logpmf(2, 3.0, 1.0), np.log(gamma_poisson_pmf(2, 3.0, 1.0))
+            gpm._logpmf(2, 3.0, 1.0), np.log(gamma_poisson_pmf(1, 3.0, 1.0))
         )
 
         self.assertAlmostEqual(
-            gpm._logpmf(2, 1.0, 4.0), np.log(gamma_poisson_pmf(2, 1.0, 4.0))
+            gpm._logpmf(2, 1.0, 4.0), np.log(gamma_poisson_pmf(1, 1.0, 4.0))
         )
 
     def test_knreach(self):
-        gpm = GammaPoissonModel([ReachPoint([], [])])
-        self.assertAlmostEqual(gpm._knreach(0, 1, 1, 2, 1.0, 1.0), 1 / 8)
-        self.assertAlmostEqual(gpm._knreach(1, 1, 1, 2, 1.0, 1.0), 1 / 8)
+        gpm = GammaPoissonModel([ReachPoint([20], [10])])
+        self.assertAlmostEqual(gpm._knreach(1, 1, 1, 2, 1.0, 1.0), 0.25)
         self.assertAlmostEqual(gpm._knreach(2, 1, 1, 2, 1.0, 1.0), 0)
-        self.assertAlmostEqual(gpm._knreach(1, 1, 1, 2, 1.0, 2.0), 1.0 / 9.0)
-        self.assertAlmostEqual(gpm._knreach(1, [1], 1, 2, 1.0, 1.0)[0], 1 / 8)
-        self.assertAlmostEqual(gpm._knreach(1, [1, 2], 1, 2, 1.0, 1.0)[0], 1 / 8)
-        self.assertAlmostEqual(gpm._knreach(1, [1, 2], 1, 2, 1.0, 1.0)[1], 1 / 16)
+        self.assertAlmostEqual(gpm._knreach(1, 1, 1, 2, 1.0, 2.0), 1.0 / 6.0)
+        self.assertAlmostEqual(gpm._knreach(1, np.array([1]), 1, 2, 1.0, 1.0)[0], 1 / 4)
         self.assertAlmostEqual(
-            gpm._knreach(1, 3, 1, 3, 1.0, 1.0), 3 * (1 / 3) * (2 / 3) ** 2 * (1 / 16)
+            gpm._knreach(1, np.array([1, 2]), 1, 2, 1.0, 1.0)[0], 1 / 4
+        )
+        self.assertAlmostEqual(
+            gpm._knreach(1, np.array([1, 2]), 1, 2, 1.0, 1.0)[1], 1 / 8
+        )
+        self.assertAlmostEqual(
+            gpm._knreach(1, 3, 1, 3, 1.0, 1.0), 3 * (1 / 3) * (2 / 3) ** 2 * (1 / 8)
         )
 
     def test_kreach(self):
-        gpm = GammaPoissonModel([ReachPoint([], [])])
-        self.assertAlmostEqual(gpm._kreach([0], 1, 2, 1, 1)[0], 2 / 3)
-        self.assertAlmostEqual(gpm._kreach([0], 1, 3, 1, 1)[0], 3 / 4)
-        self.assertAlmostEqual(gpm._kreach([1], 1, 3, 1, 1)[0], 3 / 16)
-        self.assertAlmostEqual(gpm._kreach([0, 1, 2], 1, 3, 1, 1)[0], 3 / 4)
-        self.assertAlmostEqual(gpm._kreach([0, 1, 2], 1, 3, 1, 1)[1], 3 / 16)
-        self.assertAlmostEqual(gpm._kreach([0, 1, 2], 1, 3, 1, 1)[2], 3 / 64)
+        gpm = GammaPoissonModel([ReachPoint([20], [10])])
+        self.assertAlmostEqual(gpm._kreach([0], 1, 2, 1, 1)[0], 1 / 3)
+        self.assertAlmostEqual(gpm._kreach([0], 1, 3, 1, 1)[0], 1 / 2)
+        self.assertAlmostEqual(gpm._kreach([1], 1, 3, 1, 1)[0], 3 / 8)
+        self.assertAlmostEqual(gpm._kreach([0, 1, 2], 1, 3, 1, 1)[0], 1 / 2)
+        self.assertAlmostEqual(gpm._kreach([0, 1, 2], 1, 3, 1, 1)[1], 3 / 8)
+        self.assertAlmostEqual(gpm._kreach([0, 1, 2], 1, 3, 1, 1)[2], 3 / 32)
 
     def test_expected_impressions(self):
-        gpm = GammaPoissonModel([ReachPoint([], [])])
-        self.assertAlmostEqual(gpm._expected_impressions(1, 1, 1), 1.0)
-        self.assertAlmostEqual(gpm._expected_impressions(2, 1, 1), 2.0)
-        self.assertAlmostEqual(gpm._expected_impressions(1, 2, 1), 2)
-        self.assertAlmostEqual(gpm._expected_impressions(1, 1, 2), 0.5)
+        gpm = GammaPoissonModel([ReachPoint([20], [10])])
+        self.assertAlmostEqual(gpm._expected_impressions(1, 1, 1), 2.0)
+        self.assertAlmostEqual(gpm._expected_impressions(2, 1, 1), 4.0)
+        self.assertAlmostEqual(gpm._expected_impressions(1, 2, 1), 3.0)
+        self.assertAlmostEqual(gpm._expected_impressions(1, 1, 2), 3.0)
 
     def test_expected_histogram(self):
-        gpm = GammaPoissonModel([ReachPoint([], [])])
+        gpm = GammaPoissonModel([ReachPoint([20], [10])])
         h_actual = gpm._expected_histogram(4, 12, 16, 1, 1, max_freq=3)
         self.assertLen(h_actual, 3)
-        self.assertAlmostEqual(h_actual[0], 3)
-        self.assertAlmostEqual(h_actual[1], 3 / 4.0)
-        self.assertAlmostEqual(h_actual[2], 3 / 16.0)
-
-    def test_feasible_point(self):
-        gpm = GammaPoissonModel([ReachPoint([], [])])
-        alpha, beta, I = gpm._feasible_point([14, 8, 4, 2])
-        self.assertAlmostEqual(alpha, 1.0)
-        self.assertAlmostEqual(beta, 56 / 500)
-        self.assertAlmostEqual(I, 500)
+        self.assertAlmostEqual(h_actual[0], 6)
+        self.assertAlmostEqual(h_actual[1], 3 / 2)
+        self.assertAlmostEqual(h_actual[2], 3 / 8)
 
     def test_fit_histogram_chi2_distance(self):
-        gpm = GammaPoissonModel([ReachPoint([], [])])
-        I0, N0, alpha0, beta0 = 20000, 10000, 5, 0.5
-        h_actual = gpm._expected_histogram(I0, I0 / 0.1, N0, alpha0, beta0)
-        Imax, N, alpha, beta = gpm._fit_histogram_chi2_distance(h_actual)
-        Ih = np.sum([h_actual[i] * (i + 1) for i in range(len(h_actual))])
-        h_predicted = gpm._expected_histogram(Ih, Imax, N, alpha, beta)
+        # The following point corresponds to
+        #  I, Imax, N, alpha0, beta0 = 5000, 30000, 10000, 1.0, 2.0
+        # This represents a distribution with mean = 3 and variance = 6.
+        h_actual = [2812, 703, 175, 43, 10, 2, 0, 0, 0, 0]
+        kplus_actual = [3745, 933, 230, 55, 12, 2, 0, 0, 0, 0]
+        rp = ReachPoint([5000], kplus_actual)
+        gpm = GammaPoissonModel([rp])
+        Imax, N, alpha, beta = gpm._fit_histogram_chi2_distance(rp, nstarting_points=1)
+        h_predicted = gpm._expected_histogram(5000, Imax, N, alpha, beta)
         for i in range(len(h_actual)):
             self.assertTrue(
-                (h_actual[i] - h_predicted[i]) ** 2 < 1,
+                (h_actual[i] - h_predicted[i]) ** 2 / h_predicted[i] < 1,
                 f"Discrepancy found at position {i}. "
                 f"Got {h_predicted[i]} Expected {h_actual[i]}",
             )
 
     def test_fit_histogram_fixed_N(self):
-        gpm = GammaPoissonModel([ReachPoint([], [])])
-        I0, N0, alpha0, beta0 = 4000, 10000, 1, 1
-        h_actual = gpm._expected_histogram(I0, I0 / 0.1, N0, alpha0, beta0)
-        Imax, alpha, beta = gpm._fit_histogram_fixed_N(h_actual, N0)
-        Ih = np.sum([h_actual[i] * (i + 1) for i in range(len(h_actual))])
-        h_predicted = gpm._expected_histogram(Ih, Imax, N0, alpha, beta)
+        # The following point corresponds to
+        #  I, Imax, N, alpha0, beta0 = 15000, 30000, 10000, 1.0, 2.0
+        # This represents a distribution with mean = 3 and variance = 6.
+        h_actual = [3749, 1875, 937, 468, 234, 117, 58, 29, 14, 7]
+        kplus_actual = [7488, 3739, 1864, 927, 459, 225, 108, 50, 21, 7]
+        rp = ReachPoint([15000], kplus_actual)
+        gpm = GammaPoissonModel([rp])
+        Imax, alpha, beta = gpm._fit_histogram_fixed_N(rp, 10000)
+        h_predicted = gpm._expected_histogram(15000, Imax, 10000, alpha, beta)
         for i in range(len(h_actual)):
             self.assertTrue(
-                (h_actual[i] - h_predicted[i]) ** 2 < 1,
+                (h_actual[i] - h_predicted[i]) ** 2 / h_predicted[i] < 1,
                 f"Discrepancy found at position {i}. "
                 f"Got {h_predicted[i]} Expected {h_actual[i]}",
             )
 
-    def test_fit_variable_N(self):
+    @patch(
+        "wfa_planning_evaluation_framework.models.gamma_poisson_model.GammaPoissonModel._fit_histogram_chi2_distance"
+    )
+    def test_fit_variable_N(self, mock_gamma_poisson_model):
+        mock_gamma_poisson_model.return_value = (30000, 10000, 1.0, 2.0)
         h_actual = [2853, 813, 230, 64, 17, 4, 1, 0, 0, 0]
         rp = ReachPoint([4000], h_actual)
         gpm = GammaPoissonModel([rp])
         gpm._fit()
-        self.assertAlmostEqual(gpm._max_reach, 9500, delta=100)
-        self.assertAlmostEqual(gpm._alpha, 1.12, delta=0.05)
+        self.assertAlmostEqual(gpm._max_reach, 10000, delta=1)
+        self.assertAlmostEqual(gpm._alpha, 1.0, delta=0.01)
 
-    def test_fit_fixed_N(self):
+    @patch(
+        "wfa_planning_evaluation_framework.models.gamma_poisson_model.GammaPoissonModel._fit_histogram_fixed_N"
+    )
+    def test_fit_fixed_N(self, mock_gamma_poisson_model):
+        mock_gamma_poisson_model.return_value = (30000, 1.0, 2.0)
         # Imax = 4000, N = 10000, alpha = 1, beta = 1
         h_actual = [2853, 813, 230, 64, 17, 4, 1, 0, 0, 0]
         rp = ReachPoint([4000], h_actual)
         gpm = GammaPoissonModel([rp], max_reach=10000)
         gpm._fit()
-        self.assertAlmostEqual(gpm._max_reach, 10000, delta=10)
-        self.assertAlmostEqual(gpm._alpha, 1.0, delta=0.05)
+        self.assertAlmostEqual(gpm._max_reach, 10000, delta=1)
+        self.assertAlmostEqual(gpm._alpha, 1.0, delta=0.01)
 
-    def test_by_impressions(self):
+    @patch(
+        "wfa_planning_evaluation_framework.models.gamma_poisson_model.GammaPoissonModel._fit_histogram_fixed_N"
+    )
+    def test_by_impressions(self, mock_gamma_poisson_model):
+        mock_gamma_poisson_model.return_value = (25000, 5.0, 2.0)
         # Imax = 25000, N = 10000, alpha = 5, beta = 2
         h_training = [8124, 5464, 3191, 1679, 815, 371, 159, 64, 23, 6, 0]
         rp = ReachPoint([20000], h_training, [200.0])
         gpm = GammaPoissonModel([rp], max_reach=10000)
         gpm._fit()
-        he = gpm._expected_histogram(
-            20000, gpm._max_impressions, gpm._max_reach, gpm._alpha, gpm._beta
-        )
-        hp = gpm._expected_histogram(
-            10000, gpm._max_impressions, gpm._max_reach, gpm._alpha, gpm._beta
-        )
-        re = list(reversed(np.cumsum(list(reversed(he)))))
-        rx = list(reversed(np.cumsum(list(reversed(hp)))))
         rp = gpm.by_impressions([10000], max_frequency=5)
-        h_expected = np.array([5970, 2631, 961, 310, 91])
+        h_expected = np.array([9682, 8765, 7353, 5750, 4233])
         h_actual = np.array([int(rp.reach(i)) for i in range(1, 6)])
         total_error = np.sum((h_expected - h_actual) ** 2 / h_expected)
-        self.assertTrue(total_error < 1)
         self.assertAlmostEqual(rp.spends[0], 100.0)
         for i in range(len(h_actual)):
             self.assertTrue(
@@ -177,14 +182,18 @@ class GammaPoissonModelTest(absltest.TestCase):
                 f"Got {h_actual[i]} Expected {h_expected[i]}",
             )
 
-    def test_by_spend(self):
+    @patch(
+        "wfa_planning_evaluation_framework.models.gamma_poisson_model.GammaPoissonModel._fit_histogram_fixed_N"
+    )
+    def test_by_spend(self, mock_gamma_poisson_model):
+        mock_gamma_poisson_model.return_value = (25000, 5.0, 2.0)
         # Imax = 25000, N = 10000, alpha = 5, beta = 2
         h_training = [8124, 5464, 3191, 1679, 815, 371, 159, 64, 23, 6, 0]
         rp = ReachPoint([20000], h_training, [200.0])
         gpm = GammaPoissonModel([rp], max_reach=10000)
         gpm._fit()
         rp = gpm.by_spend([100.0], max_frequency=5)
-        h_expected = np.array([5970, 2631, 961, 310, 91])
+        h_expected = np.array([9682, 8765, 7353, 5750, 4233])
         h_actual = np.array([int(rp.reach(i)) for i in range(1, 6)])
         total_error = np.sum((h_expected - h_actual) ** 2 / h_expected)
         self.assertTrue(total_error < 1)

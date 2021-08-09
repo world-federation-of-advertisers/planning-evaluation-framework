@@ -13,6 +13,7 @@
 # limitations under the License.
 """Gamma-Poisson reach curve model for underreported counts."""
 
+from absl import logging
 import numpy as np
 import scipy.stats
 from typing import List
@@ -22,11 +23,6 @@ from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 # The following constant defines the highest frequency that will be
 # used for parameter estimation.
 MAXIMUM_COMPUTATIONAL_FREQUENCY = 1000
-
-# The ratio of the number of impressions observed in the data to the
-# size of the total impression inventory.  This ratio is kept constant
-# as a way of eliminating a free parameter in the model.
-IMPRESSION_INVENTORY_RATIO = 0.1
 
 
 class GammaPoissonModel(ReachCurve):
@@ -128,6 +124,12 @@ class GammaPoissonModel(ReachCurve):
         """
         if len(data) != 1:
             raise ValueError("Exactly one ReachPoint must be specified")
+        if data[0].impressions[0] < 0.001:
+            raise ValueError("Attempt to create model with 0 impressions")
+        if data[0].impressions[0] < data[0].reach(1):
+            raise ValueError(
+                "Cannot have a model with fewer impressions than reached people"
+            )
         self._reach_point = data[0]
         self._max_reach = max_reach
         if data[0].spends:
@@ -136,12 +138,12 @@ class GammaPoissonModel(ReachCurve):
             self._cpi = None
 
     def _logpmf(self, n, alpha, beta):
-        """Log of the PMF of the Gamma-Poisson distribution.
+        """Log of the PMF of the shifted Gamma-Poisson distribution.
 
         This implementation makes use of the equivalence between the
         Gamma-Poisson distribution with parameters (alpha, beta) and
         the negative binomial distribution with parameters (p, r) =
-        (beta / (1 + beta), alpha).
+        (1 / (1 + beta), alpha).
 
         Args:
           n:  Value(s) at which the distribution is to be evaluated.
@@ -151,7 +153,7 @@ class GammaPoissonModel(ReachCurve):
         Returns:
           f(n | alpha, beta), where f is the Gamma-Poisson distribution.
         """
-        return scipy.stats.nbinom.logpmf(n, alpha, beta / (1.0 + beta))
+        return scipy.stats.nbinom.logpmf(n - 1, alpha, 1.0 / (1.0 + beta))
 
     def _knreach(self, k, n, I, Imax, alpha, beta):
         """Probability that a random user has n impressions of which k are shown.
@@ -160,7 +162,7 @@ class GammaPoissonModel(ReachCurve):
 
             C(n, k) (I / I_max)^k (1 - I/I_max)^{n-k} f(n | alpha, beta).
 
-        where C(n, k) is the binomial coefficient n!/k!(n-k)!.
+        where C(n, k) is the binomial coefficient n!/[k!(n-k)!].
 
         Args:
           k:  Scalar number of impressions that were seen by the user.
@@ -225,7 +227,8 @@ class GammaPoissonModel(ReachCurve):
         Returns:
           Expected size of impression inventory for a population of N users.
         """
-        return N * alpha / beta
+        # N * (1.0 + alpha * beta)
+        return N * (1 + scipy.stats.nbinom.mean(alpha, 1.0 / (1.0 + beta)))
 
     def _expected_histogram(self, I, Imax, N, alpha, beta, max_freq=10):
         """Computes an estimated histogram.
@@ -247,116 +250,319 @@ class GammaPoissonModel(ReachCurve):
         """Number of impressions recorded in the histogram h."""
         return np.sum([h[i] * (i + 1) for i in range(len(h))])
 
-    def _feasible_point(self, h):
-        """Returns values of alpha, beta, Imax that could feasibly produce h.
+    def _histogram_from_reach_point(self, point):
+        """Returns a frequency histogram from a reach point.
 
-        We start with alpha=1, because a Gamma-Poisson(1,beta) distribution is
-        the same as an Exponential-Poisson(beta), which is the model underlying
-        the Goerg one-point reach curve model.  The value of Imax is chosen so
-        that I/Imax is the constant INVENTORY_IMPRESSION_RATIO.  The value of
-        beta represents a reach point where half of the total available audience
-        is reached.
+        Args:
+          point: A ReachPoint
+        Returns:
+          A list h[], where h[i] is the number of people reached exactly i
+          times.  Note that this histogram will have length one less than the
+          list of k+ reach values in ReachPoint, because the last k-plus
+          reach value in the ReachPoint represents people reached at various
+          different frequencies.
         """
-        alpha = 1.0
-        Imax = self._impression_count(h) / IMPRESSION_INVENTORY_RATIO
-        beta = 2 * np.sum(h) * alpha / Imax
-        return alpha, beta, Imax
+        h = [point.frequency(i) for i in range(1, point.max_frequency)]
+        return h
 
-    def _fit_histogram_chi2_distance(self, h):
+    def _histogram_with_kplus_bucket(self, point):
+        """Computes a histogram whose last bucket is k+ reach.
+
+        Args:
+          point:  A ReachPoint for which the histogram is to be
+            computed.
+        Returns:
+          A list h[] where h[i] is the number of people reached
+          exactly i+1 times, except for h[-1], which records the
+          number of people reached len(h) or more times.
+        """
+        # A partial histogram of people who were reached exactly k times.
+        h = self._histogram_from_reach_point(point)
+
+        # The number of people who were reach len(h) or more times.  These
+        # people are not counted in the histogram h.
+        kplus = len(h) + 1
+        kplus_reach = point.reach(kplus)
+
+        # Append kplus_reach to h.  So, the last value of h is treated
+        # specially.
+        h.append(kplus_reach)
+        h = np.array(h)
+        return h
+
+    def _chi2_distance_with_one_plus_reach(
+        self, h, I, N, alpha, beta, one_plus_reach_weight=1.0
+    ):
+        """Returns distance between actual and expected histograms.
+
+        Computes the metric
+
+            chi2(h, hbar) = \sum_i (h[i] - hbar[i])^2 / hbar[i] +
+               w * (\sum_i (h[i] - hbar[i]))^2
+
+        where
+            hbar is the histogram that would be expected given parameters
+               I, N, alpha, beta
+            w is the one_plus_reach_weight that is used to determine how
+               much to weight an exact match of 1+ reach.
+
+        The first part of this objective formula is the chi-squared statistic
+        used for determining whether two sets of categorical samples are drawn
+        from the same underlying distribution.  Therefore, if the value returned
+        by this function is relatively low (say < 20), then there is reason to
+        believe that the Gamma-Poisson distribution adequately fits the data.
+
+        Args:
+          h: Actual frequency histogram.  h[i] is the number of people
+             reached exactly i+1 times, except for h[-1] which is the
+             number of people reached len(h) or more times.
+          I: Total number of impressions purchased.
+          N: Total number of unique users.
+          alpha:  Parameter of the Gamma-Poisson distribution.
+          beta:  Second parameter of the Gamma-Poisson distribution.
+          one_plus_reach_weight:  Weight to be given to the squared
+            difference in 1+ reach values for the actual and estimated
+            histograms.
+        Returns:
+          chi^2 distance between the actual and expected histograms, plus
+          a term for weighting the difference in 1+ reach.
+        """
+        # Estimate total number of potential impressions
+        Imax = self._expected_impressions(N, alpha, beta)
+        if Imax <= I:
+            return np.sum(np.array(h) ** 2)
+
+        hbar = list(self._expected_histogram(I, Imax, N, alpha, beta, len(h) - 1))
+
+        # Compute expected number of people in the k+ bucket.
+        kplus_prob = 1.0 - np.sum(
+            self._kreach(np.arange(0, len(h)), I, Imax, alpha, beta)
+        )
+        hbar.append(kplus_prob * N)
+        hbar = np.array(hbar)
+
+        actual_oneplus = np.sum(h)
+        predicted_oneplus = np.sum(hbar)
+        oneplus_error = (
+            one_plus_reach_weight * (actual_oneplus - predicted_oneplus) ** 2
+        )
+
+        obj = np.sum((hbar - h) ** 2 / (hbar + 1e-6)) + oneplus_error
+
+        if np.isnan(obj):
+            logging.vlog(2, f"alpha {alpha} beta {beta} N {N} Imax {Imax}")
+            logging.vlog(2, f"h    {h}")
+            logging.vlog(2, f"hbar {hbar}")
+            raise RuntimeError("Invalid value of objective function")
+
+        return obj
+
+    def _fit_histogram_chi2_distance(
+        self, point, one_plus_reach_weight=1.0, nstarting_points=10
+    ):
         """Chi-squared fit to histogram h.
 
         Computes parameters alpha, beta, Imax, N such that the histogram hbar of
         of expected frequencies minimizes the metric
 
-          chi2(h, hbar) = \sum_i (h[i] - hbar[i])^2 / hbar[i]
+          chi2(h, hbar) = \sum_i (h[i] - hbar[i])^2 / hbar[i] +
+             w * (\sum(h[i] - hbar[i]))^2
+
+        where w is the one_plus_reach_weight.
+
+        Experience shows that finding the optimal value depends on starting from
+        a point where the estimated audience size is not too far from the true
+        audience size.  So, this code retries the optimization for various different
+        values of the estimated audience size.  The number of such attempts is given
+        by nstarting_points.
 
         Args:
-          h:  np.array specifying the histogram of observed frequencies.
-            h[i] is the number of users that were observed to be reached
-            exactly i+1 times.
+          point:  A ReachPoint whose histogram is to be approximated.
+          one_plus_reach_weight:  Weight to be given to the squared
+            difference in 1+ reach values for the actual and estimated
+            histograms.
+          nstarting_points: The number of different starting points that
+            should be tried when performing optimizations.
         Returns:
           A tuple (Imax, N, alpha, beta) representing the parameters of the
           best fit that was found.
         """
-        # Choose a reasonable starting point
-        alpha0, beta0, Imax = self._feasible_point(h)
-        Iobs = self._impression_count(h)
+        # There must be at least this many people in the final model
+        Nmin = point.reach(1)
 
-        def gamma_obj(params):
-            """Objective function for optimization."""
-            alpha, beta = np.exp(params)
-            N = Imax * beta / alpha
-            hbar = self._expected_histogram(Iobs, Imax, N, alpha, beta, len(h))
-            obj = np.sum((hbar - h) ** 2 / (hbar + 1e-6))
-            return obj
+        # This is the number of impressions that were actually served.
+        I0 = point.impressions[0]
 
-        result = scipy.optimize.minimize(
-            gamma_obj, np.log((alpha0, beta0)), method="BFGS"
-        )
+        # The histogram of the data.
+        h = self._histogram_with_kplus_bucket(point)
 
-        alpha, beta = np.exp(result.x)
-        N = Imax * beta / alpha
+        # Best score found so far of the objective function.
+        best_score = 1e99
 
-        return Imax, N, alpha, beta
+        # Calculate the set of audience sizes that are used as initial
+        # starting points.
+        Nvalues = Nmin / (np.arange(1, nstarting_points + 1) / (nstarting_points + 1))
 
-    def _fit_histogram_fixed_N(self, h, N):
-        """Chi-squared fit to histogram h for fixed N.
+        # If the objective function for an optimization attempt is smaller than
+        # this value, then we have found a model that fits the data.  There is no
+        # need to continue searching for a better fit.
+        early_stopping_value = scipy.stats.chi2.ppf(0.98, len(h))
 
-        Computes parameters alpha, beta, Imax such that the histogram hbar of
-        of expected frequencies minimizes the metric
+        for N0 in Nvalues:
+            # Choose a reasonable starting point for optimization.
+            Imax0, alpha0, beta0 = self._fit_histogram_fixed_N(
+                point, N0, one_plus_reach_weight
+            )
 
-          chi2(h, hbar) = \sum_i (h[i] - hbar[i])^2 / hbar[i].
+            def gamma_obj(params):
+                """Objective function for optimization."""
+                alpha, beta, N = params
+                return self._chi2_distance_with_one_plus_reach(
+                    h, I0, N, alpha, beta, one_plus_reach_weight
+                )
 
-        The value of Imax is taken to satisfy I / Imax =
-        IMPRESSION_INVENTORY_RATIO, where I is number of impressions
-        recorded in the histogram h.  The value of beta is taken to
-        satisfy Imax = N * alpha / beta.  Thus, this is really a one
-        parameter model, and we can use Brent's method to find the
-        optimum.
+            result = scipy.optimize.minimize(
+                gamma_obj,
+                (alpha0, beta0, N0),
+                method="L-BFGS-B",
+                bounds=((1e-6, 100.0), (1e-6, 100.0), (Nmin, 100.0 * Nmin)),
+            )
+
+            if result.fun < best_score:
+                best_alpha, best_beta, best_N = result.x
+                best_score = result.fun
+
+            if best_score < early_stopping_value:
+                break
+
+        best_Imax = self._expected_impressions(best_N, best_alpha, best_beta)
+        return best_Imax, best_N, best_alpha, best_beta
+
+    def _find_starting_point_for_fixed_N(self, h, I0, N, one_plus_reach_weight):
+        """Searches for a good initial starting point for optimization.
+
+        The standard optimizers unfortunately often fail to find the
+        global minimum if they are started from suboptimal starting points.
+        The surface represented by the objective function has large flat
+        regions, and it often contains a valley with a false minimum that
+        is adjacent to the basin containing the true minimum.  However,
+        it seems to be the case that the basin containing the true minimum
+        is often located relatively close to the origin.  This function performs
+        a simple downhill search for a local optimum starting from a point
+        close to the origin.  The value returned by this function can then
+        be used as the starting point for a more thorough optimization
+        attempt.
 
         Args:
-          h:  np.array specifying the histogram of observed frequencies.
-            h[i] is the number of users that were observed to be reached
-            exactly i+1 times.
+          h:  Histogram with kplus reach bucket for the reach point
+              that is to be fit.
+          I0: The number of impressions that were shown to users.
+          N:  The total audience size.
+          one_plus_reach_weight:  Weight to be given to the squared
+            difference in 1+ reach values for the actual and estimated
+            histograms.
+        Returns:
+          alpha, beta: The values of the parameters that gave the best
+          score of the objective function when performing a simple
+          downhill search.
+        """
+
+        # Search for local optimum on a grid whose initial spacing is
+        # given by grid_width
+        grid_width = 0.05
+
+        # Try to start from a point that is near the origin but also
+        # in the feasible region
+        alpha = beta = 0.1
+        if I0 > N:
+            alpha = beta = 1.1 * np.sqrt(I0 / N - 1) + grid_width
+
+        score = 1e99
+        while grid_width > 0.01:
+            improvement_found = False
+            local_best_score = score
+            for delta in [(-1, -1), (-1, 1), (1, -1), (1, 1)]:
+                test_alpha = alpha + delta[0] * grid_width
+                test_beta = beta + delta[1] * grid_width
+                test_score = self._chi2_distance_with_one_plus_reach(
+                    h, I0, N, test_alpha, test_beta, one_plus_reach_weight
+                )
+                if test_score < local_best_score:
+                    improvement_found = True
+                    local_best_alpha = test_alpha
+                    local_best_beta = test_beta
+                    local_best_score = test_score
+            if improvement_found:
+                alpha, beta, score = local_best_alpha, local_best_beta, local_best_score
+            else:
+                grid_width *= 0.5
+
+        return alpha, beta
+
+    def _fit_histogram_fixed_N(self, point, N, one_plus_reach_weight=1.0):
+        """Chi-squared fit to histogram h.
+
+        Computes parameters alpha, beta, Imax, N such that the histogram hbar of
+        of expected frequencies minimizes the metric
+
+          chi2(h, hbar) = \sum_i (h[i] - hbar[i])^2 / hbar[i] +
+             w * (\sum(h[i] - hbar[i]))^2
+
+        where w is the one_plus_reach_weight.
+
+        Args:
+          point:  A ReachPoint whose histogram is to be approximated.
           N:  int, total reachable audience.
+          one_plus_reach_weight:  Weight to be given to the squared
+            difference in 1+ reach values for the actual and estimated
+            histograms.
         Returns:
           A tuple (Imax, alpha, beta) representing the parameters of the
           best fit that was found.
-
         """
-        # Choose a reasonable starting point.
-        Iobs = self._impression_count(h)
-        Imax = Iobs / IMPRESSION_INVENTORY_RATIO
+        # This is the number of impressions that were actually served.
+        I0 = point.impressions[0]
 
-        def gamma_obj(alpha):
+        # The histogram of the data.
+        h = self._histogram_with_kplus_bucket(point)
+
+        # Look for a good starting point for optimization
+        alpha0, beta0 = self._find_starting_point_for_fixed_N(
+            h, I0, N, one_plus_reach_weight
+        )
+
+        def gamma_obj(params):
             """Objective function for optimization."""
-            beta = N * alpha / Imax
-            hbar = self._expected_histogram(Iobs, Imax, N, alpha, beta, len(h))
-            obj = np.sum((hbar - h) ** 2 / (hbar + 1e-6))
-            return obj
+            alpha, beta = params
+            score = self._chi2_distance_with_one_plus_reach(
+                h, I0, N, alpha, beta, one_plus_reach_weight
+            )
+            return score
 
-        result = scipy.optimize.minimize_scalar(gamma_obj, bounds=[1e-6, np.Inf])
-        alpha = result.x
-        beta = N * alpha / Imax
+        result = scipy.optimize.minimize(
+            gamma_obj,
+            (alpha0, beta0),
+            method="L-BFGS-B",
+            bounds=((1e-6, 100.0), (1e-6, 100.0)),
+        )
 
-        return Imax, alpha, beta
+        best_alpha, best_beta = result.x
+        best_Imax = self._expected_impressions(N, best_alpha, best_beta)
+        return best_Imax, best_alpha, best_beta
 
     def _fit(self) -> None:
         """Fits a model to the data that was provided in the constructor."""
 
-        h = [
-            self._reach_point.frequency(i)
-            for i in range(1, self._reach_point.max_frequency)
-        ]
-
         if self._max_reach is None:
-            Imax, N, alpha, beta = self._fit_histogram_chi2_distance(h)
+            Imax, N, alpha, beta = self._fit_histogram_chi2_distance(self._reach_point)
             self._max_impressions = Imax
             self._max_reach = N
             self._alpha = alpha
             self._beta = beta
         else:
-            Imax, alpha, beta = self._fit_histogram_fixed_N(h, self._max_reach)
+            Imax, alpha, beta = self._fit_histogram_fixed_N(
+                self._reach_point, self._max_reach
+            )
             self._max_impressions = Imax
             self._alpha = alpha
             self._beta = beta
@@ -404,11 +610,11 @@ class GammaPoissonModel(ReachCurve):
         """
         if len(spends) != 1:
             raise ValueError("Spend vector must have a length of 1.")
-        return self.by_impressions([self.impressions_for_spend(spends[0])],
-                                   max_frequency)
+        return self.by_impressions(
+            [self.impressions_for_spend(spends[0])], max_frequency
+        )
 
     def impressions_for_spend(self, spend: float) -> int:
         if not self._cpi:
             raise ValueError("Impression cost is not known for this ReachPoint.")
         return spend / self._cpi
-        

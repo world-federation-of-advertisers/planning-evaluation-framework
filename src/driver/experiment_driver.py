@@ -23,7 +23,8 @@ Usage:
     --experimental_design=<experimental_design> \
     --output_file=<output_file> \
     --intermediates_dir=<intermediates_dir> \
-    --seed=<random_seed>
+    --seed=<random_seed> \
+    --cores=<number_of_cores>
 
 where
 
@@ -57,7 +58,9 @@ where
     new experiments are added, the experiment driver can be re-run.  
     Previously computed results will not be re-computed.
   seed is an integer that is used to seed the random number generator.
-      
+  cores is an integer specifying the number of cores to be used for
+    multithreaded processing.  If cores = 1 (default), then multithreading
+    is not used.  If cores < 1, then all available cores are used.
 """
 
 from absl import app
@@ -90,6 +93,7 @@ flags.DEFINE_string(
     "intermediates_dir", None, "Directory where intermediate results will be stored."
 )
 flags.DEFINE_integer("seed", 1, "Seed for the np.random.Generator.")
+flags.DEFINE_integer("cores", 1, "Number of cores to use for multithreading.")
 
 
 class ExperimentDriver:
@@ -102,6 +106,7 @@ class ExperimentDriver:
         output_file: str,
         intermediate_dir: str,
         random_seed: int,
+        cores: int = 1,
     ):
         self._data_design_dir = data_design_dir
         self._experimental_design = experimental_design
@@ -109,13 +114,14 @@ class ExperimentDriver:
         self._intermediate_dir = intermediate_dir
         self._rng = np.random.default_rng(seed=random_seed)
         np.random.seed(random_seed)
+        self._cores = cores
 
     def execute(self) -> pd.DataFrame:
         """Performs all experiments defined in an experimental design."""
         data_design = DataDesign(self._data_design_dir)
         experiments = list(self._fetch_experiment_list())
         experimental_design = ExperimentalDesign(
-            self._intermediate_dir, data_design, experiments, self._rng
+            self._intermediate_dir, data_design, experiments, self._rng, self._cores
         )
         experimental_design.generate_trials()
         result = experimental_design.load()
@@ -140,6 +146,7 @@ def main(argv):
         FLAGS.output_file,
         FLAGS.intermediates_dir,
         FLAGS.seed,
+        FLAGS.cores,
     )
     experiment_driver.execute()
 

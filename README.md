@@ -91,7 +91,7 @@ export PYTHONPATH
 
 Then run `source path_to/.bash_profile` or `source path_to/.zshrc_` in the terminal.
 
-2. Create a Symlink named “wfa_planning_evaluation_framework” at the directory which contains your planning-evaluation-framework repo with command:
+2. Create a Symlink named `wfa_planning_evaluation_framework` at the directory which contains your planning-evaluation-framework repo with command:
     
 ```
 ln -s path_to/planning-evaluation-framework/src/ dir_which_contains_planning_evaluation_framework_repo/wfa_planning_evaluation_framework
@@ -135,13 +135,17 @@ just CSV files, so you can view them.
 
 An Experimental Design specifies a collection of different models and parameters.  An Experiment
 consists of running each of these against every Dataset in a Data Design.  Several example
-Experiment Designs can be found in the `driver` subdirectory:
+Experimental Designs can be found in the `driver` subdirectory:
 
 * `sample_experimental_design.py`:  A very simple example.
 * `single_publisher_design.py`: An experimental design that compares Goerg's one point model
 against the Gamma-Poisson model in a variety of settings.
 * `m3_first_round_experimental_design.py`: An experimental design for evaluating the proposed
 M3 model.
+
+The following command will evaluate the Experiments defined in `driver/single_publisher_design.py`
+against the Datasets that were created in the previous step:
+
 
 ```
 python3 driver/experiment_driver.py \

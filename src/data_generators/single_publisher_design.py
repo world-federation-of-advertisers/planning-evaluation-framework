@@ -41,25 +41,43 @@ PUBLISHER_SIZES = [1000 * 2 ** k for k in range(8)]
 IMPRESSION_GENERATORS = [
     ## Mean 1.5
     # Shifted Poisson: Mean = 1.5, Var = 0.5
+    # Note: For a Poisson distribution the variance and the mean are both
+    # equal to the parameter lambda.  For a shifted Poisson, the
+    # mean is lambda + 1.
     GeneratorParameters(
         "Homogeneous", HomogeneousImpressionGenerator, {"poisson_lambda": 0.5}
     ),
+
     # Exponential Poisson: Mean = 1.5, Var = 0.75
+    # For the Exponential-Poisson, the mean is beta + 1 and the variance is
+    # beta * (beta + 1), where beta is the "gamma_scale" parameter.  This can
+    # be worked out from the formulas given below for the Gamma-Poisson by
+    # taking alpha=1.
     GeneratorParameters(
         "Heterogeneous",
         HeterogeneousImpressionGenerator,
         {"gamma_shape": 1.0, "gamma_scale": 0.5},
     ),
+
     # Gamma Poisson: Mean = 1.5, Var = 6
+    # For the shifted Gamma-Poisson, the mean is alpha * beta + 1, and the
+    # variance is alpha * beta * (beta + 1), where alpha = gamma_shape and
+    # beta = gamma_scale.  This can be worked out by making
+    # use of the equivalence between the Gamma-Poisson and the negative
+    # binomial distribution.  Using the formulation for the negative binomial
+    # given in Wikipedia, the equivalent negative binomial distribution is
+    # obtained by setting p = beta / (1 + beta) and r = alpha.  
     GeneratorParameters(
         "Heterogeneous",
         HeterogeneousImpressionGenerator,
         {"gamma_shape": 0.04545, "gamma_scale": 11},
     ),
-    # Zeta: Mean = 1.5, Var undefined
+    
+    # Zeta: Mean = 1.5, Var = infinity
     GeneratorParameters(
         "HeavyTailed", HeavyTailedImpressionGenerator, {"zeta_s": 2.8106}
     ),
+    
     ## Mean 3
     # Shifted Poisson: Mean = 3, Var = 2
     GeneratorParameters(
@@ -77,10 +95,11 @@ IMPRESSION_GENERATORS = [
         HeterogeneousImpressionGenerator,
         {"gamma_shape": 0.4, "gamma_scale": 5.0},
     ),
-    # Zeta: Mean = 3, Var undefined
+    # Zeta: Mean = 3, Var = infinity
     GeneratorParameters(
         "HeavyTailed", HeavyTailedImpressionGenerator, {"zeta_s": 2.2662}
     ),
+    
     ## Mean 5
     # Shifted Poisson: Mean = 5, Var = 4
     GeneratorParameters(
@@ -98,7 +117,7 @@ IMPRESSION_GENERATORS = [
         HeterogeneousImpressionGenerator,
         {"gamma_shape": 0.44444, "gamma_scale": 9.0},
     ),
-    # Zeta: Mean = 5, Var undefined
+    # Zeta: Mean = 5, Var = infinity
     GeneratorParameters(
         "HeavyTailed", HeavyTailedImpressionGenerator, {"zeta_s": 2.1416}
     ),
@@ -119,7 +138,7 @@ IMPRESSION_GENERATORS = [
         HeterogeneousImpressionGenerator,
         {"gamma_shape": 0.42408, "gamma_scale": 21.2222},
     ),
-    # Zeta: Mean = 10, Var undefined
+    # Zeta: Mean = 10, Var = infinity
     GeneratorParameters(
         "HeavyTailed", HeavyTailedImpressionGenerator, {"zeta_s": 2.06539}
     ),

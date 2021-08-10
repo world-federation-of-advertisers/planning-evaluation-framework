@@ -206,6 +206,18 @@ class GammaPoissonModelTest(absltest.TestCase):
                 f"Got {h_actual[i]} Expected {h_expected[i]}",
             )
 
+    @patch.object(
+        GammaPoissonModel, "_fit_histogram_fixed_N", return_value=(25000, 5.0, 2.0)
+    )
+    def test_overspend(self, mock_gamma_poisson_model):
+        # Imax = 25000, N = 10000, alpha = 5, beta = 2
+        h_training = [8124, 5464, 3191, 1679, 815, 371, 159, 64, 23, 6, 0]
+        rp = ReachPoint([20000], h_training, [200.0])
+        gpm = GammaPoissonModel([rp], max_reach=10000)
+        gpm._fit()
+        self.assertAlmostEqual(gpm.by_impressions([30000]).reach(1), 10000.0, delta=0.1)
+        self.assertAlmostEqual(gpm.by_spend([300]).reach(1), 10000.0, delta=0.1)
+
 
 if __name__ == "__main__":
     absltest.main()

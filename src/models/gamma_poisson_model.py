@@ -583,7 +583,7 @@ class GammaPoissonModel(ReachCurve):
         if len(impressions) != 1:
             raise ValueError("Impressions vector must have a length of 1.")
         hist = self._expected_histogram(
-            impressions[0],
+            min(impressions[0], self._max_impressions - 1),
             self._max_impressions,
             self.max_reach,
             self._alpha,

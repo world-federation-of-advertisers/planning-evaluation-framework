@@ -238,6 +238,7 @@ class ExperimentalTrialTest(absltest.TestCase):
                     "ncampaigns": [2],
                     "largest_pub_reach": [3],
                     "max_frequency": [5],
+                    "average_spend_fraction": [0.04],
                 }
             )
             pd.testing.assert_frame_equal(actual, expected)

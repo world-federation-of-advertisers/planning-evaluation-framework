@@ -97,9 +97,9 @@ class SyntheticDataDesignGeneratorTest(absltest.TestCase):
         )
         self.assertLen(
             list(sp_design),
-            56,
+            128,
             "Expected single pub design to have {} datasets but it had {}".format(
-                56, len(list(sp_design))
+                128, len(list(sp_design))
             ),
         )
 

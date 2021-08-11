@@ -18,6 +18,16 @@ import numpy as np
 from typing import List
 from unittest.mock import patch
 
+from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
+from wfa_planning_evaluation_framework.data_generators.fixed_price_generator import (
+    FixedPriceGenerator,
+)
+from wfa_planning_evaluation_framework.data_generators.heterogeneous_impression_generator import (
+    HeterogeneousImpressionGenerator,
+)
+from wfa_planning_evaluation_framework.data_generators.publisher_data import (
+    PublisherData,
+)
 from wfa_planning_evaluation_framework.models.gamma_poisson_model import (
     GammaPoissonModel,
 )
@@ -26,9 +36,11 @@ from wfa_planning_evaluation_framework.models.reach_surface import ReachSurface
 from wfa_planning_evaluation_framework.models.restricted_pairwise_union_reach_surface import (
     RestrictedPairwiseUnionReachSurface,
 )
+from wfa_planning_evaluation_framework.simulator.halo_simulator import HaloSimulator
 from wfa_planning_evaluation_framework.simulator.m3_strategy import M3Strategy
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
     PrivacyBudget,
+    PrivacyTracker,
 )
 from wfa_planning_evaluation_framework.simulator.system_parameters import (
     LiquidLegionsParameters,
@@ -93,6 +105,40 @@ class M3StrategyTest(absltest.TestCase):
         expected2 = surface.by_spend([100.0, 100.0]).reach(1)
         actual2 = halo.simulated_reach_by_spend([100.0, 100.0], budget).reach(1)
         self.assertAlmostEqual(expected2, actual2, delta=1000)
+
+    def test_m3_strategy_with_ground_truth(self):
+        data1 = HeterogeneousImpressionGenerator(1000, gamma_shape=1.0, gamma_scale=2)()
+        publisher1 = PublisherData(FixedPriceGenerator(0.1)(data1))
+        data2 = HeterogeneousImpressionGenerator(1000, gamma_shape=1.0, gamma_scale=3)()
+        publisher2 = PublisherData(FixedPriceGenerator(0.05)(data2))
+        dataset = DataSet([publisher1, publisher2], "dataset")
+
+        params = SystemParameters(
+            [100.0, 100.0], LiquidLegionsParameters(), np.random.default_rng(seed=1)
+        )
+        halo = HaloSimulator(dataset, params, PrivacyTracker())
+
+        budget = PrivacyBudget(1.0, 1e-5)
+        m3strategy = M3Strategy(
+            GammaPoissonModel,
+            {},
+            RestrictedPairwiseUnionReachSurface,
+            {},
+            use_ground_truth_for_reach_curves=True,
+        )
+        surface = m3strategy.fit(halo, params, budget)
+
+        expected0 = surface.by_spend([10.0, 0.0]).reach(1)
+        actual0 = dataset.reach_by_spend([10.0, 0.0]).reach(1)
+        self.assertAlmostEqual(expected0, actual0, delta=1)
+
+        expected1 = surface.by_spend([0.0, 10.0]).reach(1)
+        actual1 = dataset.reach_by_spend([0.0, 10.0]).reach(1)
+        self.assertAlmostEqual(expected1, actual1, delta=1)
+
+        expected2 = surface.by_spend([10.0, 10.0]).reach(1)
+        actual2 = dataset.reach_by_spend([10.0, 10.0]).reach(1)
+        self.assertAlmostEqual(expected2, actual2, delta=10)
 
 
 if __name__ == "__main__":

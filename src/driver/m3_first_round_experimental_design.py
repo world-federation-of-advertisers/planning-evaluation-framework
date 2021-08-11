@@ -44,6 +44,14 @@ from wfa_planning_evaluation_framework.driver.trial_descriptor import (
 
 MODELING_STRATEGIES = [
     ModelingStrategyDescriptor(
+        "m3strategy",
+        {"use_ground_truth_for_reach_curves": True},
+        "goerg",
+        {},
+        "restricted_pairwise_union",
+        {},
+    ),
+    ModelingStrategyDescriptor(
         "m3strategy", {}, "goerg", {}, "restricted_pairwise_union", {}
     ),
     ModelingStrategyDescriptor(

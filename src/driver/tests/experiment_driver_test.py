@@ -59,7 +59,7 @@ class ExperimentDriverTest(absltest.TestCase):
                 np.random.default_rng(seed=1)
             )
         )
-        self.assertLen(list(sample_design), 192)
+        self.assertLen(list(sample_design), 288)
 
     def test_single_publisher_design(self):
         sp_design = list(
@@ -107,7 +107,7 @@ class ExperimentDriverTest(absltest.TestCase):
                 data_design_dir, experimental_design, output_file, intermediate_dir, 1
             )
             result = experiment_driver.execute()
-            self.assertEqual(result.shape[0], 5184)
+            self.assertEqual(result.shape[0], 7776)
 
     @patch(
         "wfa_planning_evaluation_framework.driver.experiment.ExperimentalTrial",

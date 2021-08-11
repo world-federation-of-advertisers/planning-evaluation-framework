@@ -290,8 +290,9 @@ class HaloSimulator:
             budget:  The amount of privacy budget that can be consumed while
               satisfying the request.
             privacy_budget_split:  Specifies the proportion of the privacy budget
-              that should be allocated to reach estimation.  The remainder is
-              allocated to cardinality estimation.
+              that should be allocated to the reach count in the primitive Venn
+              diagram regions.  The remainder is allocated to the cardinality
+              estimation from the Liquid Legions.
             max_frequency:  The maximum frequency for which to report reach.
         Returns:
             A list of ReachPoint. Each reach point represents the mapping from
@@ -302,7 +303,7 @@ class HaloSimulator:
             raise ValueError("Max frequency has to be 1.")
 
         venn_diagram_regions = self._form_venn_diagram_regions(spends, max_frequency)
-        # Happen when there is no active publishers, i.e. 0 spend vector.
+        # This happens when there are no active publishers, i.e. 0 spend vector.
         if not venn_diagram_regions:
             return []
 

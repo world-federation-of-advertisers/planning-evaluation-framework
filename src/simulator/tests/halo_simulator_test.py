@@ -51,13 +51,18 @@ class FakeLaplaceMechanism:
 
 @dataclass
 class FakeNoiser(EstimateNoiserBase):
-    fixed_noise: float
+    fixed_noise: float = 1.0
 
     def __call__(self, estimate):
         return estimate + self.fixed_noise
 
 
 class FakeRandomGenerator:
+    def multinomial(self, n, pval, size=None):
+        result = np.zeros_like(pval)
+        result[0] = 1
+        return result
+
     def multivariate_hypergeometric(self, colors, nsample):
         samples = [0] * len(colors)
         index = 0
@@ -151,6 +156,215 @@ class HaloSimulatorTest(parameterized.TestCase):
             num_active,
             msg=f"The number of active registers for n={cardinality} is not correct.",
         )
+
+    def test_simulated_venn_diagram_reach_by_spend_without_active_pub(self):
+        pdfs = [
+            PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1"),
+            PublisherData([(2, 0.03), (4, 0.06)], "pdf2"),
+            PublisherData([(2, 0.01), (3, 0.03), (4, 0.05)], "pdf3"),
+        ]
+        data_set = DataSet(pdfs, "test")
+        params = SystemParameters(
+            [0.4, 0.5, 0.4],
+            LiquidLegionsParameters(),
+            FakeRandomGenerator(),
+        )
+        privacy_tracker = PrivacyTracker()
+        halo = HaloSimulator(data_set, params, privacy_tracker)
+
+        spends = [0, 0, 0]
+        budget = PrivacyBudget(0.2, 0.4)
+        privacy_budget_split = 0.5
+        max_freq = 1
+
+        reach_points = halo.simulated_venn_diagram_reach_by_spend(
+            spends, budget, privacy_budget_split, max_freq
+        )
+
+        expected_reach_points = []
+
+        self.assertEqual(expected_reach_points, reach_points)
+        self.assertEqual(halo.privacy_tracker._epsilon_sum, 0)
+        self.assertEqual(halo.privacy_tracker._delta_sum, 0)
+        self.assertEqual(len(halo.privacy_tracker._noising_events), 0)
+
+    @parameterized.named_parameters(
+        {
+            # true cardinality = 3, sample_size = 1, std = 1, fixed_noise = -10'
+            # original_primitive_regions = {2^2: 3}
+            # sampled_regions = {2^2: 1}
+            # noised_regions = {2^2: 1 - 10}
+            # cardinality_estimate = (3 + 1) - 10 = 0
+            # scaled_regions = {2^2: 0}
+            "testcase_name": "with_large_negative_noise",
+            "spends": [0, 0, 0.05],
+            "budget": PrivacyBudget(0.2, 0.4),
+            "privacy_budget_split": 0.5,
+            "fixed_noise": -10.0,
+            "expected_reach_points": [ReachPoint([0, 0, 3], [0], [0, 0, 0.05])],
+        },
+        {
+            # true cardinality = 3, sample_size = 1, std = 1, fixed_noise = 1
+            # original_primitive_regions = {2^2: 3}
+            # sampled_regions = {2^2: 1}
+            # noised_regions = {2^2: 1 + 1}
+            # cardinality_estimate = (3 + 1) + 1 = 5
+            # scaled_regions = {2^2: 5}
+            "testcase_name": "with_1_active_pub",
+            "spends": [0, 0, 0.05],
+            "budget": PrivacyBudget(0.2, 0.4),
+            "privacy_budget_split": 0.5,
+            "fixed_noise": 1.0,
+            "expected_reach_points": [ReachPoint([0, 0, 3], [5], [0, 0, 0.05])],
+        },
+        {
+            # true cardinality = 3, sample_size = 1, std = 1, fixed_noise = 2
+            # original_primitive_regions = {2^1: 0, 2^2: 2, 2^1 + 2^2: 1}
+            # sampled_regions = {2^1: 0, 2^2: 1, 2^1 + 2^2: 0}
+            # noised_regions = {2^1: 2, 2^2: 3, 2^1 + 2^2: 2}
+            # cardinality_estimate = (3 + 1) + 2 = 6
+            # scaled_regions = {2^1: 12 / 7, 2^2: 18 / 7, 2^1 + 2^2: 12 / 7}
+            "testcase_name": "with_2_active_pubs",
+            "spends": [0, 0.04, 0.05],
+            "budget": PrivacyBudget(0.2, 0.4),
+            "privacy_budget_split": 0.3,
+            "fixed_noise": 2.0,
+            "expected_reach_points": [
+                ReachPoint([0, 1, 0], [24 / 7], [0, 0.04, 0]),
+                ReachPoint([0, 0, 3], [30 / 7], [0, 0, 0.05]),
+                ReachPoint([0, 1, 3], [42 / 7], [0, 0.04, 0.05]),
+            ],
+        },
+        {
+            # true cardinality = 3, sample_size = 1, std = 1, fixed_noise = 2
+            # original_primitive_regions = {2^1: 0, 2^2: 3, 2^1 + 2^2: 0}
+            # sampled_regions = {2^1: 0, 2^2: 1, 2^1 + 2^2: 0}
+            # noised_regions = {2^1: 2, 2^2: 3, 2^1 + 2^2: 2}
+            # cardinality_estimate = (3 + 1) + 2 = 6
+            # scaled_regions = {2^1: 12 / 7, 2^2: 18 / 7, 2^1 + 2^2: 12 / 7}
+            "testcase_name": "with_1_active_pub_and_1_inactive_pub",
+            "spends": [0.0, 0.02, 0.05],
+            "budget": PrivacyBudget(0.2, 0.4),
+            "privacy_budget_split": 0.3,
+            "fixed_noise": 2.0,
+            "expected_reach_points": [
+                ReachPoint([0, 0, 0], [24 / 7], [0, 0.02, 0]),
+                ReachPoint([0, 0, 3], [30 / 7], [0, 0, 0.05]),
+                ReachPoint([0, 0, 3], [42 / 7], [0, 0.02, 0.05]),
+            ],
+        },
+    )
+    @patch.object(
+        HaloSimulator, "_liquid_legions_cardinality_estimate_variance", return_value=1.0
+    )
+    @patch(
+        "wfa_planning_evaluation_framework.simulator.halo_simulator.GeometricEstimateNoiser"
+    )
+    def test_simulated_venn_diagram_reach_by_spend(
+        self,
+        mock_geometric_estimate_noiser,
+        mock_cardinality_estimate_variance,
+        spends,
+        budget,
+        privacy_budget_split,
+        fixed_noise,
+        expected_reach_points,
+    ):
+        mock_geometric_estimate_noiser.return_value = FakeNoiser(fixed_noise)
+
+        pdfs = [
+            PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1"),
+            PublisherData([(2, 0.03), (4, 0.06)], "pdf2"),
+            PublisherData([(2, 0.01), (3, 0.03), (4, 0.05)], "pdf3"),
+        ]
+        data_set = DataSet(pdfs, "test")
+        params = SystemParameters(
+            [0.4, 0.5, 0.4],
+            LiquidLegionsParameters(),
+            FakeRandomGenerator(),
+        )
+        privacy_tracker = PrivacyTracker()
+        halo = HaloSimulator(data_set, params, privacy_tracker)
+
+        reach_points = halo.simulated_venn_diagram_reach_by_spend(
+            spends, budget, privacy_budget_split
+        )
+
+        # Examine reach points
+        for i, (r_pt, expected_r_pt) in enumerate(
+            zip(reach_points, expected_reach_points)
+        ):
+            self.assertEqual(
+                r_pt.impressions,
+                expected_r_pt.impressions,
+                msg=f"The impressions of No.{i + 1} reach point is not correct",
+            )
+            self.assertEqual(
+                r_pt.reach(1),
+                expected_r_pt.reach(1),
+                msg=f"The reach of No.{i + 1} reach point is not correct",
+            )
+            self.assertEqual(
+                r_pt.spends,
+                expected_r_pt.spends,
+                msg=f"The spends of No.{i + 1} reach point is not correct",
+            )
+
+        # Examine privacy tracker
+        expected_noise_event_primitive_regions = NoisingEvent(
+            PrivacyBudget(
+                budget.epsilon * privacy_budget_split,
+                budget.delta * privacy_budget_split,
+            ),
+            DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
+            {"privacy_budget_split": privacy_budget_split},
+        )
+
+        expected_noise_event_cardinality = NoisingEvent(
+            PrivacyBudget(
+                budget.epsilon * (1 - privacy_budget_split),
+                budget.delta * (1 - privacy_budget_split),
+            ),
+            DP_NOISE_MECHANISM_DISCRETE_LAPLACE,
+            {"privacy_budget_split": (1 - privacy_budget_split)},
+        )
+
+        expected_noise_events = [
+            expected_noise_event_primitive_regions,
+            expected_noise_event_cardinality,
+        ]
+
+        self.assertEqual(
+            halo.privacy_tracker._epsilon_sum,
+            expected_noise_event_primitive_regions.budget.epsilon
+            + expected_noise_event_cardinality.budget.epsilon,
+        )
+        self.assertEqual(
+            halo.privacy_tracker._delta_sum,
+            expected_noise_event_primitive_regions.budget.delta
+            + expected_noise_event_cardinality.budget.delta,
+        )
+        self.assertEqual(len(halo.privacy_tracker._noising_events), 2)
+
+        for noise_event, expected_noise_event in zip(
+            halo.privacy_tracker._noising_events, expected_noise_events
+        ):
+            self.assertEqual(
+                noise_event.budget.epsilon,
+                expected_noise_event.budget.epsilon,
+            )
+            self.assertEqual(
+                noise_event.budget.delta,
+                expected_noise_event.budget.delta,
+            )
+            self.assertEqual(
+                noise_event.mechanism,
+                expected_noise_event.mechanism,
+            )
+            self.assertEqual(
+                noise_event.params,
+                expected_noise_event.params,
+            )
 
     def test_form_venn_diagram_regions_with_publishers_more_than_limit(self):
         num_publishers = MAX_ACTIVE_PUBLISHERS + 1
@@ -277,7 +491,6 @@ class HaloSimulatorTest(parameterized.TestCase):
             "testcase_name": "with_1_region_and_1plus_reaches",
             "regions": {3: [1]},
             "sample_size": 1,
-            "random_generator": np.random.default_rng(0),
             "expected": {3: 1},
         },
         # regions = [1, 2, 5, 10, 17]
@@ -285,7 +498,6 @@ class HaloSimulatorTest(parameterized.TestCase):
             "testcase_name": "with_5_regions_1plus_reaches_and_fake_rng",
             "regions": {i: [i ** 2 + 1] for i in range(5)},
             "sample_size": 20,
-            "random_generator": FakeRandomGenerator(),
             "expected": {i: n for i, n in enumerate([1, 2, 5, 6, 6])},
         },
         # regions = [[0, 0], [2, 1], [0, 0], [10, 3], [0, 0], [26, 5]]
@@ -293,15 +505,14 @@ class HaloSimulatorTest(parameterized.TestCase):
             "testcase_name": "with_6_regions_2plus_reaches_and_fake_rng",
             "regions": {i: [i ** 2 + 1, i] if i % 2 else [0, 0] for i in range(6)},
             "sample_size": 20,
-            "random_generator": FakeRandomGenerator(),
             "expected": {i: n for i, n in enumerate([0, 2, 0, 9, 0, 9])},
         },
     )
-    def test_sample_venn_diagram(
-        self, regions, sample_size, random_generator, expected
-    ):
+    def test_sample_venn_diagram(self, regions, sample_size, expected):
+        params = SystemParameters([0], LiquidLegionsParameters(), FakeRandomGenerator())
+        halo = HaloSimulator(DataSet([], "test"), params, PrivacyTracker())
         self.assertEqual(
-            self.halo._sample_venn_diagram(regions, sample_size, random_generator),
+            halo._sample_venn_diagram(regions, sample_size),
             expected,
         )
 

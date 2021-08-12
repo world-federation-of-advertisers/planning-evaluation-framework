@@ -271,28 +271,70 @@ class HaloSimulator:
         self,
         spends: List[float],
         budget: PrivacyBudget,
+        privacy_budget_split: float = 0.5,
         max_frequency: int = 1,
     ) -> List[ReachPoint]:
         """Returns a simulated differentially private Venn diagram reach estimate.
 
-        For each subset of publishers, computes a differentially private
-        reach and frequency estimate for those users who are reached by
-        all and only the publishers in that subset.
+        For each subset of publishers, computes a differentially private reach
+        and frequency estimate for those users who are reached by all and only
+        only the publishers in that subset. If user X is included, then X is
+        reached by at least one of the publishers in the set.  And, every user
+        that is reached by at least one of the publishers is included in the
+        count.
 
         Args:
             spends:  The hypothetical spend vector, equal in length to
               the number of publishers.  spends[i] is the amount that is
-              spent with publisher i. Note that publishers with 0 spends will
-              not be included in the Venn diagram reach.
+              spent with publisher i.
             budget:  The amount of privacy budget that can be consumed while
               satisfying the request.
+            privacy_budget_split:  Specifies the proportion of the privacy budget
+              that should be allocated to the reach count in the primitive Venn
+              diagram regions.  The remainder is allocated to the cardinality
+              estimation from the Liquid Legions.
             max_frequency:  The maximum frequency for which to report reach.
         Returns:
             A list of ReachPoint. Each reach point represents the mapping from
             the spends of a subset of publishers to the differentially private
             estimate of the number of people reached in this subset.
         """
-        raise NotImplementedError()
+        if max_frequency != 1:
+            raise ValueError("Max frequency has to be 1.")
+
+        venn_diagram_regions = self._form_venn_diagram_regions(spends, max_frequency)
+        # This happens when there are no active publishers, i.e. 0 spend vector.
+        if not venn_diagram_regions:
+            return []
+
+        true_cardinality = self.true_reach_by_spend(spends).reach()
+        sample_size = self._liquid_legions_num_active_regions(true_cardinality)
+
+        sampled_venn_diagram_regions = self._sample_venn_diagram(
+            venn_diagram_regions, sample_size
+        )
+
+        noised_sampled_venn_diagram_regions = self._add_dp_noise_to_primitive_regions(
+            sampled_venn_diagram_regions,
+            budget,
+            privacy_budget_split,
+        )
+
+        scaled_venn_diagram_regions = self._scale_up_reach_in_primitive_regions(
+            noised_sampled_venn_diagram_regions,
+            true_cardinality,
+            np.sqrt(
+                self._liquid_legions_cardinality_estimate_variance(true_cardinality)
+            ),
+            budget,
+            1 - privacy_budget_split,
+        )
+
+        reach_points = self._generate_reach_points_from_venn_diagram(
+            spends, scaled_venn_diagram_regions
+        )
+
+        return reach_points
 
     def _form_venn_diagram_regions(
         self, spends: List[float], max_frequency: int = 1
@@ -386,7 +428,6 @@ class HaloSimulator:
         self,
         primitive_regions: Dict[int, List],
         sample_size: int,
-        random_generator: np.random.Generator = np.random.default_rng(),
     ) -> Dict[int, int]:
         """Return primitive regions with sampled reaches.
 
@@ -403,9 +444,6 @@ class HaloSimulator:
               r[k] is the number of people who were reached AT LEAST k+1 times.
             sample_size:  The total number of sampled reach from the primitive
               regions.
-            random_generator:  An instance of numpy.random.Generator that is
-              used for generating samples from a multivariate hypergeometric
-              distribution.
         Returns:
             A dictionary in which each key is the binary representation of a
               primitive region of the Venn diagram, and each value is the
@@ -428,7 +466,7 @@ class HaloSimulator:
                 f" larger than the total number of reach = {sum(reach_population)}"
             )
 
-        sampled_reach = random_generator.multivariate_hypergeometric(
+        sampled_reach = self._params.generator.multivariate_hypergeometric(
             reach_population, sample_size
         )
 

@@ -83,16 +83,14 @@ LEVELS = {
 # Will evaluate all level combinations
 
 
-def generate_experimental_design_config(
-    random_generator: np.random.Generator,
-) -> Iterable[TrialDescriptor]:
+def generate_experimental_design_config(seed: int = 1) -> Iterable[TrialDescriptor]:
     """Generates a list of TrialDescriptors for the 1st round eval of M3."""
     for level_combination in itertools.product(*LEVELS.values()):
         design_parameters = dict(zip(LEVELS.keys(), level_combination))
         mstrategy = design_parameters["modeling_strategies"]
         sparams = SystemParameters(
             liquid_legions=design_parameters["liquid_legions_params"],
-            generator=random_generator,
+            generator=np.random.default_rng(seed=seed),
             campaign_spend_fractions_generator=design_parameters[
                 "campaign_spend_fractions_generators"
             ],

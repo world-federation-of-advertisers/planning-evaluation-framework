@@ -300,7 +300,7 @@ class ExperimentalTrialTest(absltest.TestCase):
             trial = ExperimentalTrial(
                 experiment_dir, data_design, "dataset", trial_descriptor
             )
-            result = trial.evaluate(rng=np.random.default_rng(seed=1))
+            result = trial.evaluate(seed=1)
             # We don't check each column in the resulting dataframe, because these have
             # been checked by the preceding unit tests.  However, we make a few strategic
             # probes.
@@ -337,7 +337,7 @@ class ExperimentalTrialTest(absltest.TestCase):
             trial = ExperimentalTrial(
                 experiment_dir, data_design, "dataset", trial_descriptor
             )
-            result = trial.evaluate(rng=np.random.default_rng(seed=1))
+            result = trial.evaluate(seed=1)
             # We don't check each column in the resulting dataframe, because these have
             # been checked by the preceding unit tests.  However, we make a few strategic
             # probes.

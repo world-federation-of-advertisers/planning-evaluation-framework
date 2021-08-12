@@ -46,7 +46,7 @@ class ExperimentalDesign:
         experiment_dir: str,
         data_design: DataDesign,
         trial_descriptors: List[TrialDescriptor],
-        rng: np.random.Generator,
+        seed: int = 1,
         cores: int = 1,
     ):
         """Constructs an ExperimentalDesign object.
@@ -60,8 +60,8 @@ class ExperimentalDesign:
             (ModelingStrategyDescriptor, SystemParameters, ExperimentParameters).
             Each such tuple specifies one configuration of a modeling strategy
             and parameters that is to be tried against each data set.
-          rng:  The source of randomness that will be used in this
-            ExperimentalDesign.
+          seed:  The seed that is used for the random number generator.
+            Every trial will be initialized with the same seed.
           cores:  Specifies whether to use multithreading, and if so,
             how many cores should be used.  If cores=1, then multithreading
             is not used.  If cores<=0, then all available cores are used.
@@ -70,7 +70,7 @@ class ExperimentalDesign:
         self._experiment_dir = experiment_dir
         self._data_design = data_design
         self._trial_descriptors = trial_descriptors
-        self._rng = rng
+        self._seed = seed
         self._all_trials = None
         self._cores = cores
 
@@ -96,7 +96,7 @@ class ExperimentalDesign:
         ntrials = len(self._all_trials)
 
         def process_trial(i):
-            self._all_trials[i].evaluate(self._rng)
+            self._all_trials[i].evaluate(self._seed)
 
         with ProcessPool(self._cores) as pool:
             list(tqdm(pool.uimap(process_trial, range(ntrials)), total=ntrials))
@@ -107,5 +107,5 @@ class ExperimentalDesign:
             self.generate_trials()
         if self._cores != 1:
             self._evaluate_all_trials_in_parallel()
-        all_results = [trial.evaluate(self._rng) for trial in self._all_trials]
+        all_results = [trial.evaluate(self._seed) for trial in self._all_trials]
         return pd.concat(all_results)

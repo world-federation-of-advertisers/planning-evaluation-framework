@@ -90,7 +90,7 @@ class ExperimentalTrial:
         self._data_set_name = data_set_name
         self._trial_descriptor = trial_descriptor
 
-    def evaluate(self, rng: np.random.Generator) -> pd.DataFrame:
+    def evaluate(self, seed: int) -> pd.DataFrame:
         """Executes a trial.
 
         1. Check if the results for the trial have already been computed.
@@ -104,8 +104,8 @@ class ExperimentalTrial:
         9. Save to disk.
 
         Args:
-          rng: An object of type numpy.random.Generator that is used as
-            the source of randomness for this experiment.
+          seed:  A seed value that is used to initialize the random
+            number generator.
 
         Returns:
           A single row DataFrame containing the results of the evaluation
@@ -113,6 +113,9 @@ class ExperimentalTrial:
         """
         logging.vlog(2, f"Dataset {self._data_set_name}")
         logging.vlog(2, f"Trial   {self._trial_descriptor}")
+
+        rng = np.random.default_rng(seed=seed)
+        np.random.seed(seed)
 
         trial_results_path = self._compute_trial_results_path()
         if isfile(trial_results_path):

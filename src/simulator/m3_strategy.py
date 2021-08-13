@@ -16,6 +16,9 @@
 from typing import Dict
 from typing import Type
 
+from wfa_planning_evaluation_framework.models.ground_truth_reach_curve_model import (
+    GroundTruthReachCurveModel,
+)
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.models.reach_surface import ReachSurface
@@ -34,6 +37,23 @@ from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
 
 class M3Strategy(ModelingStrategy):
     """Modeling strategy proposed for implementation in M3 milestone."""
+
+    def __init__(
+        self,
+        single_pub_model: Type[ReachCurve],
+        single_pub_model_kwargs: Dict,
+        multi_pub_model: Type[ReachSurface],
+        multi_pub_model_kwargs: Dict,
+        use_ground_truth_for_reach_curves: bool = False,
+    ):
+        """Initializes a modeling strategy object."""
+        super().__init__(
+            single_pub_model,
+            single_pub_model_kwargs,
+            multi_pub_model,
+            multi_pub_model_kwargs,
+        )
+        self._use_ground_truth_for_reach_curves = use_ground_truth_for_reach_curves
 
     def fit(
         self, halo: HaloSimulator, params: SystemParameters, budget: PrivacyBudget
@@ -89,10 +109,13 @@ class M3Strategy(ModelingStrategy):
         # Compute reach curve for each publisher
         single_pub_curves = []
         for i in range(p):
-            curve = self._single_pub_model(
-                [single_pub_reach_list[i]], **self._single_pub_model_kwargs
-            )
-            curve._fit()
+            if self._use_ground_truth_for_reach_curves:
+                curve = GroundTruthReachCurveModel(halo._data_set, i)
+            else:
+                curve = self._single_pub_model(
+                    [single_pub_reach_list[i]], **self._single_pub_model_kwargs
+                )
+                curve._fit()
             single_pub_curves.append(curve)
 
         if p == 1:

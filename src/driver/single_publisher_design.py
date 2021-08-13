@@ -65,9 +65,7 @@ LEVELS = {
 NUM_TRIALS_PER_DATASET = 100
 
 
-def generate_experimental_design_config(
-    random_generator: np.random.Generator,
-) -> Iterable[TrialDescriptor]:
+def generate_experimental_design_config(seed: int = 1) -> Iterable[TrialDescriptor]:
     """Generates a list of TrialDescriptors for a single publisher model."""
     keys = LEVELS.keys()
     levels = [len(LEVELS[k]) for k in keys]
@@ -91,7 +89,7 @@ def generate_experimental_design_config(
                 design_parameters["liquid_legions_decay_rate"],
                 design_parameters["liquid_legions_sketch_size"],
             ),
-            random_generator,
+            np.random.default_rng(seed=seed),
         )
         eparams = ExperimentParameters(
             PrivacyBudget(

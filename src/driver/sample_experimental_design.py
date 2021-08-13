@@ -95,9 +95,7 @@ LEVELS = {
 NUM_TRIALS_PER_DATASET = 100
 
 
-def generate_experimental_design_config(
-    random_generator: np.random.Generator,
-) -> Iterable[TrialDescriptor]:
+def generate_experimental_design_config(seed: int = 1) -> Iterable[TrialDescriptor]:
     """Generates a list of TrialDescriptors.
 
     This examples illustrates a latin hypercube sampling strategy.
@@ -114,7 +112,7 @@ def generate_experimental_design_config(
         sparams = SystemParameters(
             design_parameters["campaign_spend_fractions"],
             design_parameters["liquid_legions_params"],
-            random_generator,
+            np.random.default_rng(seed=seed),
         )
         test_point_generator, test_point_params = design_parameters[
             "test_point_strategies"

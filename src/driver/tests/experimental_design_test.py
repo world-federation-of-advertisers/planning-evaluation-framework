@@ -165,7 +165,7 @@ class ExperimentalDesignTest(absltest.TestCase):
                 self.experiment_dir,
                 self.data_design,
                 self.trial_descriptors,
-                np.random.default_rng(seed=1),
+                seed=1,
             )
             trials = exp.generate_trials()
             self.assertLen(trials, 8)
@@ -181,7 +181,7 @@ class ExperimentalDesignTest(absltest.TestCase):
                 self.experiment_dir,
                 self.data_design,
                 self.trial_descriptors,
-                np.random.default_rng(seed=1),
+                seed=1,
                 cores=2,
             )
             trials = exp.generate_trials()

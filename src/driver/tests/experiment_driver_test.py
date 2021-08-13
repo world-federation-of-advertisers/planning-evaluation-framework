@@ -37,7 +37,7 @@ from wfa_planning_evaluation_framework.driver import single_publisher_design
 
 
 class FakeExperimentalTrial(ExperimentalTrial):
-    def evaluate(self, rng: np.random.Generator):
+    def evaluate(self, seed: int):
         return pd.DataFrame(
             {
                 "data_set_name": [self._data_set_name],
@@ -49,23 +49,21 @@ class FakeExperimentalTrial(ExperimentalTrial):
 class ExperimentDriverTest(absltest.TestCase):
     def test_sample_experimental_design(self):
         sample_design = sample_experimental_design.generate_experimental_design_config(
-            np.random.default_rng(seed=1)
+            seed=1
         )
         self.assertLen(list(sample_design), 100)
 
     def test_m3_first_round_experimental_design(self):
         sample_design = (
             m3_first_round_experimental_design.generate_experimental_design_config(
-                np.random.default_rng(seed=1)
+                seed=1
             )
         )
         self.assertLen(list(sample_design), 288)
 
     def test_single_publisher_design(self):
         sp_design = list(
-            single_publisher_design.generate_experimental_design_config(
-                np.random.default_rng(seed=1)
-            )
+            single_publisher_design.generate_experimental_design_config(seed=1)
         )
         self.assertLen(sp_design, 100)
 

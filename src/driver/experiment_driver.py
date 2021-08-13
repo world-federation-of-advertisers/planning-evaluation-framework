@@ -112,8 +112,7 @@ class ExperimentDriver:
         self._experimental_design = experimental_design
         self._output_file = output_file
         self._intermediate_dir = intermediate_dir
-        self._rng = np.random.default_rng(seed=random_seed)
-        np.random.seed(random_seed)
+        self._seed = random_seed
         self._cores = cores
 
     def execute(self) -> pd.DataFrame:
@@ -121,7 +120,7 @@ class ExperimentDriver:
         data_design = DataDesign(self._data_design_dir)
         experiments = list(self._fetch_experiment_list())
         experimental_design = ExperimentalDesign(
-            self._intermediate_dir, data_design, experiments, self._rng, self._cores
+            self._intermediate_dir, data_design, experiments, self._seed, self._cores
         )
         experimental_design.generate_trials()
         result = experimental_design.load()
@@ -136,7 +135,7 @@ class ExperimentDriver:
         module = importlib.util.module_from_spec(spec)
         sys.modules["experiment_generator"] = module
         spec.loader.exec_module(module)
-        return module.generate_experimental_design_config(self._rng)
+        return module.generate_experimental_design_config(seed=self._seed)
 
 
 def main(argv):

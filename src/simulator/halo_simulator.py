@@ -202,6 +202,7 @@ class HaloSimulator:
         kplus_reaches = [
             round(x) for x in estimator.estimate_cardinality(combined_sketch)
         ]
+        kplus_reaches = np.minimum.accumulate(np.maximum(kplus_reaches, 0))
 
         # TODO(jiayu,pasin): Does this look right?
         for noiser_class, epsilon, delta in estimator.output_privacy_parameters():

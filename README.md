@@ -156,12 +156,15 @@ python3 driver/experiment_driver.py \
   --cores=0
 ```
 
-Setting `cores=0` enables multithreading.  Even so, the above design takes very long to run, so you
-may want to reduce both the number of Datasets and the number of Experiments by (temporarily)
-modifying the respective configuration files.  To see verbose output as the evaluation proceeds,
-try adding the parameter `--v==3`.  Once the evaluation is complete, the results will be recorded
-in a CSV file named `$DIR/results`.  You can then load this into colab and explore the results that
-were obtained.  For some example colabs, see the `analysis` directory.
+Setting `cores=0` enables multithreading on all available cores.  Even
+so, the above design takes very long to run, so you may want to reduce
+both the number of Datasets and the number of Experiments by
+(temporarily) modifying the respective configuration files.  To see
+verbose output as the evaluation proceeds, try adding the parameter
+`--v==3`.  Once the evaluation is complete, the results will be
+recorded in a CSV file named `$DIR/results`.  You can then load this
+into colab and explore the results that were obtained.  For some
+example colabs, see the `analysis` directory.
 
 ### Directory Structure
 

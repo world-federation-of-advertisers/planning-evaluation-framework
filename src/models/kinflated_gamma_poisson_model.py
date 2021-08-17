@@ -87,6 +87,27 @@ class KInflatedGammaPoissonModel(ReachCurve):
         else:
             self._cpi = None
 
+    def _gamma_poisson_pmf(self, n, alpha, beta):
+        """PMF of the shifted Gamma-Poisson distribution.
+
+        This implementation makes use of the equivalence between the
+        Gamma-Poisson distribution with parameters (alpha, beta) and
+        the negative binomial distribution with parameters (p, r) =
+        (1 / (1 + beta), alpha).
+
+        Args:
+          n:  Value(s) at which the distribution is to be evaluated.
+            This can be a scalar or a numpy array.
+          alpha: Alpha parameter of the Gamma-Poisson distribution.
+          beta: Beta parameter of the Gamma-Poisson distribution.
+        Returns:
+          f(n | alpha, beta), where f is the Gamma-Poisson distribution.
+        """
+        # Note scipy.stats.nbinom uses a different parameterization than
+        # the Wikipedia parameterization.  Under this parameterization,
+        # p -> 1-p, so the parameter 1/(1 + beta) becomes beta/(1 + beta).
+        return scipy.stats.nbinom.pmf(n - 1, alpha, beta / (1.0 + beta))
+
     def _pmf(self, n, alpha, beta, a):
         """PMF of the k-inflated Gamma-Poisson distribution.
 
@@ -106,12 +127,14 @@ class KInflatedGammaPoissonModel(ReachCurve):
           f(n | alpha, beta), where f is the k-inflated Gamma-Poisson 
           distribution.
         """
-        if n <= len(a):
+        if not len(a):
+            return self._gamma_poisson_pmf(n, alpha, beta)
+        elif n <= len(a):
             return a[n-1]
         
         s = np.sum(a)
-        t = np.sum(scipy.stats.nbinom.pmf(np.arange(len(a)), alpha, 1.0 / (1.0 + beta)))
-        u = scipy.stats.nbinom.logpmf(n - 1, alpha, 1.0 / (1.0 + beta))
+        t = np.sum(self._gamma_poisson_pmf(np.arange(1, len(a)+1), alpha, beta))
+        u = self._gamma_poisson_pmf(n, alpha, beta)
         return ((1 - s) / (1 - t)) * u
                    
     def _knreach(self, k, n, I, Imax, alpha, beta, a):
@@ -138,7 +161,7 @@ class KInflatedGammaPoissonModel(ReachCurve):
           of n impressions, of which k are shown.
         """
         kprob = scipy.stats.binom.pmf(k, n, I / Imax)
-        return kprob * self._pmf(n, alpha, beta, a))
+        return kprob * self._pmf(n, alpha, beta, a)
 
     def _kreach(self, k, I, Imax, alpha, beta, a):
         """Probability that a random user receives k impressions.

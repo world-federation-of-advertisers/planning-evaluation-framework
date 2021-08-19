@@ -30,6 +30,7 @@ from wfa_planning_evaluation_framework.models.gamma_poisson_model import (
 )
 from wfa_planning_evaluation_framework.models.goerg_model import GoergModel
 from wfa_planning_evaluation_framework.data_generators.heterogeneous_impression_generator import HeterogeneousImpressionGenerator
+from wfa_planning_evaluation_framework.data_generators.heavy_tailed_impression_generator import HeavyTailedImpressionGenerator
 from wfa_planning_evaluation_framework.data_generators.fixed_price_generator import FixedPriceGenerator
 from wfa_planning_evaluation_framework.data_generators.publisher_data import PublisherData
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
@@ -131,23 +132,23 @@ class KInflatedGammaPoissonModelTest(absltest.TestCase):
 
     def test_exponential_poisson_N(self):
         kgpm = KInflatedGammaPoissonModel([ReachPoint([100], [100])])
-        self.assertAlmostEqual(kgpm._exponential_poisson_N(19971, 7992), 8476, delta=1)
-        self.assertAlmostEqual(kgpm._exponential_poisson_N(20000, 10000), 10909.09, delta=1)
+        self.assertAlmostEqual(kgpm._exponential_poisson_N(19971, 7992), 9769, delta=1)
+        self.assertAlmostEqual(kgpm._exponential_poisson_N(20000, 10000), 13333.33, delta=1)
 
     def test_fit_exponential_poisson_model(self):
         p1 = ReachPoint([20000], [10000])
         kgpm1 = KInflatedGammaPoissonModel([p1])
         N1, dist1 = kgpm1._fit_exponential_poisson_model(p1)
-        self.assertAlmostEqual(N1, 10909.09, delta=1)
+        self.assertAlmostEqual(N1, 13333.33, delta=1)
         self.assertAlmostEqual(dist1._alpha, 1.0)
-        self.assertAlmostEqual(dist1._beta, 1.2, delta=1)
+        self.assertAlmostEqual(dist1._beta, 2.0, delta=0.1)
 
         p2 = ReachPoint([19971], [7993, 4815, 2914, 1759, 1011, 604, 355, 214, 122, 75])
         kgpm2 = KInflatedGammaPoissonModel([p2])
         N2, dist2 = kgpm1._fit_exponential_poisson_model(p2)
-        self.assertAlmostEqual(N2, 8111.05, delta=1)
+        self.assertAlmostEqual(N2, 8384, delta=100)
         self.assertAlmostEqual(dist2._alpha, 1.0)
-        self.assertAlmostEqual(dist2._beta, 1.555, delta=1)
+        self.assertAlmostEqual(dist2._beta, 1.696, delta=0.1)
 
     def test_fit_frequency_one(self):
         data = HeterogeneousImpressionGenerator(10000, gamma_shape=1., gamma_scale=3)()
@@ -162,7 +163,58 @@ class KInflatedGammaPoissonModelTest(absltest.TestCase):
         kgpm._fit()
         kgpm_reach = kgpm.by_spend([spend]).reach()
         self.assertAlmostEqual(gm_reach, kgpm_reach)
+
+    def test_fit_exponential_poisson(self):
+        data = HeterogeneousImpressionGenerator(10000, gamma_shape=1., gamma_scale=3)()
+        publisher = PublisherData(FixedPriceGenerator(0.1)(data))
+        dataset = DataSet([publisher], f"Exponential-poisson")
+        spend_fraction = 0.5
+        spend = dataset._data[0].max_spend * spend_fraction
+        point = dataset.reach_by_spend([spend])
+        gm = GoergModel([point])
+        gm_reach = gm.by_spend([spend]).reach()
+        kgpm = KInflatedGammaPoissonModel([point])
+        kgpm.print_fit_header()
+        kgpm.print_fit("true", 0.0, 10000, 1.0, 3.0, [])
+        kgpm._fit()
+        kgpm_reach = kgpm.by_spend([spend]).reach()
+        self.assertAlmostEqual(gm_reach, kgpm_reach, delta=100)
         
+    def test_fit_gamma_poisson(self):
+        # mean = 5, var = 6
+        N, alpha, beta = 10000, 8, 0.5
+        data = HeterogeneousImpressionGenerator(10000, gamma_shape=alpha, gamma_scale=beta)()
+        publisher = PublisherData(FixedPriceGenerator(0.1)(data))
+        dataset = DataSet([publisher], f"Exponential-poisson")
+        spend_fraction = 0.5
+        spend = dataset._data[0].max_spend * spend_fraction
+        point = dataset.reach_by_spend([spend])
+        gm = GoergModel([point])
+        gm_reach = gm.by_spend([spend]).reach()
+        kgpm = KInflatedGammaPoissonModel([point])
+        kgpm.print_fit_header()
+        kgpm.print_fit("true", 0.0, N, alpha, beta, [])
+        kgpm._fit()
+        kgpm_reach = kgpm.by_spend([spend]).reach()
+        self.assertAlmostEqual(gm_reach, kgpm_reach, delta=100)
+        
+    def test_fit_zeta(self):
+        # mean = 5, var = 6
+        N, zeta_s = 10000, 2.141628
+        data = HeavyTailedImpressionGenerator(10000, zeta_s)()
+        publisher = PublisherData(FixedPriceGenerator(0.1)(data))
+        dataset = DataSet([publisher], f"xxx")
+        spend_fraction = 0.5
+        spend = dataset._data[0].max_spend * spend_fraction
+        point = dataset.reach_by_spend([spend])
+        gm = GoergModel([point])
+        gm_reach = gm.by_spend([spend]).reach()
+        kgpm = KInflatedGammaPoissonModel([point])
+        kgpm.print_fit_header()
+        kgpm.print_fit("true", 0.0, N, 0.0, 0.0, [])
+        kgpm._fit()
+        kgpm_reach = kgpm.by_spend([spend]).reach()
+        self.assertAlmostEqual(gm_reach, kgpm_reach, delta=100)
         
     def test_fit_histogram_chi2_distance(self):
         # The following point corresponds to

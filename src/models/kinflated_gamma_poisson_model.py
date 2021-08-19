@@ -257,6 +257,10 @@ class KInflatedGammaPoissonModel(ReachCurve):
         freqs = N * dist.kreach(np.arange(1, len(h)), I/Imax)
         kplus = N * dist.kplusreach(len(h), I/Imax)
         hbar = np.array(list(freqs) + [kplus])
+
+        # print(f"alpha {dist._alpha} beta {dist._beta} N {N} Imax {Imax}")
+        # print(f"h    {[int(h[i]) for i in range(len(h))]}")
+        # print(f"hbar {[int(hbar[i]) for i in range(len(hbar))]}")
             
         obj = np.sum((hbar - h) ** 2 / (hbar + 1e-6))
 
@@ -303,21 +307,25 @@ class KInflatedGammaPoissonModel(ReachCurve):
 
     def _exponential_poisson_beta(self, I, N, R):
         """Estimate beta given impressions, audience size and reach."""
+        if I <= R:
+            return 1e-5
         return (N * (I - R))/(I * R - N * (I - R))
 
     def _exponential_poisson_N_from_beta(self, I, R, beta):
         """Estimate audience size from impressions, reach and beta."""
         return -(I * beta * R)/((beta + 1) * (R - I))
 
-    def _exponential_poisson_N(self, I, R, mu_scale_factor=1.1):
+    def _exponential_poisson_N(self, I, R, mu_scale_factor=1.5):
         """Estimate audience size from I and R.
 
         We know that the mean mu of the distribution has to be greater than
         I / R.  Since beta = mu - 1, this says that beta >= I / R - 1.
         But how much bigger?  That cannot easily be determined from just one 
         point.  Here, we assume beta = s * (I / R - 1), where s is some
-        small scale factor.  From that, we estimate N.
+        small scale factor that is at least one.  From that, we estimate N.
         """
+        if mu_scale_factor < 1.0:
+            raise ValueError("mu_scale_factor must be at least 1.0")
         return R * (mu_scale_factor * I - R) / (mu_scale_factor * (I - R))
         
     def _fit_exponential_poisson_model(self, point):
@@ -345,26 +353,34 @@ class KInflatedGammaPoissonModel(ReachCurve):
             # Estimate the mean from the distribution found in the reach point
             s = np.sum(point.frequencies)
             mu = np.sum([(i + 1) * f / s for i, f in enumerate(point.frequencies)])
-            beta = (mu - 1) * 1.1    # 1.1 is arbitrary
+            beta = (mu - 1) * 1.2   # 1.2 is arbitrary
             N = self._exponential_poisson_N_from_beta(impressions, reach, beta)
         else:
             N = self._exponential_poisson_N(impressions, reach)
             beta = self._exponential_poisson_beta(impressions, N, reach)
 
+        Imax = N * (beta + 1)
+        if N * (beta + 1) < impressions:
+            beta = (impressions / N - 1) * 1.1
+            N = self._exponential_poisson_N_from_beta(impressions, reach, beta)
+
         return N, KInflatedGammaPoissonDistribution(1.0, beta, [])
 
-    def _fit_histogram_fixed_length_a(self, h, I, alpha0, beta0, N0, a0):
+    def _fit_histogram_fixed_length_a(self, h, I, N0, alpha0, beta0, a0):
         """Given a fixed length vector of inflation values, finds optimum fit."""
 
         def objective(params):
             alpha, beta, N = params[:3]
             a = params[3:]
             if len(a) and np.sum(a) > 1.0:
-                return np.sum(h**2)
+                return np.sum(np.array(h)**2)
             dist = KInflatedGammaPoissonDistribution(alpha, beta, a)
-            return self._chi2_distance(h, I, N, dist)
+            score = self._chi2_distance(h, I, N, dist)
+            # print(f"alpha {alpha} beta {beta} N {N} a {a} -> {score}")
+            return score
 
-        p0 = [alpha0, beta0, N0] + a0
+        p0 = list([alpha0, beta0, N0]) + list(a0)
+        Nmin = np.sum(h)
         bounds = ([(1e-6, 100.0), (1e-6,100.0), (Nmin, 100.0 * Nmin)] +
                   [(0.0, 1.0)] * len(a0))
         
@@ -377,7 +393,16 @@ class KInflatedGammaPoissonModel(ReachCurve):
         dist = KInflatedGammaPoissonDistribution(alpha, beta, a)
         score = self._chi2_distance(h, I, N, dist)
 
-        return alpha, beta, N, a, score
+        return N, dist, score
+
+    def print_fit_header(self):
+        print("{:15s} {:>7s} {:>7s} {:>8s} {:>8s} {:>2s}  distribution".format(
+            " ", "score", "N", "alpha", "beta", "n"))
+              
+    def print_fit(self, msg, score, N, alpha, beta, a):
+        dist = KInflatedGammaPoissonDistribution(alpha, beta, a)
+        dist_str = " ".join([f"{dist.pmf(i):7.4f}" for i in range(1,10)])
+        print(f"{msg:15s} {score:7.2f} {N:7.0f} {alpha:8.3f} {beta:8.3f} {len(a):2d} {dist_str}")
 
     def _fit(self):
         """Chi-squared fit to histogram h.
@@ -397,6 +422,11 @@ class KInflatedGammaPoissonModel(ReachCurve):
         by nstarting_points.
         """
         N0, dist = self._fit_exponential_poisson_model(self._reach_point)
+        h = self._reach_point.frequencies_with_kplus_bucket
+        I = self._reach_point.impressions
+        score = self._chi2_distance(h, I, N0, dist)
+#        self.print_fit_header()
+        self.print_fit("exp-poisson", score, N0, dist._alpha, dist._beta, dist._a)
 
         if self._reach_point.max_frequency == 1:
             self._max_reach = N0
@@ -405,15 +435,28 @@ class KInflatedGammaPoissonModel(ReachCurve):
             self._fit_computed = True
             return
         
-        h = self._reach_point.frequencies_with_kplus_bucket
-        N, alpha, beta, a, score = self._fit_histogram_fixed_length_a(h, alpha0, beta0, N0, [])
-        
-        while chi2.cdf(score, len(h)) > 0.95 and len(a) < self._kmax:
-            a += [self._pmf(len(a)+1, alpha, beta)]
-            N, alpha, beta, a, score = self._fit_histogram_fixed_length_a(h, alpha0, beta0, N0, [])
+        N, dist, score = self._fit_histogram_fixed_length_a(h, I, N0, dist._alpha, dist._beta, [])
+        self.print_fit("start", score, N, dist._alpha, dist._beta, dist._a)
+
+#        import pdb; pdb.set_trace()
+        while scipy.stats.chi2.cdf(score, len(h)) > 0.95 and len(dist._a) < self._kmax:
+            a = list(dist._a) + [dist.pmf(len(dist._a)+1)]
+            N, dist, score = self._fit_histogram_fixed_length_a(h, I, N, dist._alpha, dist._beta, a)
+            self.print_fit(f"{len(a)}", score, N, dist._alpha, dist._beta, dist._a)
+
+#        import pdb; pdb.set_trace()
+        N_next, dist_next = N, dist
+        while scipy.stats.chi2.cdf(score, len(h)) <= 0.95:
+            N, dist = N_next, dist_next
+            if not len(dist._a):
+                break
+            a = dist._a[:-1]
+            N_next, dist_next, score = self._fit_histogram_fixed_length_a(h, I, N, dist._alpha, dist._beta, a)
+            self.print_fit(f"{len(a)}", score, N_next, dist_next._alpha, dist_next._beta, dist_next._a)
+            
 
         self._max_reach = N
-        self._dist = KInflatedGammaPoissonDistribution(alpha, beta, a)
+        self._dist = dist
         self._max_impressions = N * dist.expected_value()
         self._fit_computed = True
 

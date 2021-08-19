@@ -45,6 +45,8 @@ class ReachPoint:
             raise ValueError("impressions and spends must have same length")
         self._impressions = tuple(impressions)
         self._kplus_reaches = tuple(kplus_reaches)
+        self._frequencies = [kplus_reaches[i] - kplus_reaches[i+1]
+                             for i in range(len(kplus_reaches)-1)]
         if spends:
             self._spends = tuple(spends)
         else:
@@ -78,7 +80,15 @@ class ReachPoint:
                     k, len(self._kplus_reaches)
                 )
             )
-        return self._kplus_reaches[k - 1] - self._kplus_reaches[k]
+        return self._frequencies[k-1]
+
+    @property
+    def frequencies(self) -> List[int]:
+        return self._frequencies
+
+    @property
+    def frequencies_with_kplus_bucket(self) -> List[int]:
+        return self._frequencies + [self._kplus_reaches[-1]]
 
     @property
     def spends(self) -> Iterable[float]:

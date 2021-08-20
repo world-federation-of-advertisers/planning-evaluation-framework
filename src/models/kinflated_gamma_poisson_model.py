@@ -308,12 +308,14 @@ class KInflatedGammaPoissonModel(ReachCurve):
 
     def _exponential_poisson_beta(self, I, N, R):
         """Estimate beta given impressions, audience size and reach."""
-        if I <= R:
-            return 1e-5
+        if I * R - N * (I - R) <= 0:
+            return 1e3
         return (N * (I - R))/(I * R - N * (I - R))
 
     def _exponential_poisson_N_from_beta(self, I, R, beta):
         """Estimate audience size from impressions, reach and beta."""
+        if I == R:
+            return 100.0 * R
         return -(I * beta * R)/((beta + 1) * (R - I))
 
     def _exponential_poisson_N(self, I, R, mu_scale_factor=1.5):
@@ -327,6 +329,8 @@ class KInflatedGammaPoissonModel(ReachCurve):
         """
         if mu_scale_factor < 1.0:
             raise ValueError("mu_scale_factor must be at least 1.0")
+        elif I == R:
+            return 100.0 * R
         return R * (mu_scale_factor * I - R) / (mu_scale_factor * (I - R))
         
     def _fit_exponential_poisson_model(self, point, Imin=None):

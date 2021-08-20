@@ -217,12 +217,32 @@ class KInflatedGammaPoissonModelTest(absltest.TestCase):
     #     self.assertAlmostEqual(gm_reach, kgpm_reach, delta=100)
 
     def test_fit_other(self):
-        # weather.com
+        # 1
+        point = ReachPoint((36003,), (5205, 2603, 1612, 1157, 947, 798, 684, 606, 560, 521))
+        # 2
+        point = ReachPoint((11824,), (3665, 1367, 605, 351, 228, 170, 129, 105, 94, 76))
+        # 3
         point = ReachPoint([22721], [5325, 2728, 1595, 995, 688, 503, 395, 307, 246, 207])
+        # 4
+        point = ReachPoint((8381,), (2826, 893, 327, 170, 112, 92, 80, 72, 59, 52))
+        # 5
+        point = ReachPoint((10443,), (3577, 1189, 558, 296, 209, 158, 129, 107, 91, 75))
+        # 6
+        point = ReachPoint((16760,), (3725, 1476, 682, 360, 213, 151, 119, 102, 91, 86))
+        # 7
+        point = ReachPoint
+        # 8
+        point = ReachPoint((37284,), (6220, 3103, 1808, 1166, 844, 683, 580, 513, 465, 433))
+        # 9
+        point = ReachPoint((204707,), (12994, 10824, 9470, 8299, 7301, 6547, 5898, 5354, 4852, 4359))
+        # 10
+        point = ReachPoint((9091,), (2886, 878, 388, 229, 158, 132, 111, 103, 88, 74))
+
         kgpm = KInflatedGammaPoissonModel([point])
+        print(f"impressions = {point.impressions}")
         kgpm.print_fit_header()
         kgpm.print_fit("true", 0.0, point.reach(), 0.0, 0.0, [])
-        kgpm._fit()
+        kgpm._fit(0)
         kgpm_point = kgpm.by_impressions([point.impressions], max_frequency=3)
         self.assertAlmostEqual(point.reach(), kgpm_point.reach(), delta=100)
         self.assertAlmostEqual(point.reach(2), kgpm_point.reach(2), delta=100)

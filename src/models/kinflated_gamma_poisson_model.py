@@ -329,7 +329,7 @@ class KInflatedGammaPoissonModel(ReachCurve):
             raise ValueError("mu_scale_factor must be at least 1.0")
         return R * (mu_scale_factor * I - R) / (mu_scale_factor * (I - R))
         
-    def _fit_exponential_poisson_model(self, point):
+    def _fit_exponential_poisson_model(self, point, Imin=None):
         """Returns N, alpha, beta of an exponential-poisson model.
 
         The fit returned by this function is guaranteed to match the 1+ reach
@@ -343,12 +343,16 @@ class KInflatedGammaPoissonModel(ReachCurve):
         Args:
           point:  A ReachPoint to which an exponential-poisson model is 
             to be fit.
+          Imin:  Minimum number of impressions that the returned model 
+            should have.
         Returns:
           A pair (N, dist), where N is the estimated audience size and dist
           is an estimated KInflatedGammaPoissonDistribution representing an
           exponential-poisson distribution.
         """
         impressions = point.impressions[0]
+        if Imin is not None and impressions < Imin:
+            impressions = Imin
         reach = point.reach()
         if len(point.frequencies) > 1:
             # Estimate the mean from the distribution found in the reach point
@@ -370,24 +374,27 @@ class KInflatedGammaPoissonModel(ReachCurve):
 
         return N, KInflatedGammaPoissonDistribution(1.0, beta, [])
 
-    def _fit_histogram_fixed_length_a(self, h, I, N0, alpha0, beta0, a0):
+    def _fit_histogram_fixed_length_a(self, h, I, Imin, N0, alpha0, beta0, a0):
         """Given a fixed length vector of inflation values, finds optimum fit."""
 
         p0 = list([alpha0, beta0, N0]) + list(a0)
         Nmin = np.sum(h)
-        bounds = ([(1e-6, 1000.0), (1e-6,1000.0), (Nmin, 100.0 * Nmin)] +
+        bounds = ([(1e-4, 1000.0), (1e-4,10000.0), (Nmin, 100.0 * Nmin)] +
                   [(0.0, 1.0)] * len(a0))
 
         def objective(params):
             alpha, beta, N = params[:3]
             a = params[3:]
-            for i in range(3):
+            for i in range(len(params)):
                 if params[i] < bounds[i][0] or bounds[i][1] < params[i]:
-                    return np.sum(np.array(h)**2)
+                    return np.sum(np.array(h)**2) + Imin**2
             if len(a) and np.sum(a) > 1.0:
                 return np.sum(np.array(h)**2)
             dist = KInflatedGammaPoissonDistribution(alpha, beta, a)
             score = self._chi2_distance(h, I, N, dist)
+            Imax = N * dist.expected_value()
+            if Imax < Imin:
+                score += (Imin - Imax) ** 2
 #            print(f"alpha {alpha} beta {beta} N {N} a {a} -> {score}")
             return score
 
@@ -399,6 +406,8 @@ class KInflatedGammaPoissonModel(ReachCurve):
 
         alpha, beta, N = result.x[:3]
         a = result.x[3:]
+        if any([x < 0 for x in a]):
+            import pdb; pdb.set_trace()
         dist = KInflatedGammaPoissonDistribution(alpha, beta, a)
         score = self._chi2_distance(h, I, N, dist)
 
@@ -414,57 +423,64 @@ class KInflatedGammaPoissonModel(ReachCurve):
         dist_str = " ".join([f"{dist.pmf(i):7.4f}" for i in range(1,10)])
         print(f"{msg:15s} {score:7.2f} {N:7.0f} {alpha:8.3f} {beta:8.3f} {len(a):2d} {dist_str}")
 
-    def _fit(self):
+    def _fit_point(self, point, Imin):
         """Chi-squared fit to histogram h.
 
         Computes parameters alpha, beta, Imax, N such that the histogram hbar of
         of expected frequencies minimizes the metric
 
-          chi2(h, hbar) = \sum_i (h[i] - hbar[i])^2 / hbar[i] +
-             w * (\sum(h[i] - hbar[i]))^2
+          chi2(h, hbar) = \sum_i (h[i] - hbar[i])^2 / hbar[i]
 
-        where w is the one_plus_reach_weight.
+        subject to the constraint the number of impressions in the fitted model 
+        is at least Imin.
 
-        Experience shows that finding the optimal value depends on starting from
-        a point where the estimated audience size is not too far from the true
-        audience size.  So, this code retries the optimization for various different
-        values of the estimated audience size.  The number of such attempts is given
-        by nstarting_points.
+        Args:
+          point:  The point to which the data is to be fit.
+          Imin: The minimum number of impressions that the resulting
+            fit should have.
+        Returns:
+          N, dist of the fit that was found, where N is the estimated audience size
+          and dist is the best fitting k-inflated Gamma Poisson distribution.
+          The expected number of impressions of this pair will be at least
+          Imin.
         """
-        N0, dist = self._fit_exponential_poisson_model(self._reach_point)
-        h = self._reach_point.frequencies_with_kplus_bucket
-        I = self._reach_point.impressions
+        N0, dist = self._fit_exponential_poisson_model(point, Imin)
+        h = point.frequencies_with_kplus_bucket
+        I = point.impressions
         score = self._chi2_distance(h, I, N0, dist)
 #        self.print_fit_header()
         self.print_fit("exp-poisson", score, N0, dist._alpha, dist._beta, dist._a)
 
-        if self._reach_point.max_frequency == 1:
-            self._max_reach = N0
-            self._max_impressions = N0 * dist.expected_value()
-            self._dist = dist
-            self._fit_computed = True
-            return
+        if point.max_frequency == 1:
+            return N0, dist
         
-        N, dist, score = self._fit_histogram_fixed_length_a(h, I, N0, dist._alpha, dist._beta, [])
+        N, dist, score = self._fit_histogram_fixed_length_a(h, I, Imin, N0, dist._alpha, dist._beta, [])
         self.print_fit("start", score, N, dist._alpha, dist._beta, dist._a)
 
 #        import pdb; pdb.set_trace()
         while scipy.stats.chi2.cdf(score, len(h)) > 0.95 and len(dist._a) < self._kmax:
             a = list(dist._a) + [dist.pmf(len(dist._a)+1)]
-            N, dist, score = self._fit_histogram_fixed_length_a(h, I, N, dist._alpha, dist._beta, a)
+            N, dist, score = self._fit_histogram_fixed_length_a(h, I, Imin, N, dist._alpha, dist._beta, a)
             self.print_fit(f"{len(a)}", score, N, dist._alpha, dist._beta, dist._a)
 
-#        import pdb; pdb.set_trace()
-        N_next, dist_next = N, dist
-        while scipy.stats.chi2.cdf(score, len(h)) <= 0.95:
-            N, dist = N_next, dist_next
-            if not len(dist._a):
-                break
-            a = dist._a[:-1]
-            N_next, dist_next, score = self._fit_histogram_fixed_length_a(h, I, N, dist._alpha, dist._beta, a)
-            self.print_fit(f"{len(a)}", score, N_next, dist_next._alpha, dist_next._beta, dist_next._a)
-            
+        return N, dist
 
+    def _fit(self, Imin=None):
+        """Chi-squared fit to histogram h.
+
+        Computes parameters alpha, beta, Imax, N such that the histogram hbar of
+        of expected frequencies minimizes the metric
+
+          chi2(h, hbar) = \sum_i (h[i] - hbar[i])^2 / hbar[i]
+
+        subject to the constraint the number of impressions in the fitted model 
+        is at least Imin.
+        """
+        if Imin is None:
+            Imin = self._reach_point.impressions[0]
+
+        N, dist = self._fit_point(self._reach_point, Imin)
+        
         self._max_reach = N
         self._dist = dist
         self._max_impressions = N * dist.expected_value()
@@ -485,8 +501,12 @@ class KInflatedGammaPoissonModel(ReachCurve):
         """
         if len(impressions) != 1:
             raise ValueError("Impressions vector must have a length of 1.")
+        
         if not self._fit_computed:
             self._fit()
+        elif self._max_impressions <= impressions[0]:
+            self._fit(impressions[0]+1)
+            
         p = impressions[0] / self._max_impressions
         freqs = self._max_reach * self._dist.kreach(np.arange(1, max_frequency), p)
         kplus = self._max_reach * self._dist.kplusreach(max_frequency, p)

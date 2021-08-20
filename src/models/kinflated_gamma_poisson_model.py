@@ -265,6 +265,7 @@ class KInflatedGammaPoissonModel(ReachCurve):
         obj = np.sum((hbar - h) ** 2 / (hbar + 1e-6))
 
         if np.isnan(obj):
+            import pdb; pdb.set_trace()
             logging.vlog(2, f"alpha {alpha} beta {beta} N {N} Imax {Imax}")
             logging.vlog(2, f"h    {h}")
             logging.vlog(2, f"hbar {hbar}")
@@ -359,33 +360,41 @@ class KInflatedGammaPoissonModel(ReachCurve):
             N = self._exponential_poisson_N(impressions, reach)
             beta = self._exponential_poisson_beta(impressions, N, reach)
 
+        # Check if the chosen values of N, beta result in an impossibly low
+        # number of impressions.  If so, adjust them upwards.
         Imax = N * (beta + 1)
-        if N * (beta + 1) < impressions:
-            beta = (impressions / N - 1) * 1.1
-            N = self._exponential_poisson_N_from_beta(impressions, reach, beta)
+        while Imax < impressions:
+            N *= 1.1
+            beta = self._exponential_poisson_beta(impressions, N, reach)
+            Imax = N * (beta + 1)
 
         return N, KInflatedGammaPoissonDistribution(1.0, beta, [])
 
     def _fit_histogram_fixed_length_a(self, h, I, N0, alpha0, beta0, a0):
         """Given a fixed length vector of inflation values, finds optimum fit."""
 
+        p0 = list([alpha0, beta0, N0]) + list(a0)
+        Nmin = np.sum(h)
+        bounds = ([(1e-6, 1000.0), (1e-6,1000.0), (Nmin, 100.0 * Nmin)] +
+                  [(0.0, 1.0)] * len(a0))
+
         def objective(params):
             alpha, beta, N = params[:3]
             a = params[3:]
+            for i in range(3):
+                if params[i] < bounds[i][0] or bounds[i][1] < params[i]:
+                    return np.sum(np.array(h)**2)
             if len(a) and np.sum(a) > 1.0:
                 return np.sum(np.array(h)**2)
             dist = KInflatedGammaPoissonDistribution(alpha, beta, a)
             score = self._chi2_distance(h, I, N, dist)
-            # print(f"alpha {alpha} beta {beta} N {N} a {a} -> {score}")
+#            print(f"alpha {alpha} beta {beta} N {N} a {a} -> {score}")
             return score
 
-        p0 = list([alpha0, beta0, N0]) + list(a0)
-        Nmin = np.sum(h)
-        bounds = ([(1e-6, 100.0), (1e-6,100.0), (Nmin, 100.0 * Nmin)] +
-                  [(0.0, 1.0)] * len(a0))
         
         result = scipy.optimize.minimize(
-            objective, p0, method="L-BFGS-B", bounds=bounds
+#            objective, p0, method="L-BFGS-B", bounds=bounds
+            objective, p0, method="Nelder-Mead" 
         )
 
         alpha, beta, N = result.x[:3]
@@ -393,6 +402,7 @@ class KInflatedGammaPoissonModel(ReachCurve):
         dist = KInflatedGammaPoissonDistribution(alpha, beta, a)
         score = self._chi2_distance(h, I, N, dist)
 
+#        import pdb; pdb.set_trace()
         return N, dist, score
 
     def print_fit_header(self):

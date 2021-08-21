@@ -194,7 +194,7 @@ class KInflatedGammaPoissonModel(ReachCurve):
     of freedom, where f_max is the highest frequency that is recorded.
     """
 
-    def __init__(self, data: List[ReachPoint], kmax=10):
+    def __init__(self, data: List[ReachPoint], kmax=10, debug=False):
         """Constructs a Gamma-Poisson model of underreported count data.
 
         Args:
@@ -202,6 +202,7 @@ class KInflatedGammaPoissonModel(ReachCurve):
             to be fit.
           kmax:  Maximum number of values of the PMF that are allowed to be set
             arbitrarily.
+          debug:  If True, prints debug information as models are fit.
         """
         if len(data) != 1:
             raise ValueError("Exactly one ReachPoint must be specified")
@@ -213,6 +214,7 @@ class KInflatedGammaPoissonModel(ReachCurve):
             )
         self._reach_point = data[0]
         self._kmax = kmax
+        self._debug = debug
         self._fit_computed = False
         if data[0].spends:
             self._cpi = data[0].spends[0] / data[0].impressions[0]
@@ -258,14 +260,9 @@ class KInflatedGammaPoissonModel(ReachCurve):
         kplus = N * dist.kplusreach(len(h), I/Imax)
         hbar = np.array(list(freqs) + [kplus])
 
-        # print(f"alpha {dist._alpha} beta {dist._beta} N {N} Imax {Imax}")
-        # print(f"h    {[int(h[i]) for i in range(len(h))]}")
-        # print(f"hbar {[int(hbar[i]) for i in range(len(hbar))]}")
-            
         obj = np.sum((hbar - h) ** 2 / (hbar + 1e-6))
 
         if np.isnan(obj):
-            import pdb; pdb.set_trace()
             logging.vlog(2, f"alpha {alpha} beta {beta} N {N} Imax {Imax}")
             logging.vlog(2, f"h    {h}")
             logging.vlog(2, f"hbar {hbar}")
@@ -399,30 +396,29 @@ class KInflatedGammaPoissonModel(ReachCurve):
             Imax = N * dist.expected_value()
             if Imax < Imin:
                 score += (Imin - Imax) ** 2
-#            print(f"alpha {alpha} beta {beta} N {N} a {a} -> {score}")
             return score
 
         
         result = scipy.optimize.minimize(
-#            objective, p0, method="L-BFGS-B", bounds=bounds
             objective, p0, method="Nelder-Mead" 
         )
 
         alpha, beta, N = result.x[:3]
         a = result.x[3:]
-        if any([x < 0 for x in a]):
-            import pdb; pdb.set_trace()
         dist = KInflatedGammaPoissonDistribution(alpha, beta, a)
         score = self._chi2_distance(h, I, N, dist)
 
-#        import pdb; pdb.set_trace()
         return N, dist, score
 
     def print_fit_header(self):
+        if not self._debug:
+            return
         print("{:15s} {:>7s} {:>7s} {:>8s} {:>8s} {:>2s}  distribution".format(
             " ", "score", "N", "alpha", "beta", "n"))
               
     def print_fit(self, msg, score, N, alpha, beta, a):
+        if not self._debug:
+            return
         dist = KInflatedGammaPoissonDistribution(alpha, beta, a)
         dist_str = " ".join([f"{dist.pmf(i):7.4f}" for i in range(1,10)])
         print(f"{msg:15s} {score:7.2f} {N:7.0f} {alpha:8.3f} {beta:8.3f} {len(a):2d} {dist_str}")
@@ -452,7 +448,7 @@ class KInflatedGammaPoissonModel(ReachCurve):
         h = point.frequencies_with_kplus_bucket
         I = point.impressions
         score = self._chi2_distance(h, I, N0, dist)
-#        self.print_fit_header()
+        self.print_fit_header()
         self.print_fit("exp-poisson", score, N0, dist._alpha, dist._beta, dist._a)
 
         if point.max_frequency == 1:
@@ -461,7 +457,6 @@ class KInflatedGammaPoissonModel(ReachCurve):
         N, dist, score = self._fit_histogram_fixed_length_a(h, I, Imin, N0, dist._alpha, dist._beta, [])
         self.print_fit("start", score, N, dist._alpha, dist._beta, dist._a)
 
-#        import pdb; pdb.set_trace()
         while scipy.stats.chi2.cdf(score, len(h)) > 0.95 and len(dist._a) < self._kmax:
             a = list(dist._a) + [dist.pmf(len(dist._a)+1)]
             N, dist, score = self._fit_histogram_fixed_length_a(h, I, Imin, N, dist._alpha, dist._beta, a)
@@ -480,8 +475,11 @@ class KInflatedGammaPoissonModel(ReachCurve):
         subject to the constraint the number of impressions in the fitted model 
         is at least Imin.
         """
+        if self._fit_computed and (Imin is None or Imin < self._max_impressions):
+            return
+            
         if Imin is None:
-            Imin = self._reach_point.impressions[0]
+            Imin = self._reach_point.impressions[0]+2
 
         N, dist = self._fit_point(self._reach_point, Imin)
         
@@ -505,11 +503,8 @@ class KInflatedGammaPoissonModel(ReachCurve):
         """
         if len(impressions) != 1:
             raise ValueError("Impressions vector must have a length of 1.")
-        
-        if not self._fit_computed:
-            self._fit()
-        elif self._max_impressions <= impressions[0]:
-            self._fit(impressions[0]+1)
+
+        self._fit(impressions[0]+1)
             
         p = impressions[0] / self._max_impressions
         freqs = self._max_reach * self._dist.kreach(np.arange(1, max_frequency), p)

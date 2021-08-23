@@ -20,8 +20,13 @@ import math
 import numpy as np
 from pyDOE import lhs
 from typing import Iterable
-from itertools import cycle, islice
 
+from wfa_planning_evaluation_framework.driver.campaign_spend_fractions_generators import (
+    CAMPAIGN_SPEND_FRACTIONS_GENERATORS,
+)
+from wfa_planning_evaluation_framework.driver.num_test_points_generators import (
+    NUM_TEST_POINTS_GENERATORS,
+)
 from wfa_planning_evaluation_framework.driver.experiment_parameters import (
     ExperimentParameters,
 )
@@ -31,6 +36,7 @@ from wfa_planning_evaluation_framework.driver.modeling_strategy_descriptor impor
 from wfa_planning_evaluation_framework.simulator.modeling_strategy import (
     ModelingStrategy,
 )
+
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
     PrivacyBudget,
 )
@@ -60,8 +66,8 @@ MODELING_STRATEGIES = [
 ]
 
 CAMPAIGN_SPEND_FRACTIONS_GENERATORS = [
-    lambda npublishers: [0.2] * npublishers,
-    lambda npublishers: list(islice(cycle([0.1, 0.2, 0.3]), npublishers)),
+    CAMPAIGN_SPEND_FRACTIONS_GENERATORS["all_0.2"],
+    CAMPAIGN_SPEND_FRACTIONS_GENERATORS["cyc_0.1_0.2_0.3"],
 ]
 
 LIQUID_LEGIONS_PARAMS = [
@@ -80,8 +86,8 @@ REPLICA_IDS = [1, 2, 3]
 MAX_FREQUENCIES = [5, 20]
 
 TEST_POINT_STRATEGIES = [
-    ("latin_hypercube", {"npoints_generator": lambda npublishers: 100 * npublishers}),
-    ("uniformly_random", {"npoints_generator": lambda npublishers: 100 * npublishers}),
+    ("latin_hypercube", {"npoints_generator": NUM_TEST_POINTS_GENERATORS["100p"]}),
+    ("uniformly_random", {"npoints_generator": NUM_TEST_POINTS_GENERATORS["100p"]}),
 ]
 
 LEVELS = {

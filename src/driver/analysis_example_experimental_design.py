@@ -17,8 +17,13 @@ import itertools
 import math
 import numpy as np
 from typing import Iterable
-from itertools import cycle, islice
 
+from wfa_planning_evaluation_framework.driver.campaign_spend_fractions_generators import (
+    CAMPAIGN_SPEND_FRACTIONS_GENERATORS,
+)
+from wfa_planning_evaluation_framework.driver.num_test_points_generators import (
+    NUM_TEST_POINTS_GENERATORS,
+)
 from wfa_planning_evaluation_framework.driver.experiment_parameters import (
     ExperimentParameters,
 )
@@ -49,8 +54,8 @@ MODELING_STRATEGIES = [
 ]
 
 CAMPAIGN_SPEND_FRACTIONS_GENERATORS = [
-    lambda npublishers: [0.6] * npublishers,
-    lambda npublishers: list(islice(cycle([0.4, 0.8]), npublishers)),
+    CAMPAIGN_SPEND_FRACTIONS_GENERATORS["all_0.6"],
+    CAMPAIGN_SPEND_FRACTIONS_GENERATORS["cyc_0.4_0.8"],
 ]
 
 LIQUID_LEGIONS_PARAMS = [
@@ -67,8 +72,8 @@ REPLICA_IDS = [1, 2, 3]
 MAX_FREQUENCIES = [3, 6]
 
 TEST_POINT_STRATEGIES = [
-    ("latin_hypercube", {"npoints_generator": lambda npublishers: 10 * npublishers}),
-    ("uniformly_random", {"npoints_generator": lambda npublishers: 10 * npublishers}),
+    ("latin_hypercube", {"npoints_generator": NUM_TEST_POINTS_GENERATORS["10p"]}),
+    ("uniformly_random", {"npoints_generator": NUM_TEST_POINTS_GENERATORS["10p"]}),
 ]
 
 LEVELS = {

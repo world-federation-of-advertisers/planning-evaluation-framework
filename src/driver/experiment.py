@@ -49,6 +49,7 @@ class Experiment:
         data_design: DataDesign,
         data_set_name: str,
         trial_descriptors: List[TrialDescriptor],
+        analysis_type: str = "",
     ):
         """Constructs an Experiment object.
 
@@ -63,11 +64,15 @@ class Experiment:
             (ModelingStrategyDescriptor, SystemParameters, ExperimentParameters).
             Each such tuple specifies one configuration of a modeling strategy
             and parameters that is to be tried against each data set.
+          analysis_type:  Type of analysis.  Can be empty of "single_pub".  If
+            "single_pub" is specified, then additional columns are added to the
+            output that are specific to single publisher analysis.
         """
         self._experiment_dir = experiment_dir
         self._data_design = data_design
         self._data_set_name = data_set_name
         self._trial_descriptors = trial_descriptors
+        self._analysis_type = analysis_type
 
     def generate_trials(self) -> List[ExperimentalTrial]:
         """Generates list of Trial objects associated to this experiement."""
@@ -75,7 +80,11 @@ class Experiment:
         for desc in self._trial_descriptors:
             trials.append(
                 ExperimentalTrial(
-                    self._experiment_dir, self._data_design, self._data_set_name, desc
+                    self._experiment_dir,
+                    self._data_design,
+                    self._data_set_name,
+                    desc,
+                    analysis_type=self._analysis_type,
                 )
             )
         self._trials = trials

@@ -48,6 +48,7 @@ class ExperimentalDesign:
         trial_descriptors: List[TrialDescriptor],
         seed: int = 1,
         cores: int = 1,
+        analysis_type: str = "",
     ):
         """Constructs an ExperimentalDesign object.
 
@@ -66,6 +67,9 @@ class ExperimentalDesign:
             how many cores should be used.  If cores=1, then multithreading
             is not used.  If cores<=0, then all available cores are used.
             If cores > 1, then cores specifies the exact number of cores to use.
+          analysis_type:  Type of analysis.  Can be empty of "single_pub".  If
+            "single_pub" is specified, then additional columns are added to the
+            output that are specific to single publisher analysis.
         """
         self._experiment_dir = experiment_dir
         self._data_design = data_design
@@ -73,6 +77,7 @@ class ExperimentalDesign:
         self._seed = seed
         self._all_trials = None
         self._cores = cores
+        self._analysis_type = analysis_type
 
     def generate_trials(self) -> List[ExperimentalTrial]:
         """Generates list of Trial objects associated to this experiment."""
@@ -83,6 +88,7 @@ class ExperimentalDesign:
                 self._data_design,
                 data_set_name,
                 self._trial_descriptors,
+                analysis_type=self._analysis_type,
             )
             all_trials.extend(experiment.generate_trials())
         self._all_trials = all_trials

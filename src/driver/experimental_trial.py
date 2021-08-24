@@ -56,6 +56,14 @@ from wfa_planning_evaluation_framework.driver.test_point_aggregator import (
     aggregate_on_exception,
 )
 
+# The output dataframe will contain the estimation error for each of the
+# following relative spend fractions.  In other words, if r is one of the
+# values below and s is the spend fraction associated to the training point,
+# then evaluate the relative error at r * s.
+SINGLE_PUBLISHER_FRACTIONS = np.arange(1, 31) * 0.1
+
+SINGLE_PUB_ANALYSIS = "single_pub"
+
 
 class ExperimentalTrial:
     """A run of a ModelingStrategy against a DataSet."""
@@ -66,6 +74,7 @@ class ExperimentalTrial:
         data_design: DataDesign,
         data_set_name: str,
         trial_descriptor: TrialDescriptor,
+        analysis_type: str = "",
     ):
         """Constructs an object representing a trial.
 
@@ -84,11 +93,15 @@ class ExperimentalTrial:
             that will be used for this trial.
           trial_descriptor: A descriptor that specifies the configuration
             of this experimental trial.
+          analysis_type:  Type of analysis.  Can be empty of "single_pub".  If
+            "single_pub" is specified, then additional columns are added to the
+            output that are specific to single publisher analysis.
         """
         self._experiment_dir = experiment_dir
         self._data_design = data_design
         self._data_set_name = data_set_name
         self._trial_descriptor = trial_descriptor
+        self._analysis_type = analysis_type
 
     def evaluate(self, seed: int) -> pd.DataFrame:
         """Executes a trial.
@@ -131,6 +144,7 @@ class ExperimentalTrial:
         modeling_strategy = (
             self._trial_descriptor.modeling_strategy.instantiate_strategy()
         )
+        single_publisher_dataframe = pd.DataFrame()
         try:
             reach_surface = modeling_strategy.fit(
                 halo, self._trial_descriptor.system_params, privacy_budget
@@ -153,6 +167,12 @@ class ExperimentalTrial:
                 for t in test_points
             ]
             metrics = aggregate(true_reach, fitted_reach)
+            if self._analysis_type == SINGLE_PUB_ANALYSIS:
+                single_publisher_dataframe = (
+                    self._compute_single_publisher_fractions_dataframe(
+                        halo, reach_surface
+                    )
+                )
         except Exception as inst:
             if not logging.vlog_is_on(2):
                 logging.vlog(1, f"Dataset {self._data_set_name}")
@@ -160,12 +180,24 @@ class ExperimentalTrial:
             logging.vlog(1, f"Modeling failure: {inst}")
             logging.vlog(2, traceback.format_exc())
             metrics = aggregate_on_exception(inst)
+            if self._analysis_type == SINGLE_PUB_ANALYSIS:
+                single_publisher_dataframe = (
+                    self._single_publisher_fractions_dataframe_on_exception()
+                )
 
         independent_vars = self._make_independent_vars_dataframe()
         privacy_tracking_vars = self._make_privacy_tracking_vars_dataframe(
             self._privacy_tracker
         )
-        result = pd.concat([independent_vars, privacy_tracking_vars, metrics], axis=1)
+        result = pd.concat(
+            [
+                independent_vars,
+                privacy_tracking_vars,
+                metrics,
+                single_publisher_dataframe,
+            ],
+            axis=1,
+        )
         Path(trial_results_path).parent.absolute().mkdir(parents=True, exist_ok=True)
         result.to_csv(trial_results_path)
         return result
@@ -229,3 +261,26 @@ class ExperimentalTrial:
             }
         )
         return privacy_vars
+
+    def _compute_single_publisher_fractions_dataframe(
+        self, halo, reach_surface
+    ) -> pd.DataFrame:
+        results = {}
+        for r in SINGLE_PUBLISHER_FRACTIONS:
+            spend = halo.campaign_spends[0] * r
+            true_reach = halo.true_reach_by_spend([spend], 1).reach()
+            fitted_reach = reach_surface.by_spend([spend], 1).reach()
+            if true_reach:
+                relative_error = np.abs((true_reach - fitted_reach) / true_reach)
+            else:
+                relative_error = np.NaN
+            column_name = f"relative_error_at_{int(r*100):03d}"
+            results[column_name] = [relative_error]
+        return pd.DataFrame(results)
+
+    def _single_publisher_fractions_dataframe_on_exception(self) -> pd.DataFrame:
+        results = {}
+        for r in SINGLE_PUBLISHER_FRACTIONS:
+            column_name = f"relative_error_at_{int(r*100):03d}"
+            results[column_name] = [np.NaN]
+        return pd.DataFrame(results)

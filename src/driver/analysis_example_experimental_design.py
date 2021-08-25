@@ -19,10 +19,10 @@ import numpy as np
 from typing import Iterable
 
 from wfa_planning_evaluation_framework.driver.campaign_spend_fractions_generators import (
-    CAMPAIGN_SPEND_FRACTIONS_GENERATORS,
+    CampaignSpendFractionsGenerators,
 )
 from wfa_planning_evaluation_framework.driver.num_test_points_generators import (
-    NUM_TEST_POINTS_GENERATORS,
+    NumTestPointsGenerators,
 )
 from wfa_planning_evaluation_framework.driver.experiment_parameters import (
     ExperimentParameters,
@@ -54,8 +54,8 @@ MODELING_STRATEGIES = [
 ]
 
 CAMPAIGN_SPEND_FRACTIONS_GENERATORS = [
-    CAMPAIGN_SPEND_FRACTIONS_GENERATORS["all_0.6"],
-    CAMPAIGN_SPEND_FRACTIONS_GENERATORS["cyc_0.4_0.8"],
+    CampaignSpendFractionsGenerators.all_60,
+    CampaignSpendFractionsGenerators.cyc_40_80,
 ]
 
 LIQUID_LEGIONS_PARAMS = [
@@ -72,8 +72,8 @@ REPLICA_IDS = [1, 2, 3]
 MAX_FREQUENCIES = [3, 6]
 
 TEST_POINT_STRATEGIES = [
-    ("latin_hypercube", {"npoints_generator": NUM_TEST_POINTS_GENERATORS["10p"]}),
-    ("uniformly_random", {"npoints_generator": NUM_TEST_POINTS_GENERATORS["10p"]}),
+    ("latin_hypercube", {"npoints_generator": NumTestPointsGenerators.p_times_10}),
+    ("uniformly_random", {"npoints_generator": NumTestPointsGenerators.p_times_10}),
 ]
 
 LEVELS = {

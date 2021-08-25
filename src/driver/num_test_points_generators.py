@@ -13,12 +13,19 @@
 # limitations under the License.
 """Functions to generate npoints in Latin/Uniform test point generataors."""
 
-# A dictionary of functions that maps the number of publishers p
+# A class of functions that maps the number of publishers p
 # to the number of testing points.
 
-NUM_TEST_POINTS_GENERATORS = {
-    "10p": lambda p: 10 * p,
-    "100p": lambda p: 100 * p,
-    "2p^2": lambda p: 2 * p ** 2,
-    "10p^2": lambda p: 10 * p ** 2,
-}
+
+class NumTestPointsGenerators:
+    def p_times_10(p):
+        return 10 * p
+
+    def p_times_10(p):
+        return 100 * p
+
+    def p_sq_times_2(p):
+        return 2 * p ** 2
+
+    def p_sq_times_10(p):
+        return 10 * p ** 2

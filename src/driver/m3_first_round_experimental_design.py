@@ -22,10 +22,10 @@ from pyDOE import lhs
 from typing import Iterable
 
 from wfa_planning_evaluation_framework.driver.campaign_spend_fractions_generators import (
-    CAMPAIGN_SPEND_FRACTIONS_GENERATORS,
+    CampaignSpendFractionsGenerators,
 )
 from wfa_planning_evaluation_framework.driver.num_test_points_generators import (
-    NUM_TEST_POINTS_GENERATORS,
+    NumTestPointsGenerators,
 )
 from wfa_planning_evaluation_framework.driver.experiment_parameters import (
     ExperimentParameters,
@@ -66,8 +66,8 @@ MODELING_STRATEGIES = [
 ]
 
 CAMPAIGN_SPEND_FRACTIONS_GENERATORS = [
-    CAMPAIGN_SPEND_FRACTIONS_GENERATORS["all_0.2"],
-    CAMPAIGN_SPEND_FRACTIONS_GENERATORS["cyc_0.1_0.2_0.3"],
+    CampaignSpendFractionsGenerators.all_20,
+    CampaignSpendFractionsGenerators.cyc_10_20_30,
 ]
 
 LIQUID_LEGIONS_PARAMS = [
@@ -86,8 +86,8 @@ REPLICA_IDS = [1, 2, 3]
 MAX_FREQUENCIES = [5, 20]
 
 TEST_POINT_STRATEGIES = [
-    ("latin_hypercube", {"npoints_generator": NUM_TEST_POINTS_GENERATORS["100p"]}),
-    ("uniformly_random", {"npoints_generator": NUM_TEST_POINTS_GENERATORS["100p"]}),
+    ("latin_hypercube", {"npoints_generator": NumTestPointsGenerators.p_times_100}),
+    ("uniformly_random", {"npoints_generator": NumTestPointsGenerators.p_times_100}),
 ]
 
 LEVELS = {

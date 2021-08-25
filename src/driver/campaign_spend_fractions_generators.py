@@ -15,14 +15,23 @@
 
 from itertools import cycle, islice
 
-# A dictionary of functions that maps the number of publishers p
+# A class of functions that maps the number of publishers p
 # to a list of length p.  The i-th element of the output list is
 # the campaign spend fraction at publisher i.
 
-CAMPAIGN_SPEND_FRACTIONS_GENERATORS = {
-    "all_0.2": lambda p: [0.2] * p,
-    "cyc_0.1_0.2_0.3": lambda p: list(islice(cycle([0.1, 0.2, 0.3]), p)),
-    "all_0.6": lambda p: [0.6] * p,
-    "cyc_0.4_0.8": lambda p: list(islice(cycle([0.4, 0.8]), p)),
-    "cyc_0.3_0.6_0.9": lambda p: list(islice(cycle([0.3, 0.6, 0.9]), p)),
-}
+
+class CampaignSpendFractionsGenerators:
+    def all_20(p):
+        return [0.2] * p
+
+    def cyc_10_20_30(p):
+        return list(islice(cycle([0.1, 0.2, 0.3]), p))
+
+    def all_60(p):
+        return [0.6] * p
+
+    def cyc_40_80(p):
+        return list(islice(cycle([0.4, 0.8]), p))
+
+    def cyc_30_60_90(p):
+        return list(islice(cycle([0.3, 0.6, 0.9]), p))

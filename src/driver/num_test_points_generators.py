@@ -21,7 +21,7 @@ class NumTestPointsGenerators:
     def p_times_10(p):
         return 10 * p
 
-    def p_times_10(p):
+    def p_times_100(p):
         return 100 * p
 
     def p_sq_times_2(p):

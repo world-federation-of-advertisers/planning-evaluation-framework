@@ -232,9 +232,13 @@ class ExperimentalTrialTest(absltest.TestCase):
             trial = ExperimentalTrial("edir", data_design, "dataset", trial_descriptor)
 
             actual = trial._make_independent_vars_dataframe()
+
+            expected_trial_name = "strategy,single_pub_model,multi_pub_model,spends=[0.03,0.05],decay_rate=13,sketch_size=1000000.0,epsilon=1.0,delta=0.01,replica_id=3,max_frequency=5,test_point_strategy=test_point_strategy"
+
             expected = pd.DataFrame(
                 {
                     "dataset": ["dataset"],
+                    "trial": [expected_trial_name],
                     "replica_id": [3],
                     "single_pub_model": ["single_pub_model"],
                     "multi_pub_model": ["multi_pub_model"],

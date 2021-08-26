@@ -75,6 +75,7 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
         """
 
         p = len(lbd)
+        self._lbd = lbd
         self._a = lbd.reshape(p, 1) * lbd.reshape(1, p) - (np.eye(p) * lbd) ** 2
         self._a = self._a.reshape(p * p, 1)
 

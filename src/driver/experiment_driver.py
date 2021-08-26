@@ -24,7 +24,8 @@ Usage:
     --output_file=<output_file> \
     --intermediates_dir=<intermediates_dir> \
     --seed=<random_seed> \
-    --cores=<number_of_cores>
+    --cores=<number_of_cores> \
+    [--analysis_type=single_pub]]
 
 where
 
@@ -58,6 +59,9 @@ where
     new experiments are added, the experiment driver can be re-run.  
     Previously computed results will not be re-computed.
   seed is an integer that is used to seed the random number generator.
+  analysis_type can be omitted or can be "single_pub".  If "single_pub is
+    specified, then additional columns are added to the output data frame
+    containing metrics that are specific to single pub analysis.
   cores is an integer specifying the number of cores to be used for
     multithreaded processing.  If cores = 1 (default), then multithreading
     is not used.  If cores < 1, then all available cores are used.
@@ -94,6 +98,9 @@ flags.DEFINE_string(
 )
 flags.DEFINE_integer("seed", 1, "Seed for the np.random.Generator.")
 flags.DEFINE_integer("cores", 1, "Number of cores to use for multithreading.")
+flags.DEFINE_string(
+    "analysis_type", "", "Specify single_pub if this is a single publisher analysis."
+)
 
 
 class ExperimentDriver:
@@ -107,12 +114,14 @@ class ExperimentDriver:
         intermediate_dir: str,
         random_seed: int,
         cores: int = 1,
+        analysis_type: str = "",
     ):
         self._data_design_dir = data_design_dir
         self._experimental_design = experimental_design
         self._output_file = output_file
         self._intermediate_dir = intermediate_dir
         self._seed = random_seed
+        self._analysis_type = analysis_type
         self._cores = cores
 
     def execute(self) -> pd.DataFrame:
@@ -120,7 +129,12 @@ class ExperimentDriver:
         data_design = DataDesign(self._data_design_dir)
         experiments = list(self._fetch_experiment_list())
         experimental_design = ExperimentalDesign(
-            self._intermediate_dir, data_design, experiments, self._seed, self._cores
+            self._intermediate_dir,
+            data_design,
+            experiments,
+            self._seed,
+            self._cores,
+            analysis_type=self._analysis_type,
         )
         experimental_design.generate_trials()
         result = experimental_design.load()
@@ -146,6 +160,7 @@ def main(argv):
         FLAGS.intermediates_dir,
         FLAGS.seed,
         FLAGS.cores,
+        FLAGS.analysis_type,
     )
     experiment_driver.execute()
 

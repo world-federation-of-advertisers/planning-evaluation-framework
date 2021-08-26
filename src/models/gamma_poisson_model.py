@@ -334,6 +334,9 @@ class GammaPoissonModel(ReachCurve):
           chi^2 distance between the actual and expected histograms, plus
           a term for weighting the difference in 1+ reach.
         """
+        if alpha <= 0 or beta <= 0 or N <= 0:
+            return np.sum(np.array(h) ** 2)
+
         # Estimate total number of potential impressions
         Imax = self._expected_impressions(N, alpha, beta)
         if Imax <= I:

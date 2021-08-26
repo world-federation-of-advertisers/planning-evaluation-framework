@@ -212,6 +212,7 @@ class ExperimentalTrial:
         independent_vars = pd.DataFrame(
             {
                 "dataset": [self._data_set_name],
+                "trial": [f"{self._trial_descriptor}"],
                 "replica_id": [self._trial_descriptor.experiment_params.replica_id],
                 "single_pub_model": [
                     self._trial_descriptor.modeling_strategy.single_pub_model

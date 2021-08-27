@@ -195,7 +195,9 @@ class KInflatedGammaPoissonModel(ReachCurve):
     of freedom, where f_max is the highest frequency that is recorded.
     """
 
-    def __init__(self, data: List[ReachPoint], kmax=10, debug=False):
+    def __init__(
+        self, data: List[ReachPoint], kmax=10, debug=False, extrapolation_multiplier=1.0
+    ):
         """Constructs a Gamma-Poisson model of underreported count data.
 
         Args:
@@ -204,6 +206,9 @@ class KInflatedGammaPoissonModel(ReachCurve):
           kmax:  Maximum number of values of the PMF that are allowed to be set
             arbitrarily.
           debug:  If True, prints debug information as models are fit.
+          extrapolation_multiplier:  Float.  If specified, then a penalty term is
+            introduced that penalizes models where the expected number of impressions
+            is less than extrapolation_multiplier * data[0].impressions[0].
         """
         if len(data) != 1:
             raise ValueError("Exactly one ReachPoint must be specified")
@@ -217,6 +222,8 @@ class KInflatedGammaPoissonModel(ReachCurve):
         self._kmax = kmax
         self._debug = debug
         self._fit_computed = False
+        self._extrapolation_multiplier = extrapolation_multiplier
+        self._extrapolation_value = extrapolation_multiplier * data[0].impressions[0]
         if data[0].spends:
             self._cpi = data[0].spends[0] / data[0].impressions[0]
         else:
@@ -485,7 +492,7 @@ class KInflatedGammaPoissonModel(ReachCurve):
             return
 
         if Imin is None:
-            Imin = self._reach_point.impressions[0] + 2
+            Imin = self._extrapolation_value
 
         N, dist = self._fit_point(self._reach_point, Imin)
 

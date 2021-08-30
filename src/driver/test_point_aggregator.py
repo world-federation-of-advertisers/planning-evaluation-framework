@@ -40,14 +40,14 @@ AGGREGATORS = {
     # Mean absolute relative error in predicted reach
     "mean_abs_relative_error": lambda x, y: _mean_abs_relative_error(x, y),
     # Mean absolute relative error at frequencies 2..9
-    "mare_freq_2": lambda x, y: _mean_abs_relative_error(x, y, 2),
-    "mare_freq_3": lambda x, y: _mean_abs_relative_error(x, y, 3),
-    "mare_freq_4": lambda x, y: _mean_abs_relative_error(x, y, 4),
-    "mare_freq_5": lambda x, y: _mean_abs_relative_error(x, y, 5),
-    "mare_freq_6": lambda x, y: _mean_abs_relative_error(x, y, 6),
-    "mare_freq_7": lambda x, y: _mean_abs_relative_error(x, y, 7),
-    "mare_freq_8": lambda x, y: _mean_abs_relative_error(x, y, 8),
-    "mare_freq_9": lambda x, y: _mean_abs_relative_error(x, y, 9),
+    "mare_freq_at_least_2": lambda x, y: _mean_abs_relative_error(x, y, 2),
+    "mare_freq_at_least_3": lambda x, y: _mean_abs_relative_error(x, y, 3),
+    "mare_freq_at_least_4": lambda x, y: _mean_abs_relative_error(x, y, 4),
+    "mare_freq_at_least_5": lambda x, y: _mean_abs_relative_error(x, y, 5),
+    "mare_freq_at_least_6": lambda x, y: _mean_abs_relative_error(x, y, 6),
+    "mare_freq_at_least_7": lambda x, y: _mean_abs_relative_error(x, y, 7),
+    "mare_freq_at_least_8": lambda x, y: _mean_abs_relative_error(x, y, 8),
+    "mare_freq_at_least_9": lambda x, y: _mean_abs_relative_error(x, y, 9),
     # Mean squared relative error in predicted reach
     "mean_squared_relative_error": lambda x, y: np.mean(
         (_reach(x) - _reach(y)) ** 2 / _reach(x) ** 2

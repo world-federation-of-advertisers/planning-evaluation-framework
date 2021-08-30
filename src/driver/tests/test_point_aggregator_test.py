@@ -79,6 +79,19 @@ class TestPointAggregatorTest(absltest.TestCase):
             1.0 / 3 * (10.0 / 200.0 + 20.0 / 300.0 + 30.0 / 400.0),
         )
 
+    def test_mean_abs_relative_error_at_higher_frequencies(self):
+        self.assertEqual(
+            AGGREGATORS["mare_freq_2"](self.test_points1, self.model_points1),
+            1.0 / 3 * (10.0 / 100.0 + 20.0 / 150.0 + 30.0 / 200.0),
+        )
+        self.assertEqual(
+            AGGREGATORS["mare_freq_3"](self.test_points1, self.model_points1),
+            1.0 / 3 * (10.0 / 50.0 + 20.0 / 75.0 + 30.0 / 100.0),
+        )
+        self.assertTrue(
+            np.isnan(AGGREGATORS["mare_freq_4"](self.test_points1, self.model_points1))
+        )
+
     def test_mean_squared_relative_error(self):
         self.assertEqual(
             AGGREGATORS["mean_squared_relative_error"](

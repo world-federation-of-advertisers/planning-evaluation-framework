@@ -60,8 +60,8 @@ MODELING_STRATEGIES = [
 ]
 
 CAMPAIGN_SPEND_FRACTIONS_GENERATORS = [
-    lambda npublishers: [0.2] * npublishers,
-    lambda npublishers: list(islice(cycle([0.1, 0.2, 0.3]), npublishers)),
+    lambda dataset: [0.2] * dataset.publisher_count,
+    lambda dataset: list(islice(cycle([0.1, 0.2, 0.3]), dataset.publisher_count)),
 ]
 
 LIQUID_LEGIONS_PARAMS = [
@@ -80,8 +80,8 @@ REPLICA_IDS = [1, 2, 3]
 MAX_FREQUENCIES = [5, 20]
 
 TEST_POINT_STRATEGIES = [
-    ("latin_hypercube", {"npoints_generator": lambda npublishers: 100 * npublishers}),
-    ("uniformly_random", {"npoints_generator": lambda npublishers: 100 * npublishers}),
+    ("latin_hypercube", {"npublishers": 1}),
+    ("uniformly_random", {"npublishers": 1}),
 ]
 
 LEVELS = {

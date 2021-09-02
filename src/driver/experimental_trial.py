@@ -18,6 +18,8 @@ against a specific DataSet, with specific SystemParameters.
 """
 
 from absl import logging
+from datetime import datetime
+import hashlib
 import numpy as np
 import pandas as pd
 from os.path import isfile, join
@@ -135,6 +137,17 @@ class ExperimentalTrial:
             logging.vlog(2, "  --> Returning previously computed result")
             return pd.read_csv(trial_results_path)
 
+        # The pending directory contains one entry for each currently executing
+        # experimental trial.  Each d
+        experiment_dir_parent = Path(self._experiment_dir).parent
+        pending_path = Path(
+            f"{experiment_dir_parent}/pending/{hashlib.md5(trial_results_path.encode()).hexdigest()}"
+        )
+        Path(pending_path).parent.absolute().mkdir(parents=True, exist_ok=True)
+        Path(pending_path).write_text(
+            f"{datetime.now()}\n{self._data_set_name}\n{self._trial_descriptor}\n\n"
+        )
+
         self._dataset = self._data_design.by_name(self._data_set_name)
         self._privacy_tracker = PrivacyTracker()
         halo = HaloSimulator(
@@ -200,6 +213,9 @@ class ExperimentalTrial:
         )
         Path(trial_results_path).parent.absolute().mkdir(parents=True, exist_ok=True)
         result.to_csv(trial_results_path)
+
+        Path(pending_path).unlink()
+
         return result
 
     def _compute_trial_results_path(self) -> str:

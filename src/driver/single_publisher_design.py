@@ -75,6 +75,7 @@ def generate_experimental_design_config(seed: int = 1) -> Iterable[TrialDescript
     """Generates a list of TrialDescriptors for a single publisher model."""
     keys = LEVELS.keys()
     levels = [len(LEVELS[k]) for k in keys]
+    np.random.seed(seed)
     for sample in lhs(
         n=len(levels), samples=NUM_TRIALS_PER_DATASET, criterion="maximin"
     ):

@@ -13,10 +13,12 @@
 # limitations under the License.
 """Defines the execution environment of a simulation instance."""
 
+import copy
 import numpy as np
 from typing import List
 from typing import NamedTuple
 from typing import Callable
+from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 
 
 class LiquidLegionsParameters(NamedTuple):
@@ -43,30 +45,21 @@ class SystemParameters(NamedTuple):
     Attributes:
         campaign_spend_fractions:  A list of values, each between 0 and 1,
             one per campaign, representing the amount spent on the campaign
-            as a fraction of total possible.  Note that 
+            as a fraction of total possible.  Note that
             len(campaign_spend_fractions) must equal the number of publishers.
         liquid_legions:  Parameters specific to constructing Liquid Legions
             sketches.
         generator:  The single source of randomness that will be used
             for this modeling run.
-        campaign_spend_fractions_generator:  A function that maps the number
-            of publishers to campaign_spend_fractions of the corresponding
-            length. If this is an empty function, then read
-            campaign_spend_fractions from the first argument directly.
-            Otherwise, the campaign_spend_fractions will always be updated using
-            this function in the halo_simulator.
-            Examples:
-            (1) lambda npublishers: [0.2] * npublishers
-            All publishers have campaign spend fraction=0.2.
-            (2) lambda npublishers: list(islice(cycle([0.1, 0.2, 0.5]), npublishers))
-            Roughly one third of publishers have camapign spend fraction=0.1,
-            0.2, 0.5 respectively.
+        campaign_spend_fractions_generator:  A function that returns the
+            campaign_spend_fractions vector that should be used for a
+            particular DataSet.
     """
 
     campaign_spend_fractions: List[float] = [0]
     liquid_legions: LiquidLegionsParameters = LiquidLegionsParameters()
     generator: np.random.Generator = np.random.default_rng(1)
-    campaign_spend_fractions_generator: Callable[[int], List[float]] = lambda x: None
+    campaign_spend_fractions_generator: Callable[[DataSet], List[float]] = None
 
     def __str__(self) -> str:
         spend_str = ",".join([f"{s}" for s in self.campaign_spend_fractions])
@@ -74,3 +67,13 @@ class SystemParameters(NamedTuple):
             self.liquid_legions.decay_rate, self.liquid_legions.sketch_size
         )
         return "spends=[{}],{}".format(spend_str, ll_str)
+
+    def update_from_dataset(self, dataset: DataSet) -> "SystemParameters":
+        """Uses the dataset to fill in various context-specific items."""
+        if self.campaign_spend_fractions_generator:
+            campaign_spend_fractions = self.campaign_spend_fractions_generator(dataset)
+        else:
+            campaign_spend_fractions = copy.deepcopy(self.campaign_spend_fractions)
+        return SystemParameters(
+            campaign_spend_fractions, copy.deepcopy(self.liquid_legions), self.generator
+        )

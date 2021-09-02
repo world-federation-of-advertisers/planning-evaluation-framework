@@ -13,6 +13,7 @@
 # limitations under the License.
 """Defines the parameters for an experimental trial."""
 
+import copy
 import numpy as np
 from typing import Dict
 from typing import Iterable
@@ -89,4 +90,17 @@ class ExperimentParameters(NamedTuple):
             f",max_frequency={self.max_frequency}"
             f",test_point_strategy={self.test_point_strategy}"
             f"{self._kwargs_string(self.test_point_strategy_kwargs)}"
+        )
+
+    def update_from_dataset(self, dataset: DataSet) -> "ExperimentParameters":
+        """Uses the dataset to fill in various context-specific items."""
+        test_point_strategy_kwargs = copy.deepcopy(self.test_point_strategy_kwargs)
+        if "npublishers" in test_point_strategy_kwargs:
+            test_point_strategy_kwargs["npublishers"] = dataset.publisher_count
+        return ExperimentParameters(
+            copy.deepcopy(self.privacy_budget),
+            copy.deepcopy(self.replica_id),
+            copy.deepcopy(self.max_frequency),
+            copy.deepcopy(self.test_point_strategy),
+            test_point_strategy_kwargs,
         )

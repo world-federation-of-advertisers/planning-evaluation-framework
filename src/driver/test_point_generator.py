@@ -37,6 +37,12 @@ from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 # give an acceptably small sampling variance for the modeling errors.
 MINIMUM_NUMBER_OF_TEST_POINTS = 100
 
+# The minimum number of test points that will be generated per publisher.
+# If this value times the number of publishers exceeds MINIMUM_NUMBER_OF_TEST_POINTS,
+# then the actual number of test points will be this value times the number of
+# publishers.
+MINIMUM_NUMBER_OF_TEST_POINTS_PER_PUBLISHER = 100
+
 
 class TestPointGenerator:
     """Generates a collection of test points for a given simulation."""

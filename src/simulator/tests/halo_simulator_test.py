@@ -793,8 +793,10 @@ class HaloSimulatorTest(parameterized.TestCase):
         params = SystemParameters(
             liquid_legions=LiquidLegionsParameters(),
             generator=np.random.default_rng(1),
-            campaign_spend_fractions_generator=lambda npublishers: [0.2] * npublishers,
+            campaign_spend_fractions_generator=lambda dataset: [0.2]
+            * dataset.publisher_count,
         )
+        params = params.update_from_dataset(data_set)
         privacy_tracker = PrivacyTracker()
         halo = HaloSimulator(data_set, params, privacy_tracker)
         self.assertAlmostEqual(halo._campaign_spends[0], 0.01, 7)

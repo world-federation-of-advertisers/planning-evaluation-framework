@@ -125,7 +125,11 @@ class GammaPoissonModel(ReachCurve):
             be achieved.
           extrapolation_multiplier:  Int.  If specified, then a penalty term is
             introduced that penalizes models where the expected number of impressions
-            is less than extrapolation_multiplier * data[0].impressions[0].
+            in the inventory is less than extrapolation_multiplier times the
+            observed number of impressions.  Thus, if the extrapolation_multiplier
+            is 2, then optimizer prefers models where the number of impressions in
+            the inventory is at least twice the number of impressions that were
+            observed in the campaign.
         """
         if len(data) != 1:
             raise ValueError("Exactly one ReachPoint must be specified")

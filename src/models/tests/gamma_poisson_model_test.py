@@ -219,17 +219,23 @@ class GammaPoissonModelTest(absltest.TestCase):
         self.assertAlmostEqual(gpm.by_spend([300]).reach(1), 10000.0, delta=0.1)
 
     def test_fit_histogram_chi2_distance_with_extrapolation(self):
-        # The following point corresponds to
+        # The following point is generated under these parameter settings
         #  I, Imax, N, alpha0, beta0 = 5000, 30000, 10000, 1.0, 2.0
         # This represents a distribution with mean = 3 and variance = 6.
+        #
+        # The last few values in the k+ reach histogram are set to 0 to force
+        # the optimizer to choose a suboptimal value for N and Imax.  This
+        # simulates the effect of adding differentially private noise to the
+        # frequency buckets.  The true expected frequency histogram is
+        #   [3745,  933,  230,   55,   12,    2,    0,    0,    0,    0]
         kplus_actual = [3745, 933, 230, 0, 0, 0, 0, 0, 0, 0]
         rp = ReachPoint([5000], kplus_actual)
         gpm = GammaPoissonModel([rp])
         Imax, _, _, _ = gpm._fit_histogram_chi2_distance(rp, nstarting_points=1)
         gpm2 = GammaPoissonModel([rp], extrapolation_multiplier=4.0)
         Imax2, _, _, _ = gpm2._fit_histogram_chi2_distance(rp, nstarting_points=1)
-        self.assertAlmostEqual(Imax, 16500, delta=100)
-        self.assertAlmostEqual(Imax2, 20000, delta=100)
+        self.assertAlmostEqual(Imax, 16540, delta=1)
+        self.assertAlmostEqual(Imax2, 20000, delta=1)
 
 
 if __name__ == "__main__":

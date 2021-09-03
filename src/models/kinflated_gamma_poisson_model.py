@@ -15,13 +15,18 @@
 
 from absl import logging
 import numpy as np
+import numpy.typing as npt
 import scipy.stats
+from typing import Iterable
 from typing import List
+from typing import Tuple
+from typing import Union
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 
 # The following constant defines the highest frequency that will be
-# used for parameter estimation.
+# used for parameter estimation.  This is chosen to be large enough so that
+# model truncation is ignorable.
 MAXIMUM_COMPUTATIONAL_FREQUENCY = 1000
 
 
@@ -45,8 +50,8 @@ class KInflatedGammaPoissonDistribution:
             (1-s) / (1-t) GP(n | alpha, beta) if n > k.
     """
 
-    def __init__(self, alpha, beta, a):
-        """k-Inflated Gamma-Poisson with parameters alpha, beta, N, a. """
+    def __init__(self, alpha: float, beta: float, a: List[float]):
+        """k-Inflated Gamma-Poisson with parameters alpha, beta, a. """
         if sum(a) > 1.0:
             raise ValueError("Inflation values sum to a value greater than 1.")
 
@@ -57,14 +62,19 @@ class KInflatedGammaPoissonDistribution:
         n = len(a)
         s = np.sum(a)
         t = np.sum(self._gamma_poisson_pmf(np.arange(1, n + 1), alpha, beta))
+        # Note that MAXIMUM_COMPUTATIONAL_FREQUENCY is a relatively large value such
+        # that values of the PMF beyond this value can be ignored.
         u = self._gamma_poisson_pmf(
             np.arange(n + 1, MAXIMUM_COMPUTATIONAL_FREQUENCY), alpha, beta
         )
         pmf_tail = ((1 - s) / (1 - t)) * u
         # self._pmf[n] = kGP(n | alpha, beta, a_1, ..., a_k)
+        # Note, we prepend 0 to self._pmf to make indexing more convenient.
         self._pmf = np.array([0.0] + list(a) + list(pmf_tail))
 
-    def _gamma_poisson_pmf(self, n, alpha, beta):
+    def _gamma_poisson_pmf(
+        self, n: Union[int, Iterable[int]], alpha: float, beta: float
+    ) -> Union[float, npt.ArrayLike]:
         """PMF of the shifted Gamma-Poisson distribution.
 
         This implementation makes use of the equivalence between the
@@ -75,17 +85,17 @@ class KInflatedGammaPoissonDistribution:
         Args:
           n:  Value(s) at which the distribution is to be evaluated.
             This can be a scalar or a numpy array.
-          alpha: Alpha parameter of the Gamma-Poisson distribution.
-          beta: Beta parameter of the Gamma-Poisson distribution.
+          alpha: float, alpha parameter of the Gamma-Poisson distribution.
+          beta: float, beta parameter of the Gamma-Poisson distribution.
         Returns:
-          f(n | alpha, beta), where f is the Gamma-Poisson distribution.
+          f(n | alpha, beta), where f is the PMF of the Gamma-Poisson distribution.
         """
         # Note scipy.stats.nbinom uses a different parameterization than
         # the Wikipedia parameterization.  Under this parameterization,
         # p -> 1-p, so the parameter 1/(1 + beta) becomes beta/(1 + beta).
         return scipy.stats.nbinom.pmf(n - 1, alpha, 1.0 / (1.0 + beta))
 
-    def pmf(self, n):
+    def pmf(self, n: Union[int, Iterable[int]]) -> Union[float, npt.ArrayLike]:
         """PMF of the k-inflated Gamma-Poisson distribution.
 
         Args:
@@ -97,7 +107,9 @@ class KInflatedGammaPoissonDistribution:
         """
         return self._pmf[n]
 
-    def knreach(self, k, n, p):
+    def knreach(
+        self, k: int, n: Union[int, Iterable[int]], p: float
+    ) -> Union[float, npt.ArrayLike]:
         """Probability that a random user has n impressions of which k are shown.
 
         Computes the function:
@@ -108,7 +120,7 @@ class KInflatedGammaPoissonDistribution:
 
         Args:
           k:  Number of impressions that were seen by the user.
-          n:  Available inventory for the user.
+          n:  Inventory size for the user.
             This can be either a scalar or a numpy array.
           p:  Probability that a given impression will be chosen.
         Returns:
@@ -117,7 +129,7 @@ class KInflatedGammaPoissonDistribution:
         """
         return scipy.stats.binom.pmf(k, n, p) * self.pmf(n)
 
-    def kreach(self, k, p):
+    def kreach(self, k: Iterable[float], p: float) -> npt.ArrayLike:
         """Probability that a random user receives k impressions.
 
         Computes the function:
@@ -128,7 +140,7 @@ class KInflatedGammaPoissonDistribution:
 
         Args:
           k:  np.array specifying number of impressions that were seen by the user.
-          p:  Probability that a given impression will be chosen.
+          p:  float, probability that a given impression will be chosen.
         Returns:
           For each k, probability that a randomly chosen user will have an inventory
           of n impressions, of which k are shown.
@@ -137,15 +149,15 @@ class KInflatedGammaPoissonDistribution:
             [np.sum([self.knreach(kv, np.arange(kv, len(self._pmf)), p)]) for kv in k]
         )
 
-    def kplusreach(self, k, p):
+    def kplusreach(self, k: int, p: float) -> npt.ArrayLike:
         """Probability that a random user receives k or more impressions.
 
         Computed as one minus the probability that the user receives k-1 or
         fewer impressions.
 
         Args:
-          k:  np.array specifying number of impressions that were seen by the user.
-          p:  Probability that a given impression will be chosen.
+          k:  int, specifying number of impressions that were seen by the user.
+          p:  float, probability that a given impression will be chosen.
         Returns:
           For each k, probability that a randomly chosen user will have an inventory
           of n impressions, of which k are shown.
@@ -155,7 +167,7 @@ class KInflatedGammaPoissonDistribution:
         else:
             return 1.0 - np.sum(self.kreach(np.arange(k), p))
 
-    def expected_value(self):
+    def expected_value(self) -> float:
         """Expected value of this distribution."""
         return np.sum(np.arange(len(self._pmf)) * self._pmf)
 
@@ -191,24 +203,30 @@ class KInflatedGammaPoissonModel(ReachCurve):
     One question is what value of k should be chosen.  We propose
     to consider successive values of k starting from 0, and to stop
     when a fit is found such that the value of the objective function
-    is smaller than the value of the chi^2 statistic with f_max degrees
-    of freedom, where f_max is the highest frequency that is recorded.
+    is smaller than the critical value of the chi^2 statistic with
+    f_max degrees of freedom, where f_max is the highest frequency
+    that is recorded.
     """
 
     def __init__(
-        self, data: List[ReachPoint], kmax=10, debug=False, extrapolation_multiplier=1.0
+        self,
+        data: List[ReachPoint],
+        kmax: int = 10,
+        debug: bool = False,
+        extrapolation_multiplier: float = 1.0,
     ):
         """Constructs a Gamma-Poisson model of underreported count data.
 
         Args:
-          data:  A list of consisting of a single ReachPoint to which the model is
+          data:  A list consisting of the single ReachPoint to which the model is
             to be fit.
           kmax:  Maximum number of values of the PMF that are allowed to be set
             arbitrarily.
           debug:  If True, prints debug information as models are fit.
           extrapolation_multiplier:  Float.  If specified, then a penalty term is
             introduced that penalizes models where the expected number of impressions
-            is less than extrapolation_multiplier * data[0].impressions[0].
+            in the inventory is less than extrapolation_multiplier * the observed number
+            of impressions in the data.
         """
         if len(data) != 1:
             raise ValueError("Exactly one ReachPoint must be specified")
@@ -229,7 +247,13 @@ class KInflatedGammaPoissonModel(ReachCurve):
         else:
             self._cpi = None
 
-    def _chi2_distance(self, h, I, N, dist):
+    def _chi2_distance(
+        self,
+        h: npt.ArrayLike,
+        I: float,
+        N: float,
+        dist: KInflatedGammaPoissonDistribution,
+    ) -> float:
         """Returns distance between actual and expected histograms.
 
         Computes the metric
@@ -276,7 +300,7 @@ class KInflatedGammaPoissonModel(ReachCurve):
 
         return obj
 
-    def _exponential_poisson_reach(self, I, N, beta):
+    def _exponential_poisson_reach(self, I: float, N: float, beta: float) -> float:
         """Estimates reach in an exponential poisson model.
 
         Estimates reach when I impressions are purchased from a population
@@ -309,19 +333,21 @@ class KInflatedGammaPoissonModel(ReachCurve):
         """
         return N * I * (beta + 1) / (N + beta * (N + I))
 
-    def _exponential_poisson_beta(self, I, N, R):
+    def _exponential_poisson_beta(self, I: float, N: float, R: float) -> float:
         """Estimate beta given impressions, audience size and reach."""
         if I * R - N * (I - R) <= 0:
             return 1e3
         return (N * (I - R)) / (I * R - N * (I - R))
 
-    def _exponential_poisson_N_from_beta(self, I, R, beta):
+    def _exponential_poisson_N_from_beta(
+        self, I: float, R: float, beta: float
+    ) -> float:
         """Estimate audience size from impressions, reach and beta."""
         if I == R:
             return 100.0 * R
         return -(I * beta * R) / ((beta + 1) * (R - I))
 
-    def _exponential_poisson_N(self, I, R, mu_scale_factor=1.5):
+    def _exponential_poisson_N(self, I: float, R: float, mu_scale_factor=1.5) -> float:
         """Estimate audience size from I and R.
 
         We know that the mean mu of the distribution has to be greater than
@@ -336,7 +362,9 @@ class KInflatedGammaPoissonModel(ReachCurve):
             return 100.0 * R
         return R * (mu_scale_factor * I - R) / (mu_scale_factor * (I - R))
 
-    def _fit_exponential_poisson_model(self, point, Imin=None):
+    def _fit_exponential_poisson_model(
+        self, point: ReachPoint, Imin: float = None
+    ) -> Tuple[float, KInflatedGammaPoissonDistribution]:
         """Returns N, alpha, beta of an exponential-poisson model.
 
         The fit returned by this function is guaranteed to match the 1+ reach
@@ -381,7 +409,16 @@ class KInflatedGammaPoissonModel(ReachCurve):
 
         return N, KInflatedGammaPoissonDistribution(1.0, beta, [])
 
-    def _fit_histogram_fixed_length_a(self, h, I, Imin, N0, alpha0, beta0, a0):
+    def _fit_histogram_fixed_length_a(
+        self,
+        h: npt.ArrayLike,
+        I: float,
+        Imin: float,
+        N0: float,
+        alpha0: float,
+        beta0: float,
+        a0: Iterable[float],
+    ) -> Tuple[float, KInflatedGammaPoissonDistribution, float]:
         """Given a fixed length vector of inflation values, finds optimum fit."""
 
         p0 = list([alpha0, beta0, N0]) + list(a0)
@@ -423,7 +460,15 @@ class KInflatedGammaPoissonModel(ReachCurve):
             )
         )
 
-    def print_fit(self, msg, score, N, alpha, beta, a):
+    def print_fit(
+        self,
+        msg: str,
+        score: float,
+        N: float,
+        alpha: float,
+        beta: float,
+        a: List[float],
+    ):
         if not self._debug:
             return
         dist = KInflatedGammaPoissonDistribution(alpha, beta, a)
@@ -432,7 +477,9 @@ class KInflatedGammaPoissonModel(ReachCurve):
             f"{msg:15s} {score:7.2f} {N:7.0f} {alpha:8.3f} {beta:8.3f} {len(a):2d} {dist_str}"
         )
 
-    def _fit_point(self, point, Imin):
+    def _fit_point(
+        self, point: ReachPoint, Imin: float
+    ) -> Tuple[float, KInflatedGammaPoissonDistribution]:
         """Chi-squared fit to histogram h.
 
         Computes parameters alpha, beta, Imax, N such that the histogram hbar of
@@ -477,7 +524,7 @@ class KInflatedGammaPoissonModel(ReachCurve):
 
         return N, dist
 
-    def _fit(self, Imin=None):
+    def _fit(self, Imin: float = None):
         """Chi-squared fit to histogram h.
 
         Computes parameters alpha, beta, Imax, N such that the histogram hbar of

@@ -138,7 +138,8 @@ class ExperimentalTrial:
             return pd.read_csv(trial_results_path)
 
         # The pending directory contains one entry for each currently executing
-        # experimental trial.  Each d
+        # experimental trial.  If a computation appears to hang, this can be
+        # used to check which evaluations are still pending.
         experiment_dir_parent = Path(self._experiment_dir).parent
         pending_path = Path(
             f"{experiment_dir_parent}/pending/{hashlib.md5(trial_results_path.encode()).hexdigest()}"

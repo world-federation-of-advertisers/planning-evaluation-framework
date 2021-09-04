@@ -93,12 +93,6 @@ class HaloSimulator:
             privacy budget consumption for this simulation.
         """
         self._data_set = data_set
-        if params.campaign_spend_fractions_generator(1) is not None:
-            params = params._replace(
-                campaign_spend_fractions=params.campaign_spend_fractions_generator(
-                    data_set.publisher_count
-                )
-            )
         self._params = params
         self._privacy_tracker = privacy_tracker
         self._publishers = []

@@ -13,11 +13,13 @@
 # limitations under the License.
 """Defines the parameters for one experimental trial."""
 
+import copy
 from numpy.random import Generator
 from typing import Dict
 from typing import NamedTuple
 from typing import Type
 
+from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.driver.experiment_parameters import (
     ExperimentParameters,
 )
@@ -48,4 +50,12 @@ class TrialDescriptor(NamedTuple):
             f"{self.modeling_strategy},"
             f"{self.system_params},"
             f"{self.experiment_params}"
+        )
+
+    def update_from_dataset(self, dataset: DataSet) -> "TrialDescriptor":
+        """Uses the dataset to fill in various context-specific items."""
+        return TrialDescriptor(
+            copy.deepcopy(self.modeling_strategy),
+            self.system_params.update_from_dataset(dataset),
+            self.experiment_params.update_from_dataset(dataset),
         )

@@ -25,6 +25,7 @@ from wfa_planning_evaluation_framework.driver.test_point_generator import (
 )
 from wfa_planning_evaluation_framework.driver.test_point_generator import (
     MINIMUM_NUMBER_OF_TEST_POINTS,
+    MINIMUM_NUMBER_OF_TEST_POINTS_PER_PUBLISHER,
 )
 
 # The maximum number of test points that will be generated.
@@ -41,8 +42,9 @@ class LatinHypercubeRandomTestPointGenerator(TestPointGenerator):
         self,
         dataset: DataSet,
         rng: np.random.Generator,
-        npoints_generator: Callable[[int], int] = lambda x: None,
         npoints: int = MINIMUM_NUMBER_OF_TEST_POINTS,
+        npublishers: int = 1,
+        minimum_points_per_publisher=MINIMUM_NUMBER_OF_TEST_POINTS_PER_PUBLISHER,
     ):
         """Returns a LatinHypercubeRandomTestPointGenerator.
 
@@ -50,19 +52,17 @@ class LatinHypercubeRandomTestPointGenerator(TestPointGenerator):
           dataset:  The DataSet for which test points are to be generated.
           rng:  A numpy Generator object that is used to seed the generation
             of random test points.
-          npoints_generator: A function that returns the number of test points
-            that should be generated. The argument of the function is the number
-            of publishers. Example is `lambda npublishers: 2 ** npublishers`.
-            If the function is an empty function, then obtain the number of test
-            points directly from the next argument.
-          npoints: Number of points to generate.
+          npoints: Minimum number of points to generate.
+          npublishers: int.  The number of publishers in the dataset for which
+            this evaluation is being performed.  This is used to determine the
+            minimum number of points to generate.
+          minimum_points_per_publisher:  The minimum number of test points to
+            generate per publisher.  If this value times npublishers is greater
+            than npoints, then it overrides npoints.
         """
         super().__init__(dataset)
         self._rng = rng
-        if npoints_generator(1) is None:
-            self._npoints = npoints
-        else:
-            self._npoints = npoints_generator(self._npublishers)
+        self._npoints = max(npoints, npublishers * minimum_points_per_publisher)
 
     def test_points(self) -> Iterable[List[float]]:
         """Returns a generator for generating a list of test points.

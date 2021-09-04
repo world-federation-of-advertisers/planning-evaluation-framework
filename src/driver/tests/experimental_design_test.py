@@ -190,6 +190,24 @@ class ExperimentalDesignTest(absltest.TestCase):
             results = exp.load()
             self.assertEqual(results.shape[0], 8)
 
+    def test_remove_duplicates(self):
+        with TemporaryDirectory() as d:
+            self._setup(d)
+
+            self.trial_descriptors.append(self.trial_descriptors[0])
+
+            exp = ExperimentalDesign(
+                self.experiment_dir,
+                self.data_design,
+                self.trial_descriptors,
+                seed=1,
+            )
+            trials = exp.generate_trials()
+            self.assertLen(trials, 8)
+
+            results = exp.load()
+            self.assertEqual(results.shape[0], 8)
+
 
 if __name__ == "__main__":
     absltest.main()

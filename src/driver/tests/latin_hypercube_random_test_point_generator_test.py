@@ -100,10 +100,11 @@ class LatinHypercubeRandomTestPointGeneratorTest(absltest.TestCase):
         generator = LatinHypercubeRandomTestPointGenerator(
             data_set,
             np.random.default_rng(1),
-            npoints_generator=lambda npublishers: 100 * npublishers,
+            npublishers=2,
+            minimum_points_per_publisher=200,
         )
         values = [x for x in generator.test_points()]
-        self.assertLen(values, 200)
+        self.assertLen(values, 400)
 
 
 if __name__ == "__main__":

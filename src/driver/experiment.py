@@ -78,12 +78,14 @@ class Experiment:
         """Generates list of Trial objects associated to this experiement."""
         trials = []
         for desc in self._trial_descriptors:
+            dataset = self._data_design.by_name(self._data_set_name)
+            dataset_specific_descriptor = desc.update_from_dataset(dataset)
             trials.append(
                 ExperimentalTrial(
                     self._experiment_dir,
                     self._data_design,
                     self._data_set_name,
-                    desc,
+                    dataset_specific_descriptor,
                     analysis_type=self._analysis_type,
                 )
             )

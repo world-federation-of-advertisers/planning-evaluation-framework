@@ -79,6 +79,18 @@ class ExperimentalDesign:
         self._cores = cores
         self._analysis_type = analysis_type
 
+    def _remove_duplicates(
+        self, trials: List[ExperimentalTrial]
+    ) -> List[ExperimentalTrial]:
+        trial_name_set = set()
+        output_list = []
+        for t in trials:
+            trial_name = f"{t._data_set_name}::{t._trial_descriptor}"
+            if not trial_name in trial_name_set:
+                trial_name_set.add(trial_name)
+                output_list.append(t)
+        return output_list
+
     def generate_trials(self) -> List[ExperimentalTrial]:
         """Generates list of Trial objects associated to this experiment."""
         all_trials = []
@@ -91,6 +103,7 @@ class ExperimentalDesign:
                 analysis_type=self._analysis_type,
             )
             all_trials.extend(experiment.generate_trials())
+        all_trials = self._remove_duplicates(all_trials)
         self._all_trials = all_trials
         return all_trials
 

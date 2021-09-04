@@ -23,6 +23,7 @@ from os import listdir
 from os.path import exists, isdir, join
 from pathlib import Path
 from typing import List
+from weakref import WeakValueDictionary
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 
 
@@ -38,6 +39,7 @@ class DataDesign:
         """
         self._dirpath = dirpath
         self._data_set_names = set()
+        self._data_sets = WeakValueDictionary()
 
         Path(dirpath).mkdir(parents=True, exist_ok=True)
         for dir in sorted(listdir(dirpath)):
@@ -56,7 +58,10 @@ class DataDesign:
 
     def by_name(self, name: str) -> DataSet:
         """Returns the DataSet having the given name."""
-        return DataSet.read_data_set(join(self._dirpath, name))
+        if not name in self._data_sets:
+            dataset = DataSet.read_data_set(join(self._dirpath, name))
+            self._data_sets[name] = dataset
+        return self._data_sets[name]
 
     def add(self, data_set: DataSet) -> None:
         """Adds a DataSet to this DataDesign."""

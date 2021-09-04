@@ -102,6 +102,7 @@ def generate_experimental_design_config(seed: int = 1) -> Iterable[TrialDescript
     """
     keys = LEVELS.keys()
     levels = [len(LEVELS[k]) for k in keys]
+    np.random.seed(seed)
     for i, sample in enumerate(
         lhs(n=len(levels), samples=NUM_TRIALS_PER_DATASET, criterion="maximin")
     ):

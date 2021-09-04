@@ -38,9 +38,16 @@ AGGREGATORS = {
     # Mean squared error in predicted reach
     "mean_squared_error": lambda x, y: np.mean((_reach(x) - _reach(y)) ** 2),
     # Mean absolute relative error in predicted reach
-    "mean_abs_relative_error": lambda x, y: np.mean(
-        np.abs(_reach(x) - _reach(y)) / _reach(x)
-    ),
+    "mean_abs_relative_error": lambda x, y: _mean_abs_relative_error(x, y),
+    # Mean absolute relative error at frequencies 2..9
+    "mare_freq_at_least_2": lambda x, y: _mean_abs_relative_error(x, y, 2),
+    "mare_freq_at_least_3": lambda x, y: _mean_abs_relative_error(x, y, 3),
+    "mare_freq_at_least_4": lambda x, y: _mean_abs_relative_error(x, y, 4),
+    "mare_freq_at_least_5": lambda x, y: _mean_abs_relative_error(x, y, 5),
+    "mare_freq_at_least_6": lambda x, y: _mean_abs_relative_error(x, y, 6),
+    "mare_freq_at_least_7": lambda x, y: _mean_abs_relative_error(x, y, 7),
+    "mare_freq_at_least_8": lambda x, y: _mean_abs_relative_error(x, y, 8),
+    "mare_freq_at_least_9": lambda x, y: _mean_abs_relative_error(x, y, 9),
     # Mean squared relative error in predicted reach
     "mean_squared_relative_error": lambda x, y: np.mean(
         (_reach(x) - _reach(y)) ** 2 / _reach(x) ** 2
@@ -90,6 +97,15 @@ AGGREGATORS = {
         [_shuffle_distance(x[i], y[i]) for i in range(len(x))]
     ),
 }
+
+
+def _mean_abs_relative_error(x: ReachPoint, y: ReachPoint, k=1) -> float:
+    """Returns the mean absolute relative error at freq k."""
+    if any([k > p.max_frequency for p in x]):
+        return np.nan
+    if any([k > p.max_frequency for p in y]):
+        return np.nan
+    return np.mean(np.abs(_reach(x, k) - _reach(y, k)) / _reach(x, k))
 
 
 def _reach(point_list: List[ReachPoint], k=1) -> np.array:

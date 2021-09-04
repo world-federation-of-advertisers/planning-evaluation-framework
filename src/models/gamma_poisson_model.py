@@ -113,7 +113,9 @@ class GammaPoissonModel(ReachCurve):
     found.
     """
 
-    def __init__(self, data: List[ReachPoint], max_reach=None):
+    def __init__(
+        self, data: List[ReachPoint], max_reach=None, extrapolation_multiplier=1.0
+    ):
         """Constructs a Gamma-Poisson model of underreported count data.
 
         Args:
@@ -121,6 +123,13 @@ class GammaPoissonModel(ReachCurve):
             to be fit.
           max_reach:  Optional.  If specified, the maximum possible reach that can
             be achieved.
+          extrapolation_multiplier:  Int.  If specified, then a penalty term is
+            introduced that penalizes models where the expected number of impressions
+            in the inventory is less than extrapolation_multiplier times the
+            observed number of impressions.  Thus, if the extrapolation_multiplier
+            is 2, then optimizer prefers models where the number of impressions in
+            the inventory is at least twice the number of impressions that were
+            observed in the campaign.
         """
         if len(data) != 1:
             raise ValueError("Exactly one ReachPoint must be specified")
@@ -132,6 +141,8 @@ class GammaPoissonModel(ReachCurve):
             )
         self._reach_point = data[0]
         self._max_reach = max_reach
+        self._extrapolation_multiplier = extrapolation_multiplier
+        self._extrapolation_value = extrapolation_multiplier * data[0].impressions[0]
         if data[0].spends:
             self._cpi = data[0].spends[0] / data[0].impressions[0]
         else:
@@ -327,6 +338,9 @@ class GammaPoissonModel(ReachCurve):
           chi^2 distance between the actual and expected histograms, plus
           a term for weighting the difference in 1+ reach.
         """
+        if alpha <= 0 or beta <= 0 or N <= 0:
+            return np.sum(np.array(h) ** 2)
+
         # Estimate total number of potential impressions
         Imax = self._expected_impressions(N, alpha, beta)
         if Imax <= I:
@@ -347,7 +361,15 @@ class GammaPoissonModel(ReachCurve):
             one_plus_reach_weight * (actual_oneplus - predicted_oneplus) ** 2
         )
 
-        obj = np.sum((hbar - h) ** 2 / (hbar + 1e-6)) + oneplus_error
+        extrapolation_penalty = 0
+        if Imax < self._extrapolation_value:
+            extrapolation_penalty = (self._extrapolation_value - Imax) ** 2
+
+        obj = (
+            np.sum((hbar - h) ** 2 / (hbar + 1e-6))
+            + oneplus_error
+            + extrapolation_penalty
+        )
 
         if np.isnan(obj):
             logging.vlog(2, f"alpha {alpha} beta {beta} N {N} Imax {Imax}")

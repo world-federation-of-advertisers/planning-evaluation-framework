@@ -67,10 +67,15 @@ class KInflatedGammaPoissonDistribution:
         u = self._gamma_poisson_pmf(
             np.arange(n + 1, MAXIMUM_COMPUTATIONAL_FREQUENCY), alpha, beta
         )
-        pmf_tail = ((1 - s) / (1 - t)) * u
+        if t >= 1:
+            pmf_tail = 0.0 * u
+        else:
+            pmf_tail = ((1 - s) / (1 - t)) * u
         # self._pmf[n] = kGP(n | alpha, beta, a_1, ..., a_k)
         # Note, we prepend 0 to self._pmf to make indexing more convenient.
         self._pmf = np.array([0.0] + list(a) + list(pmf_tail))
+        # Force the series to sum to 1.
+        self._pmf[-1] = 1.0 - np.sum(self._pmf[:-1])
 
     def _gamma_poisson_pmf(
         self, n: Union[int, Iterable[int]], alpha: float, beta: float
@@ -391,8 +396,7 @@ class KInflatedGammaPoissonModel(ReachCurve):
         reach = point.reach()
         if len(point.frequencies) > 1:
             # Estimate the mean from the distribution found in the reach point
-            s = np.sum(point.frequencies)
-            mu = np.sum([(i + 1) * f / s for i, f in enumerate(point.frequencies)])
+            mu = impressions / min(reach, impressions-1)
             beta = (mu - 1) * 1.2  # 1.2 is arbitrary
             N = self._exponential_poisson_N_from_beta(impressions, reach, beta)
         else:
@@ -403,7 +407,7 @@ class KInflatedGammaPoissonModel(ReachCurve):
         # number of impressions.  If so, adjust them upwards.
         Imax = N * (beta + 1)
         while Imax < impressions:
-            N *= 1.1
+            N = max(1, 1.1 * N)
             beta = self._exponential_poisson_beta(impressions, N, reach)
             Imax = N * (beta + 1)
 
@@ -434,7 +438,7 @@ class KInflatedGammaPoissonModel(ReachCurve):
                 if params[i] < bounds[i][0] or bounds[i][1] < params[i]:
                     return np.sum(np.array(h) ** 2) + Imin ** 2
             if len(a) and np.sum(a) > 1.0:
-                return np.sum(np.array(h) ** 2)
+                return np.sum(np.array(h) ** 2) + Imin ** 2
             dist = KInflatedGammaPoissonDistribution(alpha, beta, a)
             score = self._chi2_distance(h, I, N, dist)
             Imax = N * dist.expected_value()
@@ -535,7 +539,7 @@ class KInflatedGammaPoissonModel(ReachCurve):
         subject to the constraint the number of impressions in the fitted model
         is at least Imin.
         """
-        if self._fit_computed and (Imin is None or Imin < self._max_impressions):
+        if self._fit_computed:
             return
 
         if Imin is None:

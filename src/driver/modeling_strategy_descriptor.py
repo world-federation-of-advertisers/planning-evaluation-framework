@@ -24,6 +24,9 @@ from wfa_planning_evaluation_framework.models.gamma_poisson_model import (
 from wfa_planning_evaluation_framework.models.goerg_model import (
     GoergModel,
 )
+from wfa_planning_evaluation_framework.models.kinflated_gamma_poisson_model import (
+    KInflatedGammaPoissonModel,
+)
 from wfa_planning_evaluation_framework.models.pairwise_union_reach_surface import (
     PairwiseUnionReachSurface,
 )
@@ -45,6 +48,7 @@ from wfa_planning_evaluation_framework.simulator.single_publisher_strategy impor
 SINGLE_PUB_MODELS = {
     "goerg": GoergModel,
     "gamma_poisson": GammaPoissonModel,
+    "kinflated_gamma_poisson": KInflatedGammaPoissonModel,
 }
 
 # A dictionary mapping names of multipublisher models to the

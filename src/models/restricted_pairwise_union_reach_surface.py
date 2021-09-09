@@ -17,6 +17,7 @@ import copy
 import warnings
 import numpy as np
 from typing import List
+from numpy.typing import ArrayLike
 from scipy.optimize import minimize
 import cvxpy as cp
 from cvxopt import solvers
@@ -28,13 +29,49 @@ from wfa_planning_evaluation_framework.models.pairwise_union_reach_surface impor
 
 
 NUM_INITIAL_LBDS = 30
-
-# description doc: https://docs.google.com/document/d/1FINz2Vi4u5CjpnEroAYqFTh8dnbj3IIcD42Xd1cLqEE/edit
-#TODO(jiayu): clean up description doc and upload to WFA
+MIN_IMPROVEMENT_PER_ROUND = 1e-3
+MAX_NUM_ROUNDS = 200
 
 
 class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
-    """Models reach with the pairwise union overlap model."""
+    """Predicts union reach using the restricted pairwise union overlap model.
+
+    The restricted pairwise union overlap model is simplified from the pairwise
+    union overlap model, with the parameters degenerated from a matrix `a` to a
+    vector `lbd` (denoting the greek letter lambda).
+
+    Recall that the pairwise union overlap model assumes
+    E(r) = \sum_i r_i - \sum_{i \neq j} a_ij r_i r_j / max(m_i, m_j),
+    where E(r) means the expected union reach, each r_i indicates the single
+    publisher reach at publisher i, each m_i indicates the maximum reach at
+    publisher i, and the sum is taken over all publishers.  The coefficients to
+    estimate, a_ij, indicates the interaction between publishers i and j.  These
+    coefficients are subject to constraints:
+    (i) a_ij >= 0 for each i, j (ii) a_ii = 0 for each i
+    (iii) sum_j a_ij <= 1 for each i (iv) sum_i a_ij <= 1 for each j
+    to guarantee consistency criteria of the fitted model.
+
+    The restricted pairwise union overlap model inherits the pairwise model form
+    and the constraints, and just further assumes that there exist vector lbd
+    such that a_ij = lbd_i * lbd_j for each i, j.  In this way, the model
+    degrees of freedom is reduced from p^2 - p to p, where p is the number of
+    publishers.  As such, the model can be used when the number of training
+    points is small, like barely above p.
+
+    While the model degrees of freedom is reduced, the restricted pairwise union
+    overlap model becomes non-linear on the coefficients lbd.  It is no longer
+    fittable using quadratic programming as we did for the pairwise union
+    overlap model.  Nevertheless, the restricted pairwise union overlap model
+    can be efficiently fitted using a coordinate descent algorithm.  At each
+    step, we can iteratively optimize each coordinate of lbd while fixing other
+    coordinates.  Each step can be simply implemented via fitting a simple
+    linear regression.
+
+    See the WFA shared doc
+    https://docs.google.com/document/d/1zeiCLoKRWO7Cs2cA1fzOkmWd02EJ8C9vgkB2PPCuLvA/edit
+    for the detailed fitting algorithm.  The notations and formulas in the codes
+    well correspond to those in the doc.
+    """
 
     def _fit(self) -> None:
         self._define_criteria()
@@ -47,20 +84,95 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
                 self._fitted_lbd = fitted
                 self._fitted_loss = loss
                 self._model_success = converge
-        self._construct_a_from_lambda(self._fitted_lbd)
+        self._construct_a_from_lambda()
 
-    def _construct_a_from_lambda(self, lbd: List[float]):
-        """Get value of flattened a matrix from lamdas.
+    def _define_criteria(
+        self,
+        min_improvement_per_round: float = MIN_IMPROVEMENT_PER_ROUND,
+        max_num_rounds: int = MAX_NUM_ROUNDS,
+    ) -> None:
+        """Define criteria for terminating the iterations.
+
         Args:
-          lbd: a length p vector indicating lambda_i for each pub.
-        Returns:
-          the value of flattened a matrix.
+          min_improvement_per_round:  A threshold of the loss function.  We
+            terminate the iterations if we fail to reduce the loss function by
+            this much at a round.
+          max_num_rounds:  Terminate if the number of rounds exceeds this
+            maxmimum number.
         """
-        a = np.outer(lbd, lbd)
-        a -= np.diag(np.diag(a))
-        self._a = a.flatten()
+        self._min_improvement = min_improvement_per_round
+        self._max_num_rounds = max_num_rounds
 
-    def _uniform_initial_lbds(self, num_init=NUM_INITIAL_LBDS) -> None:
+    def _setup_predictor_response(self) -> None:
+        """Re-formulate the predictors and response of the model.
+
+        The model has input being the per-pub reach (r_1, ..., r_p) and output
+        being the union reach r.  Following the algorithm description doc, it is
+        conveninent to treat matrix D with
+        d_ij = r_i r_j / [2 max(m_i, m_j)]
+        as the predictors, and
+        y = r - \sum_i r_i
+        as the response.  This method computes D and y for each training point
+        and put them in the lists `self._Ds` and `self._ys`.
+        """
+        self._ys = []
+        # Will have self._y[l] = sum(single pubs reaches) - union reach in the
+        # l-th training point
+        self._Ds = []
+        # Will have self._Ds[l] [i, j] = d_ij^(l), i.e., d_ij at the l-th
+        # training point
+        m = [rc.max_reach for rc in self._reach_curves]
+        # m[i] is the maximum reach at publisher i
+        for rp in self._data:
+            if (
+                rp.impressions.count(0) < self._p - 1
+            ):  # Exclude single-pub training point
+                r = self.get_reach_vector(rp.impressions)
+                self._ys.append(max(0.0001, sum(r) - rp._kplus_reaches[0]))
+                self._Ds.append(self._construct_D_from_r_and_m(r, m))
+
+    @classmethod
+    def _construct_D_from_r_and_m(cls, r: ArrayLike, m: ArrayLike):
+        """An intermediate method in self._setup_predictor_response.
+
+        Compute matrix D following equation (1) in the algorithm description
+        doc.
+
+        Args:
+          r:  A vector where r[i] is the single publisher reach at publisher i.
+          m:  A vector where m[i] is the maximum reach at publisher i.
+
+        Returns:
+          The matrix D, i.e., what we reformulate as the predictor of the model.
+        """
+        mat_m = np.array(
+            [[max(m[i], m[j]) for i in range(len(m))] for j in range(len(m))]
+        )
+        # mat_m[i, j] = max(max reach of pub i, max reach of pub j)
+        return np.outer(r, r) / 2 / mat_m
+
+    def _uniform_initial_lbds(self, num_init: int = NUM_INITIAL_LBDS) -> None:
+        """Sample initial values of lbd almost uniformly from the feasible region.
+
+        To search for global optimum, we conduct coordinate descent starting
+        from a number of randomly distributed initial values, instead of just
+        one initial value.  To choose the initial values of lbd, it is
+        natural to uniformly sample from its feasible region.
+
+        The exact feasible region of lbd is defined by the inequalities
+        lbd[i] >= 0 and
+        lbd[i] * sum(lbd) <= 1
+        for each i.  This region has an irregular shape with long tails, which
+        is not easy to sample from.  To facilitate sampling, we further force
+        each lbd[i] be to <= 1.  This does truncate two much volume of the
+        exact feasible region.  Then we uniformy sample from the truncated
+        region.  Explicitly. uniformly sample from the cube
+        {lbd: 0 <= lbd[i] <= 1 for each i} and accept the samples that satisfies
+        lbd[i] * sum(lbd) <= 1 for each i.
+
+        Args:
+          num_init:  The number of initial values to be chosen.
+        """
         self._init_lbds = []
         while len(self._init_lbds) < num_init:
             lbd = np.random.rand(self._p)
@@ -68,58 +180,32 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
                 self._init_lbds.append(lbd)
 
     @classmethod
-    def _check_lbd_feasiblity(cls, lbd, tol=1e-6):
+    def _check_lbd_feasiblity(cls, lbd: List[float], tol=1e-6):
+        """Check if a choice of lbd falls in the feasible region.
+
+        This is an intermediate method used in self._uniform_initial_lbds.
+        """
         for l in lbd:
             if l < 0 or l * (sum(lbd) - l) > 1 + tol:
                 return False
         return True
 
-    def _define_criteria(self) -> None:
-        self._min_improvement = 1e-3  # threshold on the loss function for termination
-        self._max_num_rounds = 1000
+    # The above methods set up the variables to be used in the iterative algorithm.
+    # The implementation of iterations starts from here.
+    def _step(self, lbd: List[float], i: int):
+        """Each step to update one coordinate of lbd.
 
-    def _setup_predictor_response(self) -> None:
-        rs = []
-        # rs[l] = single pub reach vector in the l-th training point, i.e.,
-        # rs[l] [i] = reach at pub i in the l-th training point.
-        self._ys = []
-        # self._y[l] = sum(single pubs reaches) - union reach in the l-th training point
-        for rp in self._data:
-            if (
-                rp.impressions.count(0) < self._p - 1
-            ):  # Exclude single-pub training point
-                r = self.get_reach_vector(rp.impressions)
-                self._ys.append(max(0.0001, sum(r) - rp._kplus_reaches[0]))
-                rs.append(r)
-        mat_m = np.array(
-            [
-                [
-                    max(
-                        self._reach_curves[i].max_reach, self._reach_curves[j].max_reach
-                    )
-                    for i in range(self._p)
-                ]
-                for j in range(self._p)
-            ]
-        )
-        # mat_m[i, j] = max(pub i max reach, pub j max reach)
-        self._ds = []  # ds[l] [i, j] = d_ij^(l) in the description doc
-        for r in rs:
-            self._ds.append(np.outer(r, r) / 2 / mat_m)
+        Args:
+          lbd:  The current best guess of lbd.
+          i:  The index of the coordinate to be updated at this step.
 
-    @classmethod
-    def _get_feasible_bound(cls, lbd, i, tol=1e-6):
-        total = sum(lbd)
-        res = 1 / max(total - lbd[i], 1e-6)
-        for j in range(len(lbd)):
-            if j != i:
-                res = min(res, 1 / max(lbd[j], tol) - total + lbd[i] + lbd[j])
-        return res
-
-    def _step(self, lbd, i):
-        us = np.array([self._compute_u(lbd, i, D) for D in self._ds])
-        vs = np.array([self._compute_v(lbd, i, D) for D in self._ds])
+        Returns:
+          The updated best guess of lbd[i].
+        """
+        us = np.array([self._compute_u(lbd, i, D) for D in self._Ds])
+        vs = np.array([self._compute_v(lbd, i, D) for D in self._Ds])
         lbd_i_hat = np.inner(np.array(self._ys) - us, vs) / np.inner(vs, vs)
+        # The above line follows equation (4) in the algorithm description doc.
         if lbd_i_hat < 0:
             return 0
         bound = self._get_feasible_bound(lbd, i)
@@ -127,15 +213,77 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
             return bound
         return lbd_i_hat
 
-    def _round(self, lbd):
+    @classmethod
+    def _compute_u(cls, lbd: List[float], i: int, D: np.array):
+        """An intermediate method in self._step.
+
+        Compute u following equation (2) in the algorithm description doc.
+        """
+        u = 0
+        for j in range(len(lbd)):
+            for k in range(j + 1, len(lbd)):
+                if j != i and k != i:
+                    u += lbd[j] * lbd[k] * D[j, k]
+        return u
+
+    @classmethod
+    def _compute_v(cls, lbd: List[float], i: int, D: np.array):
+        """An intermediate method in self._step.
+
+        Compute v following equation (3) in the algorithm description doc.
+        """
+        v = 0
+        for j in range(len(lbd)):
+            if j != i:
+                v += lbd[j] * D[i, j]
+        return v
+
+    @classmethod
+    def _get_feasible_bound(cls, lbd: List[float], i: int, tol: float = 1e-6):
+        """An intermediate method in self._step.
+
+        Compute the upper bound of lbd[i] following equation (5) in the
+        algorithm description doc.
+
+        Args:
+          lbd:  The current best guess of lbd.
+          i:  The index of the coordinate to update
+          tol:  An artifical threshold to avoid divide-by-zero error.
+
+        Returns:
+          A bound B satisfying the following property.  Suppose we change lbd[i]
+          to a number 'l_new' while keeping the other coordinates unchanged.
+          Then lbd is feasible (i.e., cls._check_lbd_feasiblity == True) if and
+          only if 0 <= l_new <= B.
+        """
+        total = sum(lbd)
+        res = 1 / max(total - lbd[i], 1e-6)
+        for j in range(len(lbd)):
+            if j != i:
+                res = min(res, 1 / max(lbd[j], tol) - total + lbd[i] + lbd[j])
+        return res
+
+    def _round(self, lbd: List[float]):
+        """Each round to update the whole vector lbd.
+
+        A round consists of self._p steps.
+
+        Args:
+          lbd:  The current best guess of lbd.
+
+        Returns:
+          The updated best guess of lbd after a round.
+        """
         for i in np.random.permutation(self._p):
+            # We shuffle the order of coordinates to have symmetry across
+            # different EDPs.
             lbd[i] = self._step(lbd, i)
         return lbd
 
-    def _loss(self, lbd):
-        """Compute L2 loss literally following formula ? in the description doc."""
+    def _loss(self, lbd: List[float]):
+        """Compute the L2 loss of any lbd."""
         loss = 0
-        for y, D in zip(self._ys, self._ds):
+        for y, D in zip(self._ys, self._Ds):
             fitted = 0
             for i in range(self._p):
                 for j in range(i + 1, self._p):
@@ -143,7 +291,13 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
             loss += (y - fitted) ** 2
         return loss
 
-    def _fit_one_init_lbd(self, lbd):
+    def _fit_one_init_lbd(self, lbd: List[float]):
+        """The complete fitting algorithm given one initial point of lbd.
+
+        It conducts a number of rounds until we fail to reduce the loss function
+        by self._min_improvement at a round.  That is, a local optimum is
+        achieved at this round.
+        """
         prev_loss = self._loss(lbd)
         cur_loss = prev_loss - 1
         num_rounds = 0
@@ -157,19 +311,16 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
             num_rounds += 1
         return lbd, cur_loss, (cur_loss >= prev_loss - self._min_improvement)
 
-    def _compute_u(self, lbd, i, D):
-        """Compute u literally following formula X in the description doc."""
-        u = 0
-        for j in range(self._p):
-            for k in range(j + 1, self._p):
-                if j != i and k != i:
-                    u += lbd[j] * lbd[k] * D[j, k]
-        return u
+    def _construct_a_from_lambda(self):
+        """Obtain matrix `a` which will be used for model prediction.
 
-    def _compute_v(self, lbd, i, D):
-        """Compute v literally following formula Y in the description doc."""
-        v = 0
-        for j in range(self._p):
-            if j != i:
-                v += lbd[j] * D[i, j]
-        return v
+        The matrix `a` in the parent class `PairwiseUnionReachSurface` is
+        degenerated to a function of the vector of `lbd` in the child class
+        `RestrictedPairwiseUnionReachSurface`.  This method converts the
+        `self._fitted_lbd` in the child class to the `self._a` in the parent
+        class, so as to inherit methods like `by_impressions` in the parent
+        class for model prediction.
+        """
+        a = np.outer(self._fitted_lbd, self._fitted_lbd)
+        a -= np.diag(np.diag(a))
+        self._a = a.flatten()

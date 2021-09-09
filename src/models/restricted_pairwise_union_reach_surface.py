@@ -16,7 +16,7 @@
 import copy
 import warnings
 import numpy as np
-from typing import List
+from typing import List, Tuple
 from numpy.typing import ArrayLike
 from scipy.optimize import minimize
 import cvxpy as cp
@@ -68,12 +68,19 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
     linear regression.
 
     See the WFA shared doc
-    https://docs.google.com/document/d/1zeiCLoKRWO7Cs2cA1fzOkmWd02EJ8C9vgkB2PPCuLvA/edit
+    https://docs.google.com/document/d/1zeiCLoKRWO7Cs2cA1fzOkmWd02EJ8C9vgkB2PPCuLvA/edit?usp=sharing
     for the detailed fitting algorithm.  The notations and formulas in the codes
     well correspond to those in the doc.
     """
 
     def _fit(self) -> None:
+        """Fitting the restricted pairwise union overlap model.
+
+        We will choose a number of initial points, and search local optima from
+        each initial point using the coordinate descent method.  The final
+        estimated is chosen as the local optimum that achieves the minimum loss
+        function.
+        """
         self._define_criteria()
         self._setup_predictor_response()
         self._uniform_initial_lbds()
@@ -164,9 +171,9 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
         lbd[i] * sum(lbd) <= 1
         for each i.  This region has an irregular shape with long tails, which
         is not easy to sample from.  To facilitate sampling, we further force
-        each lbd[i] be to <= 1.  This does truncate two much volume of the
+        each lbd[i] be to <= 1.  This does truncate too much volume of the
         exact feasible region.  Then we uniformy sample from the truncated
-        region.  Explicitly. uniformly sample from the cube
+        region.  Explicitly, uniformly sample from the cube
         {lbd: 0 <= lbd[i] <= 1 for each i} and accept the samples that satisfies
         lbd[i] * sum(lbd) <= 1 for each i.
 
@@ -215,9 +222,9 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
 
     @classmethod
     def _compute_u(cls, lbd: List[float], i: int, D: np.array):
-        """An intermediate method in self._step.
+        """Compute u following equation (2) in the algorithm description doc.
 
-        Compute u following equation (2) in the algorithm description doc.
+        This is an intermediate method in self._step.
         """
         u = 0
         for j in range(len(lbd)):
@@ -228,9 +235,9 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
 
     @classmethod
     def _compute_v(cls, lbd: List[float], i: int, D: np.array):
-        """An intermediate method in self._step.
+        """Compute v following equation (3) in the algorithm description doc.
 
-        Compute v following equation (3) in the algorithm description doc.
+        This is an intermediate method in self._step.
         """
         v = 0
         for j in range(len(lbd)):
@@ -240,10 +247,10 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
 
     @classmethod
     def _get_feasible_bound(cls, lbd: List[float], i: int, tol: float = 1e-6):
-        """An intermediate method in self._step.
+        """Compute B(lbd_{-i}) of equation (5) in the algorithm description doc.
 
-        Compute the upper bound of lbd[i] following equation (5) in the
-        algorithm description doc.
+        B(lbd_{-i}) is the upper bound of lbd[i] so that lbd falls in the
+        feasibele region.  This is an intermediate method in self._step.
 
         Args:
           lbd:  The current best guess of lbd.
@@ -291,12 +298,29 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
             loss += (y - fitted) ** 2
         return loss
 
-    def _fit_one_init_lbd(self, lbd: List[float]):
-        """The complete fitting algorithm given one initial point of lbd.
+    def _fit_one_init_lbd(self, lbd: List[float]) -> Tuple[List[float], float, bool]:
+        """The complete updating procedure from one initial point of lbd.
 
         It conducts a number of rounds until we fail to reduce the loss function
         by self._min_improvement at a round.  That is, a local optimum is
         achieved at this round.
+
+        Args:
+          lbd:  Initial value of lbd.
+
+        Returns:
+          A tuple of (lbd_opt, loss, converge).
+          - lbd_opt means the obtained lbd at the last round.
+          - loss means the loss function of lbd_opt.
+          - converge is a boolean indicating if a local optimum is indeed
+            achieved.  Empirically, we find that local optima can beachieved in
+            only a few rounds, and this is intuitively true in view of the
+            geometric interpretation of coordinate descent.  But, a theoretical
+            support is absent.  As such, we record if the reduction of loss is
+            indeed smaller than the threshold (self._min_improvement) at the
+            last round.  If not, it means that the local optimum is still not
+            found after many rounds, i.e., the algorithm fails to converge when
+            starting from the given initial point.
         """
         prev_loss = self._loss(lbd)
         cur_loss = prev_loss - 1

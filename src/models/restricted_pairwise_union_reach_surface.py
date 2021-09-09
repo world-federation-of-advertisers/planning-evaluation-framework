@@ -62,10 +62,10 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
     overlap model becomes non-linear on the coefficients lbd.  It is no longer
     fittable using quadratic programming as we did for the pairwise union
     overlap model.  Nevertheless, the restricted pairwise union overlap model
-    can be efficiently fitted using a coordinate descent algorithm.  At each
-    step, we can iteratively optimize each coordinate of lbd while fixing other
-    coordinates.  Each step can be simply implemented via fitting a simple
-    linear regression.
+    can be efficiently fitted using a coordinate descent algorithm.  We can
+    iteratively optimize each coordinate of lbd while fixing other coordinates.
+    Each iteration can be simply implemented via fitting a simple linear
+    regression.
 
     See the WFA shared doc
     https://docs.google.com/document/d/1zeiCLoKRWO7Cs2cA1fzOkmWd02EJ8C9vgkB2PPCuLvA/edit?usp=sharing

@@ -44,12 +44,14 @@ class FakeReachSurface(ReachSurface):
 class ReachSurfaceTest(absltest.TestCase):
     def test_by_impressions(self):
         surface = FakeReachSurface([ReachPoint([100, 200], [100])])
+        surface._fit()
         self.assertEqual(surface.by_impressions([100, 200]).reach(), 100)
         self.assertEqual(surface.by_impressions([100, 200], 3).reach(2), 50)
         self.assertEqual(surface.by_impressions([100, 200], 3).reach(3), 33)
 
     def test_by_spend(self):
         surface = FakeReachSurface([ReachPoint([1000, 2000], [1000])])
+        surface._fit()
         self.assertEqual(surface.by_spend([1, 2]).reach(), 300)
         self.assertEqual(surface.by_spend([1, 2], 3).reach(2), 150)
         self.assertEqual(surface.by_spend([1, 2], 3).reach(3), 100)
@@ -57,6 +59,7 @@ class ReachSurfaceTest(absltest.TestCase):
 
     def test_max_reach(self):
         surface = FakeReachSurface([ReachPoint([1000, 2000], [1000])])
+        surface._fit()
         self.assertEqual(surface.max_reach, 1000)
 
 

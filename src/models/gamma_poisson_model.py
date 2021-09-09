@@ -131,6 +131,7 @@ class GammaPoissonModel(ReachCurve):
             the inventory is at least twice the number of impressions that were
             observed in the campaign.
         """
+        super().__init__(data, max_reach)
         if len(data) != 1:
             raise ValueError("Exactly one ReachPoint must be specified")
         if data[0].impressions[0] < 0.001:

@@ -77,10 +77,12 @@ class RestrictedPairwiseUnionReachSurfaceTest(absltest.TestCase):
         max_reaches = [
             universe_size * (decay_rate ** pub_num) for pub_num in range(num_publishers)
         ]
-        return [
-            LinearCappedReachCurve([ReachPoint([max_reach], (max_reach,))])
-            for max_reach in max_reaches
-        ]
+        reach_curves = []
+        for max_reach in max_reaches:
+            curve = LinearCappedReachCurve([ReachPoint([max_reach], (max_reach,))])
+            curve._fit()
+            reach_curves.append(curve)
+        return reach_curves
 
     def generate_sample_matrix_a(self, num_publishers, lbd_const=0):
         lbd = np.array([[lbd_const] for _ in range(num_publishers)])
@@ -123,6 +125,7 @@ class RestrictedPairwiseUnionReachSurfaceTest(absltest.TestCase):
         surface = RestrictedPairwiseUnionReachSurface(
             reach_curves, training_reach_points
         )
+        surface._fit()
         test_reach_points = self.generate_sample_reach_points(
             true_a, reach_curves, training_size, universe_size, 2
         )
@@ -146,6 +149,7 @@ class RestrictedPairwiseUnionReachSurfaceTest(absltest.TestCase):
         surface = RestrictedPairwiseUnionReachSurface(
             reach_curves, training_reach_points
         )
+        surface._fit()
         test_reach_points = self.generate_sample_reach_points(
             true_a, reach_curves, training_size, universe_size, 2
         )
@@ -185,6 +189,8 @@ class RestrictedPairwiseUnionReachSurfaceTest(absltest.TestCase):
                 surface = RestrictedPairwiseUnionReachSurface(
                     reach_curves, training_reach_points
                 )
+                surface._fit()
+
 
     def test_fit_warning_problem(self):
         num_publishers = 3
@@ -213,6 +219,8 @@ class RestrictedPairwiseUnionReachSurfaceTest(absltest.TestCase):
                 surface = RestrictedPairwiseUnionReachSurface(
                     reach_curves, training_reach_points
                 )
+                surface._fit()
+
 
     def test_fit_warning_no_problem(self):
         num_publishers = 3
@@ -240,6 +248,7 @@ class RestrictedPairwiseUnionReachSurfaceTest(absltest.TestCase):
                 surface = RestrictedPairwiseUnionReachSurface(
                     reach_curves, training_reach_points
                 )
+                surface._fit()
                 test_reach_points = self.generate_sample_reach_points(
                     true_a, reach_curves, training_size, universe_size, 2
                 )

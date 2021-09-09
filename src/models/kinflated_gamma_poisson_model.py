@@ -292,6 +292,9 @@ class KInflatedGammaPoissonModel(ReachCurve):
         # Estimate total number of potential impressions
         Imax = N * dist.expected_value()
         if Imax <= I:
+            # It is necessary to treat this as a special case because the
+            # probability that an impression will be served is I / Imax.
+            # If I / Imax > 1, then the computation of the histogram fails.
             return np.sum(np.array(h) ** 2)
 
         freqs = N * dist.kreach(np.arange(1, len(h)), I / Imax)
@@ -414,8 +417,8 @@ class KInflatedGammaPoissonModel(ReachCurve):
         Args:
           point:  A ReachPoint to which an exponential-poisson model is
             to be fit.
-          Imin:  Minimum number of impressions that the returned model
-            should have.
+          Imin:  Minimum number of inventory impressions that the returned
+            model should have.
         Returns:
           A pair (N, dist), where N is the estimated audience size and dist
           is an estimated KInflatedGammaPoissonDistribution representing an
@@ -427,7 +430,7 @@ class KInflatedGammaPoissonModel(ReachCurve):
         reach = point.reach()
         if len(point.frequencies) > 1:
             # Estimate the mean from the distribution found in the reach point
-            mu = impressions / min(reach, impressions-1)
+            mu = impressions / min(reach, impressions - 1)
             beta = (mu - 1) * 1.2  # 1.2 is arbitrary
             N = self._exponential_poisson_N_from_beta(impressions, reach, beta)
         else:

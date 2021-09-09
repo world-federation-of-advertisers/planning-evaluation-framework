@@ -173,7 +173,7 @@ class RestrictedPairwiseUnionReachSurfaceTest(absltest.TestCase):
     def test_by_impressions_zero_lambda(self):
         num_publishers = 3
         training_size = 10
-        universe_size = 200000
+        universe_size = 20000
         decay_rate = 0.8
 
         reach_curves = self.generate_sample_reach_curves(

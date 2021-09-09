@@ -166,9 +166,9 @@ class KInflatedGammaPoissonModelTest(absltest.TestCase):
         p2 = ReachPoint([19971], [7993, 4815, 2914, 1759, 1011, 604, 355, 214, 122, 75])
         kgpm2 = KInflatedGammaPoissonModel([p2])
         N2, dist2 = kgpm1._fit_exponential_poisson_model(p2)
-        self.assertAlmostEqual(N2, 8384, delta=100)
+        self.assertAlmostEqual(N2, 8564, delta=1)
         self.assertAlmostEqual(dist2._alpha, 1.0)
-        self.assertAlmostEqual(dist2._beta, 1.696, delta=0.1)
+        self.assertAlmostEqual(dist2._beta, 1.8, delta=0.1)
 
     def test_fit_frequency_one(self):
         data = HeterogeneousImpressionGenerator(10000, gamma_shape=1.0, gamma_scale=3)()

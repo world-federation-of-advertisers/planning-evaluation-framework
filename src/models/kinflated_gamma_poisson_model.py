@@ -53,7 +53,10 @@ class KInflatedGammaPoissonDistribution:
     def __init__(self, alpha: float, beta: float, a: List[float]):
         """k-Inflated Gamma-Poisson with parameters alpha, beta, a. """
         if sum(a) > 1.0:
-            raise ValueError("Inflation values sum to a value greater than 1.")
+            # In theory, it should be an error to create a distribution where
+            # the values of sum to a value > 1, but in practice the easiest
+            # solution is just to scale down the sum to 1.
+            a = np.array(a) / np.sum(a)
 
         self._alpha = alpha
         self._beta = beta
@@ -312,8 +315,8 @@ class KInflatedGammaPoissonModel(ReachCurve):
         of N users where the impression count of each user is distributed
         according to the exponential poisson distribution with parameter beta.
 
-        Under the exponential poisson model, the probability that a
-        user will have n impressions is (1 - p) * p^{n-1}, where p =
+        Under the exponential poisson model, the probability f(n) that a
+        user will have n impressions is f(n) = (1 - p) * p^{n-1}, where p =
         beta/(beta + 1).  This can be worked out by using the
         equivalence between the gamma poisson and the negative
         binomial and setting alpha = r = 1.
@@ -336,10 +339,25 @@ class KInflatedGammaPoissonModel(ReachCurve):
         Returns:
           The expected reach.
         """
+        if I >= (beta + 1) * N:
+            return N
         return N * I * (beta + 1) / (N + beta * (N + I))
 
     def _exponential_poisson_beta(self, I: float, N: float, R: float) -> float:
-        """Estimate beta given impressions, audience size and reach."""
+        """Estimate beta given impressions, audience size and reach.
+
+        This is computed by backsolving the formula for reach used in
+        _exponential_poisson_reach for beta in terms of I, N and R.
+
+        Args:
+          I:  The hypothetical number of impressions purchased.
+          N:  The audience size.
+          R:  The 1+ reach that was obtained.
+        Returns:
+          The corresponding parameter beta of the exponential-poisson
+          model that achieves reach R when I impressions are delivered
+          to an audience of size N.
+        """
         if I * R - N * (I - R) <= 0:
             return 1e3
         return (N * (I - R)) / (I * R - N * (I - R))
@@ -347,8 +365,21 @@ class KInflatedGammaPoissonModel(ReachCurve):
     def _exponential_poisson_N_from_beta(
         self, I: float, R: float, beta: float
     ) -> float:
-        """Estimate audience size from impressions, reach and beta."""
-        if I == R:
+        """Estimate audience size from impressions, reach and beta.
+
+        This is computed by backsolving the formula for reach used in
+        _exponential_poisson_reach for N in terms of I, R and beta.
+
+        Args:
+          I:  The hypothetical number of impressions purchased.
+          R:  The 1+ reach that was obtained.
+          beta: The parameter of the exponential-poisson distribution.
+        Returns:
+          The corresponding parameter N of the exponential-poisson
+          model that achieves reach R when I impressions are delivered
+          to an audience of size N with parameter beta.
+        """
+        if I < R + 1e-3:
             return 100.0 * R
         return -(I * beta * R) / ((beta + 1) * (R - I))
 
@@ -363,7 +394,7 @@ class KInflatedGammaPoissonModel(ReachCurve):
         """
         if mu_scale_factor < 1.0:
             raise ValueError("mu_scale_factor must be at least 1.0")
-        elif I == R:
+        elif I < R + 1e-3:
             return 100.0 * R
         return R * (mu_scale_factor * I - R) / (mu_scale_factor * (I - R))
 

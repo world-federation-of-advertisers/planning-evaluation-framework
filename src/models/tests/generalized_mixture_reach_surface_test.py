@@ -103,23 +103,28 @@ class GeneralizedMixtureReachSurfaceTest(absltest.TestCase):
         for j in range(num_clusters):
             w = 1
             for i in range(num_publishers):
-                w *= 1 - a[j + i * num_clusters] * reach_vector[i] / N
+                w *= 1 - ((a[j + i * num_clusters] * reach_vector[i]) / N)
             reach += 1 - w
+        reach *= N
         return ReachPoint(impressions, [reach], spends)
 
     def test_by_impressions(self):
         universe_size = 200
-        N = universe_size
-        num_publishers = 20
-        num_clusters = 10
+        num_publishers = 8
+        num_clusters = 5
         training_size = 200
         decay_rate = 0.8
+        random_seed = 1
+
+        random_generator = np.random.default_rng(random_seed)
 
         reach_curves = self.generate_sample_reach_curves(
             num_publishers, decay_rate, universe_size
         )
 
-        true_a = np.random.dirichlet(
+        N = max([reach_curve.max_reach for reach_curve in reach_curves]) * 2
+
+        true_a = random_generator.dirichlet(
             np.ones(num_clusters), size=num_publishers
         ).flatten()
 
@@ -135,7 +140,7 @@ class GeneralizedMixtureReachSurfaceTest(absltest.TestCase):
         )
 
         surface = GeneralizedMixtureReachSurface(
-            reach_curves, training_reach_points, num_clusters, N
+            reach_curves, training_reach_points, num_clusters
         )
 
         test_reach_points = self.generate_sample_reach_points(

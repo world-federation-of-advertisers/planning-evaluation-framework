@@ -85,8 +85,8 @@ def generate_experimental_design_config(seed: int = 1) -> Iterable[TrialDescript
         mstrategy = ModelingStrategyDescriptor(
             "single_publisher",
             {},
-            design_parameters["modeling_strategy"],
-            {},
+            design_parameters["modeling_strategy"][0],
+            design_parameters["modeling_strategy"][1],
             "none",
             {},
         )

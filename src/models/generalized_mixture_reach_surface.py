@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Class for modeling Pairwise union reach surface."""
+"""Class for modeling Generalized mixture reach surface."""
 
 import copy
 from typing import List
@@ -24,6 +24,8 @@ from wfa_planning_evaluation_framework.models.reach_surface import ReachSurface
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 
 solvers.options["show_progress"] = False
+THRESHOLD = 10 ** -5
+MAX_ITERATION = 10000
 
 
 class GeneralizedMixtureReachSurface(ReachSurface):
@@ -31,12 +33,17 @@ class GeneralizedMixtureReachSurface(ReachSurface):
 
     GeneralizedMixtureReachSurface models the combined reach with the formula
 
-
-    N * sum_{j=1..c} [1 - prod_{i=1..p} (1-a_i_j r_i / N)] +epsilon
+    ExpectedUnionReach = N * sum_{j=1..c} [1 - prod_{i=1..p} (1-a_i_j r_i / N)]
 
     where :
           all a_i_j >= 0
           sum_{j=1..c} a_i_j=1 for all i.
+
+    Here p is the number of publishers, c is the number of clusters,
+    and N is explained in the docstring.
+
+    reference doc:
+    https://drive.google.com/file/d/16vlwlB6e21cIFOpH0V7-ys6UPjc1wAMy/
 
     """
 
@@ -45,7 +52,6 @@ class GeneralizedMixtureReachSurface(ReachSurface):
         reach_curves: Iterable[ReachCurve],
         reach_points: Iterable[ReachPoint],
         num_clusters: int,
-        N: int,
     ):
         """Constructor for GeneralizedMixtureReachSurface.
 
@@ -54,28 +60,38 @@ class GeneralizedMixtureReachSurface(ReachSurface):
             reach prediction.
           reach_points: A list of ReachPoints to which the model is to be fit.
             This list is of arbitrary length, but it should contain a minimum of
-            p(p-1)/2 points, where p is the number of publishers. Otherwise,
+            c*(p-1)/2 points, where p is the number of publishers. Otherwise,
             there is no guarantee of a unique solution. The reach points
             represent arbitrary points on the reach surface, involving spend at
             multiple advertisers
-          num_clusters: number of clusters. Different users in the same cluster
-            have the same probability to receive a new impression.
+          num_clusters: number of clusters.
           N : A non-negative value that is at least as large as the maximum
-            reach of any of the per-publisher reach functions,
-            e.g., N >= reach_curves[i].max_reach for i=1,2,...,p.
+            reach of any of the per-publisher reach functions, e.g., N >=
+            reach_curves[i].max_reach for i=1,2,...,p.
         """
 
         self._reach_curves = copy.deepcopy(reach_curves)
         self._n = len(reach_points)
         self._p = len(reach_points[0].impressions)
         self._c = num_clusters
-        self._N = N
-        self._n_iter = 10
+        # TODO(uakyol) : Optimize N later.
+        self._N = max([reach_curve.max_reach for reach_curve in reach_curves]) * 2
+        self._initial_a = np.random.dirichlet(
+            np.ones(self._c) / 5, size=self._p
+        ).flatten()
         super().__init__(data=reach_points)
 
     def update_theta_from_a(self, a, r):
         """Udpate theta using equation:
-        theta(x_1, ... ,x_p) = (1 - prod_{i=1..p} (1- x_i)) / sum_{i=1..p} x_i}
+
+        theta_j := theta(a_1_j r_1 / N, ..., a_p_j r_p / N)
+
+        With theta_j, the union reach can be represented as a linear
+        combination of theta_j.
+        Thus if we know all theta_j, we can solve the parameters a by linear
+        regression. Now theta_j also depends on a, and we propose iteratively
+        solving a from theta and updating theta from a.
+        The idea is similar to the classical Expectation-maximization algorithm.
 
         Args:
           a: a length (p * c) vector. Current best guess of a.
@@ -83,8 +99,9 @@ class GeneralizedMixtureReachSurface(ReachSurface):
             each training point.
 
         Returns:
-          A length n list of length c vectors that indicate each
-          theta_j^{(k)}.
+          n x c matrix th, where
+          th[i][j] = theta(a[1][j] r[i][1] / N, a[2][j] r[i][2] / N, ...,
+          a[p][j] r[i][p] / N)
         """
         theta = []
         for k in range(self._n):
@@ -99,16 +116,18 @@ class GeneralizedMixtureReachSurface(ReachSurface):
         """A key intermediate step to fit GM model.
 
         Args:
-          z: a length-n list of length-(p * c) vectors.
+          y: an n x 1 matrix of total reach values
+          r: an n x p matrix of per-publisher reach values
+          th: an n x c matrix of theta values
+          N: total universe size
 
         Returns:
-          a length-(p * c) vector of the optimization problem above
-
-          𝑃=∑𝑛𝑘=1𝑧(𝑘)[𝑧(𝑘)]⊤ ,  𝑞=−∑𝑛𝑘=1𝑦(𝑘)𝑧(𝑘) ,  𝐺=− np.eye( 𝑝×𝑐 ),
-          ℎ= np.zeros(𝑝×𝑐), 𝐴=np.kron(np.eye(c), np.ones(p)), 𝑏=np.ones(c),
-          𝑎=(𝑎11,…,𝑎1𝑐,…,𝑎𝑝1,…,𝑎𝑝𝑐), 𝑧=(𝑧11,…,𝑧1𝑐,…,𝑧𝑝1,…,𝑧𝑝𝑐).
+          a: a c x p matrix that minimizes minimizes
+          sum_{k=1..n} [ y^k - sum_{i=1..p} sum_{j=1..c} a_i_j z_i_j^k} ]^2
+          subject to the constraints that a[i][j] >= 0 and row sums are one.
         """
-        P = matrix(
+
+        self._P = matrix(
             sum(
                 [
                     np.matmul(
@@ -119,15 +138,35 @@ class GeneralizedMixtureReachSurface(ReachSurface):
                 ]
             )
         )
-        q = -matrix(sum(self._data[k].reach() * z[k] for k in range(self._n)))
+        self._q = -matrix(
+            sum((self._data[k].reach() / self._N) * z[k] for k in range(self._n))
+        )
         G = -matrix(np.eye(self._p * self._c))
         h = matrix(np.zeros(self._p * self._c))
         A = matrix(np.kron(np.eye(self._p), np.ones(self._c)))
         b = matrix(np.ones(self._p))
-        res = solvers.qp(P, q, G, h, A, b)
+        res = solvers.qp(self._P, self._q, G, h, A, b)
         if show_status:
             print(res["status"])
         return np.array(res["x"]).flatten()
+
+    def get_z_from_theta(self, theta, r):
+        """Calculate intermidiate value z.
+
+        Args:
+          theta: a length n list of length c vectors. Current best guess of
+            theta.
+          r: a length n list of length p vectors. Single publisher reaches for
+            each training point.
+
+        Returns:
+          a length-n list of length-(p * c) vectors indicating each r_i * theta_j / N for each training point.
+        """
+        return [
+            np.matmul(r[k].reshape(self._p, 1), theta[k].reshape(1, self._c)).flatten()
+            / self._N
+            for k in range(self._n)
+        ]
 
     def update_a_from_theta(self, theta, r):
         """Udpate theta.
@@ -144,15 +183,11 @@ class GeneralizedMixtureReachSurface(ReachSurface):
         z = self.get_z_from_theta(theta, r)
         return self.solve_a_given_z(z)
 
-    def get_z_from_theta(self, theta, r):
-        z = []
-        for k in range(self._n):
-            z_k = np.zeros(self._p * self._c)
-            for i in range(self._p):
-                for j in range(self._c):
-                    z_k[j + i * self._c] = r[k][i] * theta[k][j] / self._N
-            z.append(z_k)
-        return z
+    def _loss(self, a):
+        return (
+            np.matmul(np.matmul(np.transpose(a), self._P), a)
+            + np.matmul(np.transpose(self._q), a)
+        )[0]
 
     def _fit(self) -> None:
         reach_vectors = np.array(
@@ -161,16 +196,20 @@ class GeneralizedMixtureReachSurface(ReachSurface):
                 for reach_point in self._data
             ]
         )
-        cur_a = np.random.dirichlet(np.ones(self._c) / 5, size=self._p).flatten()
-        cur_theta = self.update_theta_from_a(cur_a, reach_vectors)
-        for _ in range(self._n_iter):
-            z = self.get_z_from_theta(cur_theta, reach_vectors)
-            cur_a = self.update_a_from_theta(cur_theta, reach_vectors)
-            cur_theta = self.update_theta_from_a(cur_a, reach_vectors)
-        self.a = cur_a
 
-    def by_spend(self, spend: Iterable[float], max_frequency: int = 1) -> ReachPoint:
-        return
+        cur_a = self._initial_a.copy()
+        cur_theta = self.update_theta_from_a(cur_a, reach_vectors)
+        old_loss = float("inf")
+
+        for iter in range(MAX_ITERATION):
+            cur_a = self.update_a_from_theta(cur_theta, reach_vectors)
+            new_loss = self._loss(cur_a)
+            loss_improvement = old_loss - new_loss
+            if loss_improvement < THRESHOLD:
+                self.a = cur_a
+                return
+            cur_theta = self.update_theta_from_a(cur_a, reach_vectors)
+            old_loss = new_loss
 
     def by_impressions(
         self, impressions: Iterable[int], max_frequency: int = 1
@@ -181,6 +220,7 @@ class GeneralizedMixtureReachSurface(ReachSurface):
         for j in range(self._c):
             w = 1
             for i in range(self._p):
-                w *= 1 - self.a[j + i * self._c] * reach_vector[i] / self._N
+                w *= 1 - ((self.a[j + i * self._c] * reach_vector[i]) / self._N)
             reach += 1 - w
+        reach *= self._N
         return ReachPoint(impressions, [reach])

@@ -19,6 +19,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 from unittest.mock import DEFAULT
 from absl.testing import absltest
+from absl.testing import parameterized
 import numpy as np
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.models.reach_surface import ReachSurface
@@ -43,7 +44,7 @@ class LinearCappedReachCurve(ReachCurve):
         return ReachPoint(impressions, kplus_frequencies)
 
 
-class RestrictedPairwiseUnionReachSurfaceTest(absltest.TestCase):
+class RestrictedPairwiseUnionReachSurfaceTest(parameterized.TestCase):
     def assertPointsAlmostEqualToPrediction(
         self, surface, reach_points, tolerance=0.03
     ):
@@ -146,6 +147,15 @@ class RestrictedPairwiseUnionReachSurfaceTest(absltest.TestCase):
         self.assertTrue(feasiblity(lbd))
         lbd[0] = B + 0.1
         self.assertTrue(not feasiblity(lbd))
+
+    @parameterized.parameters(
+        [RestrictedPairwiseUnionReachSurface._truncated_uniform_initial_lbd],
+        [RestrictedPairwiseUnionReachSurface._scaled_from_simplex_initial_lbd],
+    )
+    def test_init_lbd_sampler(self, init_lbd_sampler):
+        sample = [init_lbd_sampler(10) for _ in range(30)]
+        feasiblity = RestrictedPairwiseUnionReachSurface._check_lbd_feasiblity
+        self.assertTrue(all([feasiblity(s) for s in sample]))
 
     def test_by_impressions(self):
         num_publishers = 3

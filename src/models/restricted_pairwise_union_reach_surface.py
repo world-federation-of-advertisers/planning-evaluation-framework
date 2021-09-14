@@ -54,21 +54,21 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
     estimate, a_ij, indicates the interaction between publishers i and j.  These
     coefficients are subject to constraints:
     (i) a_ij >= 0 for each i, j (ii) a_ii = 0 for each i
-    (iii) sum_j a_ij <= 1 for each i (iv) sum_i a_ij <= 1 for each j
+    (iii) a_ij = a_ji for each i, j (iv) sum_j a_ij <= 1 for each i
     to guarantee consistency criteria of the fitted model.
 
     The restricted pairwise union overlap model inherits the pairwise model form
     and the constraints, and just further assumes that there exist vector lbd
     such that a_ij = lbd_i * lbd_j for each i, j.  In this way, the model
-    degrees of freedom is reduced from p^2 - p to p, where p is the number of
-    publishers.  As such, the model can be used when the number of training
+    degrees of freedom is reduced from (p-1)(p-2)/2 to p, where p is the number
+    of publishers.  As such, the model can be used when the number of training
     points is small, like barely above p.
 
     While the model degrees of freedom is reduced, the restricted pairwise union
     overlap model becomes non-linear on the coefficients lbd.  It is no longer
     fittable using quadratic programming as we did for the pairwise union
     overlap model.  Nevertheless, the restricted pairwise union overlap model
-    can be efficiently fitted using a coordinate descent algorithm.  We can
+    can be efficiently fit using a coordinate descent algorithm.  We can
     iteratively optimize each coordinate of lbd while fixing other coordinates.
     Each iteration can be simply implemented via fitting a simple linear
     regression.
@@ -231,10 +231,7 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
         # The above line follows equation (4) in the algorithm description doc.
         if lbd_i_hat < 0:
             return 0
-        bound = self._get_feasible_bound(lbd, i)
-        if lbd_i_hat > bound:
-            return bound
-        return lbd_i_hat
+        return min(lbd_i_hat, self._get_feasible_bound(lbd, i))
 
     @classmethod
     def _compute_u(cls, lbd: List[float], i: int, D: np.array) -> float:

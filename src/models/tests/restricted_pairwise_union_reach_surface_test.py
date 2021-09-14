@@ -84,8 +84,7 @@ class RestrictedPairwiseUnionReachSurfaceTest(parameterized.TestCase):
         ]
 
     def generate_sample_matrix_a(self, num_publishers, lbd_const=0):
-        lbd = np.array([[lbd_const] for _ in range(num_publishers)])
-
+        lbd = [lbd_const] * num_publishers
         true_a = np.ones(num_publishers * num_publishers)
         for i in range(num_publishers):
             for j in range(num_publishers):
@@ -121,7 +120,7 @@ class RestrictedPairwiseUnionReachSurfaceTest(parameterized.TestCase):
         lbd2 = [1, 1, 1]
         feasiblity = RestrictedPairwiseUnionReachSurface._check_lbd_feasiblity
         self.assertTrue(feasiblity(lbd1))
-        self.assertTrue(not feasiblity(lbd2))
+        self.assertFalse(feasiblity(lbd2))
 
     def test_compute_u(self):
         lbd = [0.2, 0.3, 0.4]

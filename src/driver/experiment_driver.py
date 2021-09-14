@@ -17,8 +17,8 @@ Runs a collection of experiments against a collection of data sets,
 writing the output as a DataFrame in CSV format.
 
 Usage:
-
-  python3 experiment_driver.py \
+  Local machine without Apache Beam
+    python3 experiment_driver.py \
     --data_design_dir=<data_design_dir> \
     --experimental_design=<experimental_design> \
     --output_file=<output_file> \
@@ -26,6 +26,36 @@ Usage:
     --seed=<random_seed> \
     --cores=<number_of_cores> \
     [--analysis_type=single_pub]]
+
+  DirectRuuner:
+    python3 experiment_driver.py \
+    --data_design_dir=<data_design_dir> \
+    --experimental_design=<experimental_design> \
+    --output_file=<output_file> \
+    --intermediates_dir=<intermediates_dir> \
+    --seed=<random_seed> \
+    --cores=<number_of_cores> \
+    [--analysis_type=single_pub]]
+    --use_apache_beam \
+    --runner=direct \
+    --direct_running_mode=multi_processing
+
+  DataflowRunner:
+    python3 experiment_driver.py \
+    --data_design_dir=gs://<bucket_name>/<subpath/to/data_design_dir> \
+    --experimental_design=gs://<bucket_name>/<subpath/to/experimental_design_dir> \
+    --output_file=<output_file> \
+    --intermediates_dir=gs://<bucket_name>/<subpath/to/intermediates_dir> \
+    --seed=<random_seed> \
+    --cores=<number_of_cores> \
+    [--analysis_type=single_pub]]
+    --use_apache_beam \
+    --runner=DataflowRunner \
+    --region=<region> \
+    --project=<project_id> \
+    --staging_location=gs://<bucket_name>/<subpath/to/staging_dir> \
+    --setup_file <path/to/setup.py> \
+    --extra_package=<path/to/wfa_cardinality_estimation_evaluation_framework-0.0.tar.gz>
 
 where
 
@@ -69,12 +99,17 @@ where
 
 from absl import app
 from absl import flags
+import argparse
 import importlib.util
 import math
 import numpy as np
 import pandas as pd
 import sys
 from typing import Iterable
+
+from cloudpathlib import CloudPath
+from apache_beam.options.pipeline_options import PipelineOptions
+
 from wfa_planning_evaluation_framework.data_generators.data_design import DataDesign
 from wfa_planning_evaluation_framework.driver.experimental_design import (
     ExperimentalDesign,
@@ -84,23 +119,23 @@ from wfa_planning_evaluation_framework.driver.trial_descriptor import (
 )
 
 
-FLAGS = flags.FLAGS
+# FLAGS = flags.FLAGS
 
-flags.DEFINE_string("data_design_dir", None, "Directory containing the data design")
-flags.DEFINE_string(
-    "experimental_design", None, "Name of python file containing experimental design."
-)
-flags.DEFINE_string(
-    "output_file", None, "Name of file where output DataFrame will be written."
-)
-flags.DEFINE_string(
-    "intermediates_dir", None, "Directory where intermediate results will be stored."
-)
-flags.DEFINE_integer("seed", 1, "Seed for the np.random.Generator.")
-flags.DEFINE_integer("cores", 1, "Number of cores to use for multithreading.")
-flags.DEFINE_string(
-    "analysis_type", "", "Specify single_pub if this is a single publisher analysis."
-)
+# flags.DEFINE_string("data_design_dir", None, "Directory containing the data design")
+# flags.DEFINE_string(
+#     "experimental_design", None, "Name of python file containing experimental design."
+# )
+# flags.DEFINE_string(
+#     "output_file", None, "Name of file where output DataFrame will be written."
+# )
+# flags.DEFINE_string(
+#     "intermediates_dir", None, "Directory where intermediate results will be stored."
+# )
+# flags.DEFINE_integer("seed", 1, "Seed for the np.random.Generator.")
+# flags.DEFINE_integer("cores", 1, "Number of cores to use for multithreading.")
+# flags.DEFINE_string(
+#     "analysis_type", "", "Specify single_pub if this is a single publisher analysis."
+# )
 
 
 class ExperimentDriver:
@@ -124,8 +159,10 @@ class ExperimentDriver:
         self._analysis_type = analysis_type
         self._cores = cores
 
-    def execute(self) -> pd.DataFrame:
+    def execute(self, use_apache_beam, pipeline_options) -> pd.DataFrame:
         """Performs all experiments defined in an experimental design."""
+        import time
+        tic = time.perf_counter()
         data_design = DataDesign(self._data_design_dir)
         experiments = list(self._fetch_experiment_list())
         experimental_design = ExperimentalDesign(
@@ -137,8 +174,23 @@ class ExperimentDriver:
             analysis_type=self._analysis_type,
         )
         experimental_design.generate_trials()
-        result = experimental_design.load()
-        result.to_csv(self._output_file)
+        toc = time.perf_counter()
+        print(f"=============Reading all datasets takes {toc - tic:0.4f} seconds=============")
+
+        result = experimental_design.load(
+            use_apache_beam=use_apache_beam,
+            pipeline_options=pipeline_options,
+        )
+
+        if self._output_file.startswith("gs://"):
+            output_cloud_path = CloudPath(self._output_file)
+            output_cloud_path.write_text(result.to_csv(index=False))
+        else:
+            result.to_csv(self._output_file, index=False)
+
+        from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
+        print(DataSet.read_data_set.cache_info())
+
         return result
 
     def _fetch_experiment_list(self) -> Iterable[TrialDescriptor]:
@@ -152,17 +204,87 @@ class ExperimentDriver:
         return module.generate_experimental_design_config(seed=self._seed)
 
 
-def main(argv):
-    experiment_driver = ExperimentDriver(
-        FLAGS.data_design_dir,
-        FLAGS.experimental_design,
-        FLAGS.output_file,
-        FLAGS.intermediates_dir,
-        FLAGS.seed,
-        FLAGS.cores,
-        FLAGS.analysis_type,
+def create_arg_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--data_design_dir",
+        dest="data_design_dir",
+        required=True,
+        help="Directory containing the data design.",
     )
-    experiment_driver.execute()
+    parser.add_argument(
+        "--experimental_design",
+        dest="experimental_design",
+        required=True,
+        help="Name of python file containing experimental design.",
+    )
+    parser.add_argument(
+        "--output_file",
+        dest="output_file",
+        required=True,
+        help="Name of file where output DataFrame will be written.",
+    )
+    parser.add_argument(
+        "--intermediates_dir",
+        dest="intermediates_dir",
+        required=True,
+        help="Directory where intermediate results will be stored.",
+    )
+    parser.add_argument(
+        "--seed",
+        dest="seed",
+        type=int,
+        default=1,
+        help="Seed for the np.random.Generator.",
+    )
+    parser.add_argument(
+        "--cores",
+        dest="cores",
+        type=int,
+        default=1,
+        help="Number of cores to use for multithreading.",
+    )
+    parser.add_argument(
+        "--analysis_type",
+        dest="analysis_type",
+        default="",
+        help="Specify single_pub if this is a single publisher analysis.",
+    )
+    parser.add_argument(
+        "--use_apache_beam",
+        dest="use_apache_beam",
+        action="store_true",
+        help="Use Apache Beam.",
+    )
+    
+    return parser
+
+
+def main(argv):
+    parser = create_arg_parser()
+    known_args, pipeline_args = parser.parse_known_args(argv)
+
+    experiment_driver = ExperimentDriver(
+        known_args.data_design_dir,
+        known_args.experimental_design,
+        known_args.output_file,
+        known_args.intermediates_dir,
+        known_args.seed,
+        known_args.cores,
+        known_args.analysis_type,
+    )
+
+    pipeline_args.extend(
+        [
+            f"--temp_location={known_args.intermediates_dir}",
+            f"--direct_num_workers={known_args.cores}",
+        ]
+    )
+    pipeline_options = PipelineOptions(pipeline_args)
+    experiment_driver.execute(
+        known_args.use_apache_beam, 
+        pipeline_options, 
+    )
 
 
 if __name__ == "__main__":

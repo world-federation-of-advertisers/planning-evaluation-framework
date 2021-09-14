@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Dict
 from typing import Iterable
 from typing import List
+from functools import lru_cache
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
 )
@@ -54,7 +55,9 @@ class DataSet:
             such as "homog_p=10_rep=3".  If no name is given, then a random
             digit string is assigned as the name.
         """
+        # TODO: Resolve issue of using deepcopy in Dataflow mode
         self._data = deepcopy(publisher_data_list)
+        # self._data = publisher_data_list
 
         total_audience = set()
         for pub in self._data:
@@ -211,6 +214,7 @@ class DataSet:
                 file.close()
 
     @classmethod
+    @lru_cache(maxsize=128)
     def read_data_set(cls, dirpath: str) -> "DataSet":
         """Reads a DataSet from disk.
 
@@ -224,18 +228,22 @@ class DataSet:
         Returns:
           The DataSet object representing the contents of this directory.
         """
+        if dirpath.startswith("gs://"):
+            from cloudpathlib import CloudPath as Path
+        else:
+            from pathlib import Path
+
         pdf_list = []
-        for f in sorted(listdir(dirpath)):
-            filepath = join(dirpath, f)
-            if isfile(filepath):
-                with open(filepath) as file:
+        dirpath = Path(dirpath)
+        for filepath in sorted(dirpath.glob("*")):
+            if filepath.is_file():
+                with filepath.open() as file:
                     try:
                         pdf = PublisherData.read_publisher_data(file)
-                        pdf.name = f
+                        pdf.name = filepath
                         pdf_list.append(pdf)
                     except (ValueError, RuntimeError) as e:
                         raise RuntimeError(
                             "In publisher file {}".format(filepath)
                         ) from e
-        name = dirpath.split("/")[-1]
-        return cls(pdf_list, name)
+        return cls(pdf_list, dirpath.name)

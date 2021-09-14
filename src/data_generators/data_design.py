@@ -39,12 +39,18 @@ class DataDesign:
         """
         self._dirpath = dirpath
         self._data_set_names = set()
-        self._data_sets = WeakValueDictionary()
+        # self._data_sets = WeakValueDictionary()
 
-        Path(dirpath).mkdir(parents=True, exist_ok=True)
-        for dir in sorted(listdir(dirpath)):
-            if isdir(join(dirpath, dir)):
-                self._data_set_names.add(dir)
+        if dirpath.startswith("gs://"):
+            from cloudpathlib import CloudPath as Path
+        else:
+            from pathlib import Path
+
+        dirpath = Path(dirpath)
+        dirpath.mkdir(parents=True, exist_ok=True)
+        for p in sorted(dirpath.glob("*")):
+            if p.is_dir():
+                self._data_set_names.add(p.name)
 
     @property
     def count(self) -> int:
@@ -58,10 +64,11 @@ class DataDesign:
 
     def by_name(self, name: str) -> DataSet:
         """Returns the DataSet having the given name."""
-        if not name in self._data_sets:
-            dataset = DataSet.read_data_set(join(self._dirpath, name))
-            self._data_sets[name] = dataset
-        return self._data_sets[name]
+        # if not name in self._data_sets:
+        #     dataset = DataSet.read_data_set(join(self._dirpath, name))
+        #     self._data_sets[name] = dataset
+        # return self._data_sets[name]
+        return DataSet.read_data_set(join(self._dirpath, name))
 
     def add(self, data_set: DataSet) -> None:
         """Adds a DataSet to this DataDesign."""

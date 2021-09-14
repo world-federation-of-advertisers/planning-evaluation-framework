@@ -23,7 +23,6 @@ import hashlib
 import numpy as np
 import pandas as pd
 from os.path import isfile, join
-from pathlib import Path
 import traceback
 from typing import List
 from typing import NamedTuple
@@ -56,6 +55,7 @@ from wfa_planning_evaluation_framework.driver.trial_descriptor import (
 from wfa_planning_evaluation_framework.driver.test_point_aggregator import (
     aggregate,
     aggregate_on_exception,
+    AGGREGATORS,
 )
 
 # The output dataframe will contain the estimation error for each of the
@@ -132,8 +132,23 @@ class ExperimentalTrial:
         rng = np.random.default_rng(seed=seed)
         np.random.seed(seed)
 
+        if self._experiment_dir.startswith("gs://"):
+            from cloudpathlib import CloudPath as Path
+            # When there is no credential provided, GSClients of cloudpathlib
+            # will create an anonymous client which can't access non-public
+            # buckets. On the other hand, Clients in google.cloud.storage will
+            # fall back to the default inferred from the environment. As a
+            # result, we first create a Client from google.cloud.storage and
+            # then use it to initiate a GSClient object.
+            from cloudpathlib import GSClient
+            from google.cloud import storage
+            client = GSClient(storage_client=storage.Client())
+            client.set_as_default_client()
+        else:
+            from pathlib import Path
+
         trial_results_path = self._compute_trial_results_path()
-        if isfile(trial_results_path):
+        if Path(trial_results_path).is_file():
             logging.vlog(2, "  --> Returning previously computed result")
             return pd.read_csv(trial_results_path)
 
@@ -144,15 +159,15 @@ class ExperimentalTrial:
         pending_path = Path(
             f"{experiment_dir_parent}/pending/{hashlib.md5(trial_results_path.encode()).hexdigest()}"
         )
-        Path(pending_path).parent.absolute().mkdir(parents=True, exist_ok=True)
+        Path(pending_path).parent.mkdir(parents=True, exist_ok=True)
         Path(pending_path).write_text(
             f"{datetime.now()}\n{self._data_set_name}\n{self._trial_descriptor}\n\n"
         )
 
-        self._dataset = self._data_design.by_name(self._data_set_name)
-        self._privacy_tracker = PrivacyTracker()
+        dataset = self._data_design.by_name(self._data_set_name)
+        privacy_tracker = PrivacyTracker()
         halo = HaloSimulator(
-            self._dataset, self._trial_descriptor.system_params, self._privacy_tracker
+            dataset, self._trial_descriptor.system_params, privacy_tracker
         )
         privacy_budget = self._trial_descriptor.experiment_params.privacy_budget
         modeling_strategy = (
@@ -165,7 +180,7 @@ class ExperimentalTrial:
             )
             test_points = list(
                 self._trial_descriptor.experiment_params.generate_test_points(
-                    self._dataset, rng
+                    dataset, rng
                 )
             )
             true_reach = [
@@ -201,7 +216,7 @@ class ExperimentalTrial:
 
         independent_vars = self._make_independent_vars_dataframe()
         privacy_tracking_vars = self._make_privacy_tracking_vars_dataframe(
-            self._privacy_tracker
+            privacy_tracker
         )
         result = pd.concat(
             [
@@ -212,8 +227,8 @@ class ExperimentalTrial:
             ],
             axis=1,
         )
-        Path(trial_results_path).parent.absolute().mkdir(parents=True, exist_ok=True)
-        result.to_csv(trial_results_path)
+        Path(trial_results_path).parent.mkdir(parents=True, exist_ok=True)
+        result.to_csv(trial_results_path, index=False)
 
         Path(pending_path).unlink()
 
@@ -221,7 +236,7 @@ class ExperimentalTrial:
 
     def _compute_trial_results_path(self) -> str:
         """Returns path of file where the results of this trial are stored."""
-        return f"{self._experiment_dir}/{self._data_set_name}/{self._trial_descriptor}"
+        return f"{self._experiment_dir}/{self._data_set_name}/{self._trial_descriptor}.csv"
 
     def _make_independent_vars_dataframe(self) -> pd.DataFrame:
         """Returns a 1-row DataFrame of independent variables for this trial."""
@@ -317,3 +332,77 @@ class ExperimentalTrial:
         results["max_nonzero_frequency_from_halo"] = [np.NaN]
         results["max_nonzero_frequency_from_data"] = [np.NaN]
         return pd.DataFrame(results)
+
+
+NUM_DIRS = 100
+
+class Trial:
+    def __init__(
+        self,
+        num_trials: int,
+        experiment_dir: str,
+        trial_name: str,
+    ):
+        self._num_trials = num_trials
+        self._experiment_dir = experiment_dir
+        self._trial_name = trial_name
+
+    def evaluate(self, seed: int) -> pd.DataFrame:
+        logging.vlog(2, f"num_trials {self._num_trials}")
+        logging.vlog(2, f"trial_name {self._trial_name}")
+
+        if self._experiment_dir.startswith("gs://"):
+            from cloudpathlib import CloudPath as Path
+            # When there is no credential provided, GSClients of cloudpathlib
+            # will create an anonymous client which can't access non-public
+            # buckets. On the other hand, Clients in google.cloud.storage will
+            # fall back to the default inferred from the environment. As a
+            # result, we first create a Client from google.cloud.storage and
+            # then use it to initiate a GSClient object.
+            from cloudpathlib import GSClient
+            from google.cloud import storage
+            client = GSClient(storage_client=storage.Client())
+            client.set_as_default_client()
+        else:
+            from pathlib import Path
+
+        trial_results_path = self._compute_trial_results_path()
+        if Path(trial_results_path).is_file():
+            logging.vlog(2, "  --> Returning previously computed result")
+            return pd.read_csv(trial_results_path)
+
+        logging.vlog(2, "  --> Evaluating models")
+
+        # Temp debug directory
+        experiment_dir_parent = Path(self._experiment_dir).parent
+        pending_path = Path(
+            f"{experiment_dir_parent}/pending/{hashlib.md5(trial_results_path.encode()).hexdigest()}"
+        )
+        Path(pending_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(pending_path).write_text(
+            f"{datetime.now()}\n{self._trial_name}\n{self._num_trials}\n\n"
+        )
+        try:
+            stats = {
+                key: list(np.random.uniform(low=0, high=100, size=1))
+                for key in AGGREGATORS
+            }
+            result = pd.DataFrame(data=stats)
+        except Exception as inst:
+            if not logging.vlog_is_on(2):
+                logging.vlog(2, f"num_trials {self._num_trials}")
+                logging.vlog(2, f"trial_name {self._trial_name}")
+            logging.vlog(1, f"Modeling failure: {inst}")
+            logging.vlog(2, traceback.format_exc())
+            result = aggregate_on_exception(inst)
+
+        Path(trial_results_path).parent.mkdir(parents=True, exist_ok=True)
+        result.to_csv(trial_results_path, index=False)
+
+        Path(pending_path).unlink()
+
+        return result
+
+    def _compute_trial_results_path(self) -> str:
+        """Returns path of file where the results of this trial are stored."""
+        return f"{self._experiment_dir}/{(self._num_trials - 1) // NUM_DIRS}/{self._trial_name}.csv"

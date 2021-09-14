@@ -24,7 +24,11 @@ from pathos.multiprocessing import ProcessPool, cpu_count
 from tqdm import tqdm
 from typing import List
 from typing import Tuple
+import itertools
 
+import apache_beam as beam
+from apache_beam.options.pipeline_options import PipelineOptions
+from cloudpathlib import CloudPath
 
 from wfa_planning_evaluation_framework.driver.trial_descriptor import TrialDescriptor
 from wfa_planning_evaluation_framework.data_generators.data_design import (
@@ -35,7 +39,23 @@ from wfa_planning_evaluation_framework.driver.experiment import (
 )
 from wfa_planning_evaluation_framework.driver.experimental_trial import (
     ExperimentalTrial,
+    Trial
 )
+
+
+class CombineDataFrameFn(beam.CombineFn):
+    def create_accumulator(self):
+        return []
+
+    def add_input(self, accumulator, input):
+        accumulator.append(input)
+        return accumulator
+
+    def merge_accumulators(self, accumulators):
+        return list(itertools.chain.from_iterable(accumulators))
+
+    def extract_output(self, accumulator):
+        return pd.concat(accumulator)
 
 
 class ExperimentalDesign:
@@ -106,6 +126,14 @@ class ExperimentalDesign:
         all_trials = self._remove_duplicates(all_trials)
         self._all_trials = all_trials
         return all_trials
+    # def generate_trials(self) -> List[Trial]:
+    #     """Generates list of Trial objects associated to this experiment."""
+    #     all_trials = [
+    #         Trial(i + 1, self._experiment_dir, f"trial{i}")
+    #         for i in range(100)
+    #     ]
+    #     self._all_trials = all_trials
+    #     return all_trials
 
     def _evaluate_all_trials_in_parallel(self) -> None:
         """Evaluates all trials in parallel."""
@@ -120,11 +148,45 @@ class ExperimentalDesign:
         with ProcessPool(self._cores) as pool:
             list(tqdm(pool.uimap(process_trial, range(ntrials)), total=ntrials))
 
-    def load(self) -> pd.DataFrame:
+    def load(
+            self, 
+            use_apache_beam: bool, 
+            pipeline_options: PipelineOptions, 
+        ) -> pd.DataFrame:
         """Returns a DataFrame of all results from this ExperimentalDesign."""
         if not self._all_trials:
             self.generate_trials()
-        if self._cores != 1:
+
+        temp_path = pipeline_options.get_all_options()["temp_location"]
+        temp_result_path = temp_path + "/temp_result.csv"
+        import time
+        if use_apache_beam:
+            tic = time.perf_counter()
+            with beam.Pipeline(options=pipeline_options) as pipeline:
+                (
+                    pipeline
+                    | beam.Create(self._all_trials)
+                    | "Evaluate trails" >> beam.Map(lambda trial: trial.evaluate(self._seed))
+                    | "Combine results" >> beam.CombineGlobally(CombineDataFrameFn())
+                    | "Write combined result" >> beam.Map(lambda df: df.to_csv(temp_result_path, index=False))
+                )
+            toc = time.perf_counter()
+            print(f"=======================Pipeline run takes {toc - tic:0.4f} seconds=======================")
+        elif self._cores != 1:
             self._evaluate_all_trials_in_parallel()
-        all_results = [trial.evaluate(self._seed) for trial in self._all_trials]
-        return pd.concat(all_results)
+
+        tic = time.perf_counter()
+        result = None
+        if temp_result_path.startswith("gs://"):
+            temp_result_cloud_path = CloudPath(temp_result_path)
+            with temp_result_cloud_path.open() as file:
+                result = pd.read_csv(file)
+            toc = time.perf_counter()
+            print(f"=============Reading result file takes {toc - tic:0.4f} seconds=============")
+        
+        else:
+            result = pd.concat(trial.evaluate(self._seed) for trial in self._all_trials)
+            toc = time.perf_counter()
+            print(f"=============Reading .csv files takes {toc - tic:0.4f} seconds=============")
+
+        return result

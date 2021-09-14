@@ -294,6 +294,19 @@ class ExperimentalTrial:
                 relative_error = np.NaN
             column_name = f"relative_error_at_{int(r*100):03d}"
             results[column_name] = [relative_error]
+
+        # Also, record the maximum frequency in the actual data and the
+        # data produced by Halo.
+        training_point = reach_surface._data[0]
+        results["max_nonzero_frequency_from_halo"] = [
+            max(
+                [(i + 1) for i, f in enumerate(training_point._kplus_reaches) if f != 0]
+            )
+        ]
+        data_point = halo.true_reach_by_spend(halo.campaign_spends)
+        results["max_nonzero_frequency_from_data"] = [
+            max([(i + 1) for i, f in enumerate(data_point._kplus_reaches) if f != 0])
+        ]
         return pd.DataFrame(results)
 
     def _single_publisher_fractions_dataframe_on_exception(self) -> pd.DataFrame:
@@ -301,4 +314,6 @@ class ExperimentalTrial:
         for r in SINGLE_PUBLISHER_FRACTIONS:
             column_name = f"relative_error_at_{int(r*100):03d}"
             results[column_name] = [np.NaN]
+        results["max_nonzero_frequency_from_halo"] = [np.NaN]
+        results["max_nonzero_frequency_from_data"] = [np.NaN]
         return pd.DataFrame(results)

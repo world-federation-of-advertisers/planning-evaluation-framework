@@ -39,7 +39,6 @@ class ReachSurface:
         if not all([len(point.impressions) == dim for point in data]):
             raise ValueError("Not all input points have the same dimensionality.")
         self._max_reach = max_reach
-        self._fit()
 
     def _fit(self) -> None:
         """Fits a model to the data that was provided in the constructor."""

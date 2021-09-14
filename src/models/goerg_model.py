@@ -37,6 +37,7 @@ class GoergModel(ReachCurve):
           max_reach:  Optional.  If specified, the maximum possible reach that can
             be achieved.
         """
+        super().__init__(data)
         if len(data) != 1:
             raise ValueError("Exactly one ReachPoint must be specified")
         if data[0].impressions[0] < 0.001:

@@ -165,13 +165,13 @@ class ExperimentalDesign:
             with beam.Pipeline(options=pipeline_options) as pipeline:
                 (
                     pipeline
-                    | beam.Create(self._all_trials)
-                    | "Evaluate trails" >> beam.Map(lambda trial: trial.evaluate(self._seed))
+                    | "Create trial inputs" >> beam.Create(self._all_trials)
+                    | "Evaluate trials" >> beam.Map(lambda trial: trial.evaluate(self._seed))
                     | "Combine results" >> beam.CombineGlobally(CombineDataFrameFn())
                     | "Write combined result" >> beam.Map(lambda df: df.to_csv(temp_result_path, index=False))
                 )
             toc = time.perf_counter()
-            print(f"=======================Pipeline run takes {toc - tic:0.4f} seconds=======================")
+            print(f"=============Pipeline run takes {toc - tic:0.4f} seconds=============")
         elif self._cores != 1:
             self._evaluate_all_trials_in_parallel()
 

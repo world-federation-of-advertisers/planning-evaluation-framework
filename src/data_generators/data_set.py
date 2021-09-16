@@ -56,8 +56,8 @@ class DataSet:
             digit string is assigned as the name.
         """
         # TODO: Resolve issue of using deepcopy in Dataflow mode
-        self._data = deepcopy(publisher_data_list)
-        # self._data = publisher_data_list
+        # self._data = deepcopy(publisher_data_list)
+        self._data = publisher_data_list
 
         total_audience = set()
         for pub in self._data:

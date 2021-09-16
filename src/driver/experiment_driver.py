@@ -161,6 +161,7 @@ class ExperimentDriver:
 
     def execute(self, use_apache_beam, pipeline_options) -> pd.DataFrame:
         """Performs all experiments defined in an experimental design."""
+        from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
         import time
         tic = time.perf_counter()
         data_design = DataDesign(self._data_design_dir)
@@ -174,22 +175,26 @@ class ExperimentDriver:
             analysis_type=self._analysis_type,
         )
         experimental_design.generate_trials()
+        print("=============Generated trials=============")
+        print(DataSet.read_data_set.cache_info())
+
         toc = time.perf_counter()
         print(f"=============Reading all datasets takes {toc - tic:0.4f} seconds=============")
-
+        
+        
         result = experimental_design.load(
             use_apache_beam=use_apache_beam,
             pipeline_options=pipeline_options,
         )
+
+        print("=============Loaded=============")
+        print(DataSet.read_data_set.cache_info())
 
         if self._output_file.startswith("gs://"):
             output_cloud_path = CloudPath(self._output_file)
             output_cloud_path.write_text(result.to_csv(index=False))
         else:
             result.to_csv(self._output_file, index=False)
-
-        from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
-        print(DataSet.read_data_set.cache_info())
 
         return result
 

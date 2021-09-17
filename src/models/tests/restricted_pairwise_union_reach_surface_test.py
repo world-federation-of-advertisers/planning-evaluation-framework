@@ -46,7 +46,7 @@ class LinearCappedReachCurve(ReachCurve):
 
 class RestrictedPairwiseUnionReachSurfaceTest(parameterized.TestCase):
     def assertPointsAlmostEqualToPrediction(
-        self, surface, reach_points, tolerance=0.03
+        self, surface, reach_points, tolerance=0.05, msg=""
     ):
         for reach_point in reach_points:
             prediction = (
@@ -58,6 +58,7 @@ class RestrictedPairwiseUnionReachSurfaceTest(parameterized.TestCase):
                 prediction.reach(),
                 reach_point.reach(),
                 delta=reach_point.reach() * tolerance,
+                msg=msg,
             )
 
     def generate_true_reach(self, a, reach_curves, impressions, spends=None):
@@ -157,10 +158,10 @@ class RestrictedPairwiseUnionReachSurfaceTest(parameterized.TestCase):
         self.assertTrue(all([feasiblity(s) for s in sample]))
 
     def test_by_impressions(self):
-        num_publishers = 3
+        num_publishers = 5
         training_size = 10
         universe_size = 20000
-        decay_rate = 0.8
+        decay_rate = 1
 
         reach_curves = self.generate_sample_reach_curves(
             num_publishers, decay_rate, universe_size
@@ -173,17 +174,22 @@ class RestrictedPairwiseUnionReachSurfaceTest(parameterized.TestCase):
         surface = RestrictedPairwiseUnionReachSurface(
             reach_curves, training_reach_points
         )
+        surface._fit()
         test_reach_points = self.generate_sample_reach_points(
             true_a, reach_curves, training_size, universe_size, 2
         )
-        self.assertPointsAlmostEqualToPrediction(surface, training_reach_points)
-        self.assertPointsAlmostEqualToPrediction(surface, test_reach_points)
+        self.assertPointsAlmostEqualToPrediction(
+            surface, training_reach_points, msg="High discrepancy on training points"
+        )
+        self.assertPointsAlmostEqualToPrediction(
+            surface, test_reach_points, msg="High discrepancy on testing points"
+        )
 
     def test_by_impressions_zero_lambda(self):
-        num_publishers = 3
+        num_publishers = 5
         training_size = 10
         universe_size = 20000
-        decay_rate = 0.8
+        decay_rate = 1
 
         reach_curves = self.generate_sample_reach_curves(
             num_publishers, decay_rate, universe_size
@@ -196,6 +202,7 @@ class RestrictedPairwiseUnionReachSurfaceTest(parameterized.TestCase):
         surface = RestrictedPairwiseUnionReachSurface(
             reach_curves, training_reach_points
         )
+        surface._fit()
         test_reach_points = self.generate_sample_reach_points(
             true_a, reach_curves, training_size, universe_size, 2
         )

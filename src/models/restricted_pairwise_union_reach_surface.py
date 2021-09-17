@@ -33,7 +33,7 @@ from wfa_planning_evaluation_framework.models.pairwise_union_reach_surface impor
 # algorithm, as will be used in RestrictedPairwiseUnionReachSurface._define_criteria
 MIN_IMPROVEMENT_PER_ROUND = 1e-3
 MAX_NUM_ROUNDS = 1000
-DISTANCE_TO_THE_WALL = 0.01
+DISTANCE_TO_THE_WALL = 0.1
 NUM_NEAR_THE_WALL = 10
 MIN_NUM_INIT = 30
 MAX_NUM_INIT = 1000
@@ -64,7 +64,7 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
     of publishers.  As such, the model can be used when the number of training
     points is small, like barely above p.
 
-    While the model degrees of freedom is reduced, the restricted pairwise union
+    While the model degrees of freedom are reduced, the restricted pairwise union
     overlap model becomes non-linear on the coefficients lbd.  It is no longer
     fittable using quadratic programming as we did for the pairwise union
     overlap model.  Nevertheless, the restricted pairwise union overlap model
@@ -121,7 +121,7 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
         We then approximate the global optimum as the minimum local-opt-loss
         found so far.
 
-        In addition to the termination criteria, we also specify some maximal
+        In addition to the termination criteria, we also specify some maximum
         or minimum number of iterations in this method.
 
         Args:
@@ -167,7 +167,7 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
         and put them in the lists `self._Ds` and `self._ys`.
         """
         self._ys = []
-        # Will have self._y[l] = sum(single pubs reaches) - union reach in the
+        # Will have self._ys[l] = sum(single pubs reaches) - union reach in the
         # l-th training point
         self._Ds = []
         # Will have self._Ds[l] [i, j] = d_ij^(l), i.e., d_ij at the l-th
@@ -434,7 +434,7 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
             return kth_smallest_loss < (1 + self._distance_to_the_wall) * smallest_loss
 
         while (
-            num_init < self._min_num_init or _close_enough(max_heap)
+            num_init < self._min_num_init or not _close_enough(max_heap)
         ) and num_init < self._max_num_init:
             init_lbd = init_lbd_sampler(self._p)
             local_fit, local_loss, local_converge = self._fit_one_init_lbd(init_lbd)
@@ -459,4 +459,4 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
         """
         a = np.outer(self._fitted_lbd, self._fitted_lbd)
         a -= np.diag(np.diag(a))
-        self._a = a.flatten()
+        self._a = a.flatten() / 2

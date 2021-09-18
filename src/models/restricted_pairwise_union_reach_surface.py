@@ -19,7 +19,7 @@ import numpy as np
 from typing import List, Tuple, Callable
 from numpy.typing import ArrayLike
 from scipy.optimize import minimize
-from heapq import heappushpop
+from heapq import heapify, heappushpop
 import cvxpy as cp
 from cvxopt import solvers
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
@@ -33,7 +33,7 @@ from wfa_planning_evaluation_framework.models.pairwise_union_reach_surface impor
 # algorithm, as will be used in RestrictedPairwiseUnionReachSurface._define_criteria
 MIN_IMPROVEMENT_PER_ROUND = 1e-3
 MAX_NUM_ROUNDS = 1000
-DISTANCE_TO_THE_WALL = 0.1
+DISTANCE_TO_THE_WALL = 0.01
 NUM_NEAR_THE_WALL = 10
 MIN_NUM_INIT = 30
 MAX_NUM_INIT = 1000
@@ -422,6 +422,7 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
         """
         np.random.seed(random_seed)
         max_heap = [-np.Inf] * self._num_near_the_wall
+        heapify(max_heap)
         # A List following the max heap order to save the negative losses to
         # save the smallest k locally optimum losses.
         # We take negative loss simply because we need a min heap to save the
@@ -445,7 +446,8 @@ class RestrictedPairwiseUnionReachSurface(PairwiseUnionReachSurface):
                 self._fitted_lbd = local_fit
                 self._model_success = local_converge
             num_init += 1
-        self._model_success &= _close_enough(max_heap)
+        self._model_success = (local_converge, _close_enough(max_heap))
+        self._k_smallest_losses = sorted([-l for l in max_heap])
 
     def _construct_a_from_lambda(self) -> None:
         """Obtain matrix `a` which will be used for model prediction.

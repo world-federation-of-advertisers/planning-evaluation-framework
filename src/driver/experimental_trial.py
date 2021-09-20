@@ -218,12 +218,14 @@ class ExperimentalTrial:
             predicted_single_inventories = (
                 [c._max_reach for c in self.reach_surface._reach_curves]
                 if result["model_succeeded"].iloc[0]
-                else ""
+                else None
             )
             result["union_inventory_reach"] = union_inventory
             result["true_single_pub_inventory_reaches"] = [true_single_inventories]
             result["predicted_single_pub_inventory_reaches"] = [
                 predicted_single_inventories
+                if result["model_succeeded"].iloc[0]
+                else None
             ]
             result["overlap_rate"] = 1 - union_inventory / sum(true_single_inventories)
             result["inventory_mean_over_prediction_rate"] = (

@@ -107,7 +107,6 @@ import pandas as pd
 import sys
 from typing import Iterable
 
-from cloudpathlib import CloudPath
 from apache_beam.options.pipeline_options import PipelineOptions
 
 from wfa_planning_evaluation_framework.data_generators.data_design import DataDesign
@@ -161,6 +160,13 @@ class ExperimentDriver:
 
     def execute(self, use_apache_beam, pipeline_options) -> pd.DataFrame:
         """Performs all experiments defined in an experimental design."""
+        client = None
+        if self._output_file.startswith("gs://"):
+            from cloudpathlib import GSClient
+            from google.cloud import storage
+            client = GSClient(storage_client=storage.Client())
+            client.set_as_default_client()
+
         from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
         import time
         tic = time.perf_counter()
@@ -181,7 +187,6 @@ class ExperimentDriver:
         toc = time.perf_counter()
         print(f"=============Reading all datasets takes {toc - tic:0.4f} seconds=============")
         
-        
         result = experimental_design.load(
             use_apache_beam=use_apache_beam,
             pipeline_options=pipeline_options,
@@ -191,7 +196,7 @@ class ExperimentDriver:
         print(DataSet.read_data_set.cache_info())
 
         if self._output_file.startswith("gs://"):
-            output_cloud_path = CloudPath(self._output_file)
+            output_cloud_path = client.GSPath(self._output_file)
             output_cloud_path.write_text(result.to_csv(index=False))
         else:
             result.to_csv(self._output_file, index=False)

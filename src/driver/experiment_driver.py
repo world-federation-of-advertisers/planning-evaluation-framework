@@ -95,6 +95,26 @@ where
   cores is an integer specifying the number of cores to be used for
     multithreaded processing.  If cores = 1 (default), then multithreading
     is not used.  If cores < 1, then all available cores are used.
+  use_apache_beam is the flag that indicates whether to use Apache Beam
+    for running the evaluation with either multi-processing or cloud
+    computing.
+  runner is the choice of the backend runner of Apache Beam. Currenly, we
+    only support "direct"/"DirectRunner" and "dataflow"/"DataflowRunner".
+  direct_running_mode is the running mode of DirectRunner. It can be one 
+    of ['in_memory', 'multi_threading', 'multi_processing'].
+  region is used in DataflowRunner mode when using Apache Beam and is the 
+    Google Compute Engine region to create the job. If not set, defaults  
+    to the default region in the current environment. The default region
+    is set via gcloud.
+  project is used in DataflowRunner mode when using Apache Beam and is the
+    project ID for your Google Cloud Project.
+  staging_location is used in DataflowRunner mode when using Apache Beam and 
+    is the Cloud Storage bucket path for staging your binary and any temporary 
+    files. Must be a valid Cloud Storage URL that begins with gs://.
+  setup_file is used in DataflowRunner mode when using Apache Beam and is the
+    path to the setup.py of the current program.
+  extra_package is used in DataflowRunner mode when using Apache Beam and is
+    the path to the tarbal file of wfa_cardinality_estimation_evaluation_framework.
 """
 
 from absl import app
@@ -164,11 +184,13 @@ class ExperimentDriver:
         if self._output_file.startswith("gs://"):
             from cloudpathlib import GSClient
             from google.cloud import storage
+
             client = GSClient(storage_client=storage.Client())
             client.set_as_default_client()
 
         from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
         import time
+
         tic = time.perf_counter()
         data_design = DataDesign(self._data_design_dir)
         experiments = list(self._fetch_experiment_list())
@@ -185,8 +207,10 @@ class ExperimentDriver:
         print(DataSet.read_data_set.cache_info())
 
         toc = time.perf_counter()
-        print(f"=============Reading all datasets takes {toc - tic:0.4f} seconds=============")
-        
+        print(
+            f"=============Reading all datasets takes {toc - tic:0.4f} seconds============="
+        )
+
         result = experimental_design.load(
             use_apache_beam=use_apache_beam,
             pipeline_options=pipeline_options,
@@ -266,7 +290,7 @@ def create_arg_parser():
         action="store_true",
         help="Use Apache Beam.",
     )
-    
+
     return parser
 
 
@@ -292,8 +316,8 @@ def main(argv):
     )
     pipeline_options = PipelineOptions(pipeline_args)
     experiment_driver.execute(
-        known_args.use_apache_beam, 
-        pipeline_options, 
+        known_args.use_apache_beam,
+        pipeline_options,
     )
 
 

@@ -212,6 +212,16 @@ class ExperimentalTrial:
             ],
             axis=1,
         )
+        result["union_inventory_reach"] = self._dataset.maximum_reach
+        result["sum(single_pub_inventory_reach)"] = sum(
+            [p.max_reach for p in self._dataset._data]
+        )
+        result["overlap_rate"] = (
+            1
+            - result["union_inventory_reach"]
+            / result["sum(single_pub_inventory_reach)"]
+        )
+
         Path(trial_results_path).parent.absolute().mkdir(parents=True, exist_ok=True)
         result.to_csv(trial_results_path)
 

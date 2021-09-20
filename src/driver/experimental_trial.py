@@ -212,33 +212,43 @@ class ExperimentalTrial:
             ],
             axis=1,
         )
-        if self._trial_descriptor.modeling_strategy == "m3strategy":
+        if self._trial_descriptor.modeling_strategy.strategy == "m3strategy":
             union_inventory = self._dataset.maximum_reach
             true_single_inventories = [p.max_reach for p in self._dataset._data]
-            predicted_single_inventories = [
-                c._max_reach for c in self.reach_surface._reach_curves
-            ]
+            predicted_single_inventories = (
+                [c._max_reach for c in self.reach_surface._reach_curves]
+                if result["model_succeeded"].iloc[0]
+                else ""
+            )
             result["union_inventory_reach"] = union_inventory
             result["true_single_pub_inventory_reaches"] = [true_single_inventories]
             result["predicted_single_pub_inventory_reaches"] = [
                 predicted_single_inventories
             ]
             result["overlap_rate"] = 1 - union_inventory / sum(true_single_inventories)
-            result["inventory_mean_over_prediction_rate"] = np.mean(
-                [
-                    (p - t) / t
-                    for t, p in zip(
-                        true_single_inventories, predicted_single_inventories
-                    )
-                ]
+            result["inventory_mean_over_prediction_rate"] = (
+                np.mean(
+                    [
+                        (p - t) / t
+                        for t, p in zip(
+                            true_single_inventories, predicted_single_inventories
+                        )
+                    ]
+                )
+                if result["model_succeeded"].iloc[0]
+                else None
             )
-            result["inventory_mean_mis_prediction_rate"] = np.mean(
-                [
-                    abs(p - t) / t
-                    for t, p in zip(
-                        true_single_inventories, predicted_single_inventories
-                    )
-                ]
+            result["inventory_mean_mis_prediction_rate"] = (
+                np.mean(
+                    [
+                        abs(p - t) / t
+                        for t, p in zip(
+                            true_single_inventories, predicted_single_inventories
+                        )
+                    ]
+                )
+                if result["model_succeeded"].iloc[0]
+                else None
             )
 
         Path(trial_results_path).parent.absolute().mkdir(parents=True, exist_ok=True)

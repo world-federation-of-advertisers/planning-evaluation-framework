@@ -160,7 +160,7 @@ class ExperimentalTrial:
         )
         single_publisher_dataframe = pd.DataFrame()
         try:
-            reach_surface = modeling_strategy.fit(
+            self.reach_surface = modeling_strategy.fit(
                 halo, self._trial_descriptor.system_params, privacy_budget
             )
             test_points = list(
@@ -175,7 +175,7 @@ class ExperimentalTrial:
                 for t in test_points
             ]
             fitted_reach = [
-                reach_surface.by_spend(
+                self.reach_surface.by_spend(
                     t, self._trial_descriptor.experiment_params.max_frequency
                 )
                 for t in test_points
@@ -184,7 +184,7 @@ class ExperimentalTrial:
             if self._analysis_type == SINGLE_PUB_ANALYSIS:
                 single_publisher_dataframe = (
                     self._compute_single_publisher_fractions_dataframe(
-                        halo, reach_surface
+                        halo, self.reach_surface
                     )
                 )
         except Exception as inst:
@@ -212,15 +212,34 @@ class ExperimentalTrial:
             ],
             axis=1,
         )
-        result["union_inventory_reach"] = self._dataset.maximum_reach
-        result["sum(single_pub_inventory_reach)"] = sum(
-            [p.max_reach for p in self._dataset._data]
-        )
-        result["overlap_rate"] = (
-            1
-            - result["union_inventory_reach"]
-            / result["sum(single_pub_inventory_reach)"]
-        )
+        if self._trial_descriptor.modeling_strategy == "m3strategy":
+            union_inventory = self._dataset.maximum_reach
+            true_single_inventories = [p.max_reach for p in self._dataset._data]
+            predicted_single_inventories = [
+                c._max_reach for c in self.reach_surface._reach_curves
+            ]
+            result["union_inventory_reach"] = union_inventory
+            result["true_single_pub_inventory_reaches"] = [true_single_inventories]
+            result["predicted_single_pub_inventory_reaches"] = [
+                predicted_single_inventories
+            ]
+            result["overlap_rate"] = 1 - union_inventory / sum(true_single_inventories)
+            result["inventory_mean_over_prediction_rate"] = np.mean(
+                [
+                    (p - t) / t
+                    for t, p in zip(
+                        true_single_inventories, predicted_single_inventories
+                    )
+                ]
+            )
+            result["inventory_mean_mis_prediction_rate"] = np.mean(
+                [
+                    abs(p - t) / t
+                    for t, p in zip(
+                        true_single_inventories, predicted_single_inventories
+                    )
+                ]
+            )
 
         Path(trial_results_path).parent.absolute().mkdir(parents=True, exist_ok=True)
         result.to_csv(trial_results_path)

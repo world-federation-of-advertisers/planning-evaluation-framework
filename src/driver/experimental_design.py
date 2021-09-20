@@ -39,7 +39,7 @@ from wfa_planning_evaluation_framework.driver.experiment import (
 )
 from wfa_planning_evaluation_framework.driver.experimental_trial import (
     ExperimentalTrial,
-    Trial
+    Trial,
 )
 
 
@@ -126,6 +126,7 @@ class ExperimentalDesign:
         all_trials = self._remove_duplicates(all_trials)
         self._all_trials = all_trials
         return all_trials
+
     # def generate_trials(self) -> List[Trial]:
     #     """Generates list of Trial objects associated to this experiment."""
     #     all_trials = [
@@ -149,10 +150,10 @@ class ExperimentalDesign:
             list(tqdm(pool.uimap(process_trial, range(ntrials)), total=ntrials))
 
     def load(
-            self, 
-            use_apache_beam: bool, 
-            pipeline_options: PipelineOptions, 
-        ) -> pd.DataFrame:
+        self,
+        use_apache_beam: bool,
+        pipeline_options: PipelineOptions,
+    ) -> pd.DataFrame:
         """Returns a DataFrame of all results from this ExperimentalDesign."""
         if not self._all_trials:
             self.generate_trials()
@@ -160,18 +161,23 @@ class ExperimentalDesign:
         temp_path = pipeline_options.get_all_options()["temp_location"]
         temp_result_path = temp_path + "/temp_result.csv"
         import time
+
         if use_apache_beam:
             tic = time.perf_counter()
             with beam.Pipeline(options=pipeline_options) as pipeline:
                 (
                     pipeline
                     | "Create trial inputs" >> beam.Create(self._all_trials)
-                    | "Evaluate trials" >> beam.Map(lambda trial: trial.evaluate(self._seed))
+                    | "Evaluate trials"
+                    >> beam.Map(lambda trial: trial.evaluate(self._seed))
                     | "Combine results" >> beam.CombineGlobally(CombineDataFrameFn())
-                    | "Write combined result" >> beam.Map(lambda df: df.to_csv(temp_result_path, index=False))
+                    | "Write combined result"
+                    >> beam.Map(lambda df: df.to_csv(temp_result_path, index=False))
                 )
             toc = time.perf_counter()
-            print(f"=============Pipeline run takes {toc - tic:0.4f} seconds=============")
+            print(
+                f"=============Pipeline run takes {toc - tic:0.4f} seconds============="
+            )
         elif self._cores != 1:
             self._evaluate_all_trials_in_parallel()
 
@@ -182,11 +188,15 @@ class ExperimentalDesign:
             with temp_result_cloud_path.open() as file:
                 result = pd.read_csv(file)
             toc = time.perf_counter()
-            print(f"=============Reading result file takes {toc - tic:0.4f} seconds=============")
-        
+            print(
+                f"=============Reading result file takes {toc - tic:0.4f} seconds============="
+            )
+
         else:
             result = pd.concat(trial.evaluate(self._seed) for trial in self._all_trials)
             toc = time.perf_counter()
-            print(f"=============Reading .csv files takes {toc - tic:0.4f} seconds=============")
+            print(
+                f"=============Reading .csv files takes {toc - tic:0.4f} seconds============="
+            )
 
         return result

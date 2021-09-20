@@ -79,10 +79,12 @@ class RestrictedPairwiseUnionReachSurfaceTest(parameterized.TestCase):
         max_reaches = [
             universe_size * (decay_rate ** pub_num) for pub_num in range(num_publishers)
         ]
-        return [
-            LinearCappedReachCurve([ReachPoint([max_reach], (max_reach,))])
-            for max_reach in max_reaches
-        ]
+        reach_curves = []
+        for max_reach in max_reaches:
+            curve = LinearCappedReachCurve([ReachPoint([max_reach], (max_reach,))])
+            curve._fit()
+            reach_curves.append(curve)
+        return reach_curves
 
     def generate_sample_matrix_a(self, num_publishers, lbd_const=0):
         lbd = [lbd_const] * num_publishers
@@ -213,6 +215,6 @@ class RestrictedPairwiseUnionReachSurfaceTest(parameterized.TestCase):
             surface, test_reach_points, tolerance=0.00001
         )
 
-
+        
 if __name__ == "__main__":
     absltest.main()

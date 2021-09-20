@@ -125,5 +125,6 @@ class M3Strategy(ModelingStrategy):
         reach_surface = self._multi_pub_model(
             single_pub_curves, training_points, **self._multi_pub_model_kwargs
         )
+        reach_surface._fit()
 
         return reach_surface

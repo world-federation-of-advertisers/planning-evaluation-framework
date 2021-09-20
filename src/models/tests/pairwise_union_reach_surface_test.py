@@ -91,10 +91,13 @@ class PairwiseUnionReachSurfaceTest(absltest.TestCase):
         max_reaches = [
             universe_size * (decay_rate ** pub_num) for pub_num in range(num_publishers)
         ]
-        return [
-            LinearCappedReachCurve([ReachPoint([max_reach], (max_reach,))])
-            for max_reach in max_reaches
-        ]
+        reach_curves = []
+        for max_reach in max_reaches:
+            curve = LinearCappedReachCurve([ReachPoint([max_reach], (max_reach,))])
+            curve._fit()
+            reach_curves.append(curve)
+        return reach_curves
+
 
     def generate_sample_matrix_a(self, num_publishers):
         true_a = np.array(
@@ -182,6 +185,7 @@ class PairwiseUnionReachSurfaceTest(absltest.TestCase):
         # We then fit the model - since the generating process is the same
         # model, the fitted model should have a really small error rate.
         surface = PairwiseUnionReachSurface(reach_curves, training_reach_points)
+        surface._fit()
         test_reach_points = self.generate_reach_points(
             true_a, reach_curves, training_size, universe_size, 2
         )
@@ -203,6 +207,7 @@ class PairwiseUnionReachSurfaceTest(absltest.TestCase):
         )
 
         surface = PairwiseUnionReachSurface(reach_curves, training_reach_points)
+        surface._fit()
         test_reach_points = self.generate_reach_points(
             true_a, reach_curves, training_size, universe_size, 2, True
         )
@@ -228,6 +233,7 @@ class PairwiseUnionReachSurfaceTest(absltest.TestCase):
         )
 
         surface = PairwiseUnionReachSurface(reach_curves, training_reach_points)
+        surface._fit()
         # Reach for each point is the sum of independent reaches of publishers.
         test_reach_points = []
         random_generator = np.random.default_rng(1)
@@ -260,6 +266,7 @@ class PairwiseUnionReachSurfaceTest(absltest.TestCase):
         )
 
         surface = PairwiseUnionReachSurface(reach_curves, training_reach_points)
+        surface._fit()
         # the reach for each point is the sum of independent reaches of publishers.
         test_reach_points = self.generate_reach_points_independent(
             reach_curves, training_size, universe_size, 2

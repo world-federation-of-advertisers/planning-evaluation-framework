@@ -134,6 +134,7 @@ class ExperimentalTrial:
 
         if self._experiment_dir.startswith("gs://"):
             from cloudpathlib import CloudPath as Path
+
             # When there is no credential provided, GSClients of cloudpathlib
             # will create an anonymous client which can't access non-public
             # buckets. On the other hand, Clients in google.cloud.storage will
@@ -142,6 +143,7 @@ class ExperimentalTrial:
             # then use it to initiate a GSClient object.
             from cloudpathlib import GSClient
             from google.cloud import storage
+
             client = GSClient(storage_client=storage.Client())
             client.set_as_default_client()
         else:
@@ -237,7 +239,9 @@ class ExperimentalTrial:
 
     def _compute_trial_results_path(self) -> str:
         """Returns path of file where the results of this trial are stored."""
-        return f"{self._experiment_dir}/{self._data_set_name}/{self._trial_descriptor}.csv"
+        return (
+            f"{self._experiment_dir}/{self._data_set_name}/{self._trial_descriptor}.csv"
+        )
 
     def _make_independent_vars_dataframe(self) -> pd.DataFrame:
         """Returns a 1-row DataFrame of independent variables for this trial."""
@@ -353,6 +357,7 @@ class ExperimentalTrial:
 
 NUM_DIRS = 100
 
+
 class Trial:
     def __init__(
         self,
@@ -370,6 +375,7 @@ class Trial:
 
         if self._experiment_dir.startswith("gs://"):
             from cloudpathlib import CloudPath as Path
+
             # When there is no credential provided, GSClients of cloudpathlib
             # will create an anonymous client which can't access non-public
             # buckets. On the other hand, Clients in google.cloud.storage will
@@ -378,6 +384,7 @@ class Trial:
             # then use it to initiate a GSClient object.
             from cloudpathlib import GSClient
             from google.cloud import storage
+
             client = GSClient(storage_client=storage.Client())
             client.set_as_default_client()
         else:

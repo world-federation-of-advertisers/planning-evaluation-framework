@@ -210,6 +210,8 @@ class HaloSimulator:
 
         # convert result to a ReachPoint
         impressions = self._data_set.impressions_by_spend(spends)
+        if np.sum(impressions) <= kplus_reaches[0]:
+           kplus_reaches = [max(np.sum(impressions)-2, 1), 1] + [0] * max(0, max_frequency-2)
         return ReachPoint(
             impressions=impressions, kplus_reaches=kplus_reaches, spends=spends
         )

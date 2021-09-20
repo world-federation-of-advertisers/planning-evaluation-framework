@@ -19,6 +19,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 from unittest.mock import DEFAULT
 from absl.testing import absltest
+from absl.testing import parameterized
 import numpy as np
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.models.reach_surface import ReachSurface
@@ -43,9 +44,9 @@ class LinearCappedReachCurve(ReachCurve):
         return ReachPoint(impressions, kplus_frequencies)
 
 
-class RestrictedPairwiseUnionReachSurfaceTest(absltest.TestCase):
+class RestrictedPairwiseUnionReachSurfaceTest(parameterized.TestCase):
     def assertPointsAlmostEqualToPrediction(
-        self, surface, reach_points, tolerance=0.03
+        self, surface, reach_points, tolerance=0.05, msg=""
     ):
         for reach_point in reach_points:
             prediction = (
@@ -57,6 +58,7 @@ class RestrictedPairwiseUnionReachSurfaceTest(absltest.TestCase):
                 prediction.reach(),
                 reach_point.reach(),
                 delta=reach_point.reach() * tolerance,
+                msg=msg,
             )
 
     def generate_true_reach(self, a, reach_curves, impressions, spends=None):
@@ -85,8 +87,7 @@ class RestrictedPairwiseUnionReachSurfaceTest(absltest.TestCase):
         return reach_curves
 
     def generate_sample_matrix_a(self, num_publishers, lbd_const=0):
-        lbd = np.array([[lbd_const] for _ in range(num_publishers)])
-
+        lbd = [lbd_const] * num_publishers
         true_a = np.ones(num_publishers * num_publishers)
         for i in range(num_publishers):
             for j in range(num_publishers):
@@ -108,11 +109,61 @@ class RestrictedPairwiseUnionReachSurfaceTest(absltest.TestCase):
             )
         return reach_points
 
+    def test_construct_D_from_r_and_m(self):
+        r = [1, 2, 3]
+        m = [3, 2, 1]
+        D = RestrictedPairwiseUnionReachSurface._construct_D_from_r_and_m(r, m)
+        expected_D = np.array(
+            [[0.16667, 0.33333, 0.5], [0.33333, 1, 1.5], [0.5, 1.5, 4.5]]
+        )
+        np.testing.assert_array_almost_equal(D, expected_D, decimal=3)
+
+    def test_check_lbd_feasiblity(self):
+        lbd1 = [0.5, 0.5, 0.5]
+        lbd2 = [1, 1, 1]
+        feasiblity = RestrictedPairwiseUnionReachSurface._check_lbd_feasiblity
+        self.assertTrue(feasiblity(lbd1))
+        self.assertFalse(feasiblity(lbd2))
+
+    def test_compute_u(self):
+        lbd = [0.2, 0.3, 0.4]
+        i = 0
+        D = np.ones((3, 3))
+        u = RestrictedPairwiseUnionReachSurface._compute_u(lbd, i, D)
+        self.assertAlmostEqual(u, 0.12, delta=1e-4)
+
+    def test_compute_v(self):
+        lbd = [0.2, 0.3, 0.4]
+        i = 0
+        D = np.ones((3, 3))
+        v = RestrictedPairwiseUnionReachSurface._compute_v(lbd, i, D)
+        self.assertAlmostEqual(v, 0.7, delta=1e-4)
+
+    def test_get_feasible_bound(self):
+        lbd = [0.2, 0.5, 0.5]
+        i = 0
+        B = RestrictedPairwiseUnionReachSurface._get_feasible_bound(lbd, i)
+        self.assertAlmostEqual(B, 1, delta=1e-4)
+        feasiblity = RestrictedPairwiseUnionReachSurface._check_lbd_feasiblity
+        lbd[0] = B
+        self.assertTrue(feasiblity(lbd))
+        lbd[0] = B + 0.1
+        self.assertTrue(not feasiblity(lbd))
+
+    @parameterized.parameters(
+        [RestrictedPairwiseUnionReachSurface._truncated_uniform_initial_lbd],
+        [RestrictedPairwiseUnionReachSurface._scaled_from_simplex_initial_lbd],
+    )
+    def test_init_lbd_sampler(self, init_lbd_sampler):
+        sample = [init_lbd_sampler(10) for _ in range(30)]
+        feasiblity = RestrictedPairwiseUnionReachSurface._check_lbd_feasiblity
+        self.assertTrue(all([feasiblity(s) for s in sample]))
+
     def test_by_impressions(self):
-        num_publishers = 3
-        training_size = 50
-        universe_size = 200000
-        decay_rate = 0.8
+        num_publishers = 5
+        training_size = 10
+        universe_size = 20000
+        decay_rate = 1
 
         reach_curves = self.generate_sample_reach_curves(
             num_publishers, decay_rate, universe_size
@@ -129,14 +180,18 @@ class RestrictedPairwiseUnionReachSurfaceTest(absltest.TestCase):
         test_reach_points = self.generate_sample_reach_points(
             true_a, reach_curves, training_size, universe_size, 2
         )
-        self.assertPointsAlmostEqualToPrediction(surface, training_reach_points)
-        self.assertPointsAlmostEqualToPrediction(surface, test_reach_points)
+        self.assertPointsAlmostEqualToPrediction(
+            surface, training_reach_points, msg="High discrepancy on training points"
+        )
+        self.assertPointsAlmostEqualToPrediction(
+            surface, test_reach_points, msg="High discrepancy on testing points"
+        )
 
     def test_by_impressions_zero_lambda(self):
-        num_publishers = 3
-        training_size = 50
-        universe_size = 200000
-        decay_rate = 0.8
+        num_publishers = 5
+        training_size = 10
+        universe_size = 20000
+        decay_rate = 1
 
         reach_curves = self.generate_sample_reach_curves(
             num_publishers, decay_rate, universe_size
@@ -160,104 +215,6 @@ class RestrictedPairwiseUnionReachSurfaceTest(absltest.TestCase):
             surface, test_reach_points, tolerance=0.00001
         )
 
-    def test_result_not_success(self):
-        num_publishers = 3
-        training_size = 50
-        universe_size = 200000
-        decay_rate = 0.8
-
-        reach_curves = self.generate_sample_reach_curves(
-            num_publishers, decay_rate, universe_size
-        )
-        true_a = self.generate_sample_matrix_a(num_publishers, 2 / num_publishers)
-        training_reach_points = self.generate_sample_reach_points(
-            true_a, reach_curves, training_size, universe_size, 1
-        )
-
-        class MockResult:
-            success = False
-
-        def my_side_effect(arg):
-            return MockResult()
-
-        with self.assertRaises(RuntimeError) as context:
-            with patch.object(
-                RestrictedPairwiseUnionReachSurface,
-                "_fit_with_constraints",
-                side_effect=my_side_effect,
-            ):
-                surface = RestrictedPairwiseUnionReachSurface(
-                    reach_curves, training_reach_points
-                )
-                surface._fit()
-
-
-    def test_fit_warning_problem(self):
-        num_publishers = 3
-        training_size = 50
-        universe_size = 200000
-        decay_rate = 0.8
-
-        reach_curves = self.generate_sample_reach_curves(
-            num_publishers, decay_rate, universe_size
-        )
-        true_a = self.generate_sample_matrix_a(num_publishers, 2 / num_publishers)
-        training_reach_points = self.generate_sample_reach_points(
-            true_a, reach_curves, training_size, universe_size, 1
-        )
-
-        def my_side_effect(arg):
-            warnings.warn("Bad things happened in the optimizer")
-            return DEFAULT
-
-        with self.assertRaises(RuntimeError) as context:
-            with patch.object(
-                RestrictedPairwiseUnionReachSurface,
-                "_fit_with_constraints",
-                side_effect=my_side_effect,
-            ):
-                surface = RestrictedPairwiseUnionReachSurface(
-                    reach_curves, training_reach_points
-                )
-                surface._fit()
-
-
-    def test_fit_warning_no_problem(self):
-        num_publishers = 3
-        training_size = 50
-        universe_size = 200000
-        decay_rate = 0.8
-
-        reach_curves = self.generate_sample_reach_curves(
-            num_publishers, decay_rate, universe_size
-        )
-        true_a = self.generate_sample_matrix_a(num_publishers, 2 / num_publishers)
-        training_reach_points = self.generate_sample_reach_points(
-            true_a, reach_curves, training_size, universe_size, 1
-        )
-
-        def my_side_effect(cons):
-            warnings.warn("delta_grad == 0.0 and some other things")
-            return DEFAULT
-
-            with patch.object(
-                RestrictedPairwiseUnionReachSurface,
-                "_fit_with_constraints",
-                side_effect=my_side_effect,
-            ):
-                surface = RestrictedPairwiseUnionReachSurface(
-                    reach_curves, training_reach_points
-                )
-                surface._fit()
-                test_reach_points = self.generate_sample_reach_points(
-                    true_a, reach_curves, training_size, universe_size, 2
-                )
-                self.assertPointsAlmostEqualToPrediction(
-                    surface, training_reach_points, tolerance=0.00001
-                )
-                self.assertPointsAlmostEqualToPrediction(
-                    surface, test_reach_points, tolerance=0.00001
-                )
-
+        
 if __name__ == "__main__":
     absltest.main()

@@ -21,9 +21,7 @@ DataSets within a DataDesign are loaded lazily.
 
 from os import listdir
 from os.path import exists, isdir, join
-from pathlib import Path
 from typing import List
-from weakref import WeakValueDictionary
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 
 
@@ -41,7 +39,7 @@ class DataDesign:
         self._data_set_names = set()
 
         if dirpath.startswith("gs://"):
-            from cloudpathlib import CloudPath as Path
+            from cloudpathlib import GSPath as Path
         else:
             from pathlib import Path
 

@@ -140,15 +140,15 @@ class ExperimentalDesign:
 
     def load(
         self,
-        use_apache_beam: bool,
-        pipeline_options: PipelineOptions,
+        use_apache_beam: bool = False,
+        pipeline_options: PipelineOptions = PipelineOptions(),
     ) -> pd.DataFrame:
         """Returns a DataFrame of all results from this ExperimentalDesign."""
         if not self._all_trials:
             self.generate_trials()
 
         temp_path = pipeline_options.get_all_options()["temp_location"]
-        temp_result_path = temp_path + "/temp_result.csv"
+        temp_result_path = temp_path + "/temp_result.csv" if temp_path else "/temp_result.csv"
         import time
 
         if use_apache_beam:

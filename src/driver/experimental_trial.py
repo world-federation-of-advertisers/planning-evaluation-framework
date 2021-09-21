@@ -132,7 +132,7 @@ class ExperimentalTrial:
         np.random.seed(seed)
 
         if self._experiment_dir.startswith("gs://"):
-            from cloudpathlib import CloudPath as Path
+            from cloudpathlib import GSPath as Path
 
             # When there is no credential provided, GSClients of cloudpathlib
             # will create an anonymous client which can't access non-public

@@ -227,7 +227,7 @@ class DataSet:
           The DataSet object representing the contents of this directory.
         """
         if dirpath.startswith("gs://"):
-            from cloudpathlib import CloudPath as Path
+            from cloudpathlib import GSPath as Path
         else:
             from pathlib import Path
 

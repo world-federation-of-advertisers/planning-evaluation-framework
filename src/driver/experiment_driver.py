@@ -158,7 +158,7 @@ class ExperimentDriver:
         self._analysis_type = analysis_type
         self._cores = cores
 
-    def execute(self, use_apache_beam, pipeline_options) -> pd.DataFrame:
+    def execute(self, use_apache_beam: bool = False, pipeline_options: PipelineOptions = PipelineOptions()) -> pd.DataFrame:
         """Performs all experiments defined in an experimental design."""
         client = None
         # When there is no credential provided, GSClients of cloudpathlib

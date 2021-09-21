@@ -158,7 +158,11 @@ class ExperimentDriver:
         self._analysis_type = analysis_type
         self._cores = cores
 
-    def execute(self, use_apache_beam: bool = False, pipeline_options: PipelineOptions = PipelineOptions()) -> pd.DataFrame:
+    def execute(
+        self,
+        use_apache_beam: bool = False,
+        pipeline_options: PipelineOptions = PipelineOptions(),
+    ) -> pd.DataFrame:
         """Performs all experiments defined in an experimental design."""
         client = None
         # When there is no credential provided, GSClients of cloudpathlib
@@ -168,7 +172,7 @@ class ExperimentDriver:
         # result, we first create a Client from google.cloud.storage and
         # then use it to initiate a GSClient object and set it as the default
         # for other operations.
-        if pipeline_options.get_all_options()["runner"] in ["direct", "DirectRunner"]:
+        if pipeline_options.get_all_options()["runner"] in ["direct", "DataflowRunner"]:
             from cloudpathlib import GSClient
             from google.cloud import storage
 

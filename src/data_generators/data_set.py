@@ -55,9 +55,7 @@ class DataSet:
             such as "homog_p=10_rep=3".  If no name is given, then a random
             digit string is assigned as the name.
         """
-        # TODO: Resolve issue of using deepcopy in Dataflow mode
-        # self._data = deepcopy(publisher_data_list)
-        self._data = publisher_data_list
+        self._data = deepcopy(publisher_data_list)
 
         total_audience = set()
         for pub in self._data:
@@ -240,7 +238,7 @@ class DataSet:
                 with filepath.open() as file:
                     try:
                         pdf = PublisherData.read_publisher_data(file)
-                        pdf.name = filepath
+                        pdf.name = str(filepath)
                         pdf_list.append(pdf)
                     except (ValueError, RuntimeError) as e:
                         raise RuntimeError(

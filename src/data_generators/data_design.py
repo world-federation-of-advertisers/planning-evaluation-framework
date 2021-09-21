@@ -39,7 +39,6 @@ class DataDesign:
         """
         self._dirpath = dirpath
         self._data_set_names = set()
-        # self._data_sets = WeakValueDictionary()
 
         if dirpath.startswith("gs://"):
             from cloudpathlib import CloudPath as Path
@@ -64,10 +63,6 @@ class DataDesign:
 
     def by_name(self, name: str) -> DataSet:
         """Returns the DataSet having the given name."""
-        # if not name in self._data_sets:
-        #     dataset = DataSet.read_data_set(join(self._dirpath, name))
-        #     self._data_sets[name] = dataset
-        # return self._data_sets[name]
         return DataSet.read_data_set(join(self._dirpath, name))
 
     def add(self, data_set: DataSet) -> None:

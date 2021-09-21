@@ -28,7 +28,6 @@ import itertools
 
 import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions
-from cloudpathlib import CloudPath
 
 from wfa_planning_evaluation_framework.driver.trial_descriptor import TrialDescriptor
 from wfa_planning_evaluation_framework.data_generators.data_design import (
@@ -39,7 +38,6 @@ from wfa_planning_evaluation_framework.driver.experiment import (
 )
 from wfa_planning_evaluation_framework.driver.experimental_trial import (
     ExperimentalTrial,
-    Trial,
 )
 
 
@@ -127,15 +125,6 @@ class ExperimentalDesign:
         self._all_trials = all_trials
         return all_trials
 
-    # def generate_trials(self) -> List[Trial]:
-    #     """Generates list of Trial objects associated to this experiment."""
-    #     all_trials = [
-    #         Trial(i + 1, self._experiment_dir, f"trial{i}")
-    #         for i in range(100)
-    #     ]
-    #     self._all_trials = all_trials
-    #     return all_trials
-
     def _evaluate_all_trials_in_parallel(self) -> None:
         """Evaluates all trials in parallel."""
         if self._cores < 1:
@@ -184,6 +173,8 @@ class ExperimentalDesign:
         tic = time.perf_counter()
         result = None
         if temp_result_path.startswith("gs://"):
+            from cloudpathlib import CloudPath
+
             temp_result_cloud_path = CloudPath(temp_result_path)
             with temp_result_cloud_path.open() as file:
                 result = pd.read_csv(file)

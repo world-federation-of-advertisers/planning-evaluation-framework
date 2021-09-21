@@ -118,7 +118,6 @@ where
 """
 
 from absl import app
-from absl import flags
 import argparse
 import importlib.util
 import math
@@ -136,25 +135,6 @@ from wfa_planning_evaluation_framework.driver.experimental_design import (
 from wfa_planning_evaluation_framework.driver.trial_descriptor import (
     TrialDescriptor,
 )
-
-
-# FLAGS = flags.FLAGS
-
-# flags.DEFINE_string("data_design_dir", None, "Directory containing the data design")
-# flags.DEFINE_string(
-#     "experimental_design", None, "Name of python file containing experimental design."
-# )
-# flags.DEFINE_string(
-#     "output_file", None, "Name of file where output DataFrame will be written."
-# )
-# flags.DEFINE_string(
-#     "intermediates_dir", None, "Directory where intermediate results will be stored."
-# )
-# flags.DEFINE_integer("seed", 1, "Seed for the np.random.Generator.")
-# flags.DEFINE_integer("cores", 1, "Number of cores to use for multithreading.")
-# flags.DEFINE_string(
-#     "analysis_type", "", "Specify single_pub if this is a single publisher analysis."
-# )
 
 
 class ExperimentDriver:
@@ -181,7 +161,14 @@ class ExperimentDriver:
     def execute(self, use_apache_beam, pipeline_options) -> pd.DataFrame:
         """Performs all experiments defined in an experimental design."""
         client = None
-        if self._output_file.startswith("gs://"):
+        # When there is no credential provided, GSClients of cloudpathlib
+        # will create an anonymous client which can't access non-public
+        # buckets. On the other hand, Clients in google.cloud.storage will
+        # fall back to the default inferred from the environment. As a
+        # result, we first create a Client from google.cloud.storage and
+        # then use it to initiate a GSClient object and set it as the default
+        # for other operations.
+        if pipeline_options.get_all_options()["runner"] in ["direct", "DirectRunner"]:
             from cloudpathlib import GSClient
             from google.cloud import storage
 
@@ -204,18 +191,16 @@ class ExperimentDriver:
         )
         experimental_design.generate_trials()
         print("=============Generated trials=============")
-        print(DataSet.read_data_set.cache_info())
-
         toc = time.perf_counter()
         print(
             f"=============Reading all datasets takes {toc - tic:0.4f} seconds============="
         )
+        print(DataSet.read_data_set.cache_info())
 
         result = experimental_design.load(
             use_apache_beam=use_apache_beam,
             pipeline_options=pipeline_options,
         )
-
         print("=============Loaded=============")
         print(DataSet.read_data_set.cache_info())
 

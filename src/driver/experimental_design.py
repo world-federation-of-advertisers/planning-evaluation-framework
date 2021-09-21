@@ -173,9 +173,8 @@ class ExperimentalDesign:
         tic = time.perf_counter()
         result = None
         if temp_result_path.startswith("gs://"):
-            from cloudpathlib import CloudPath
-
-            temp_result_cloud_path = CloudPath(temp_result_path)
+            from cloudpathlib import GSPath
+            temp_result_cloud_path = GSPath(temp_result_path)
             with temp_result_cloud_path.open() as file:
                 result = pd.read_csv(file)
             toc = time.perf_counter()

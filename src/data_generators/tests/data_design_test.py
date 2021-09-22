@@ -14,11 +14,15 @@
 """Tests for publisher_data_file.py."""
 
 from absl.testing import absltest
+from unittest.mock import patch
 from tempfile import TemporaryDirectory
+
+from cloudpathlib.local import LocalGSClient, LocalGSPath
 
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
 )
+import wfa_planning_evaluation_framework.data_generators.data_design as data_design
 from wfa_planning_evaluation_framework.data_generators.data_design import DataDesign
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 
@@ -33,6 +37,22 @@ class DataDesignTest(absltest.TestCase):
         pdf21 = PublisherData([(1, 0.01), (2, 0.02), (2, 0.04), (3, 0.05)], "pdf21")
         pdf22 = PublisherData([(2, 0.03), (3, 0.06)], "pdf22")
         cls.data_set2 = DataSet([pdf21, pdf22], "ds2")
+
+    def tearDown(self):
+        LocalGSClient.reset_default_storage_dir()
+
+    @patch.object(data_design, "GSPath", LocalGSPath)
+    def test_constructor_with_cloud_path(self):
+        file_gs_path = LocalGSPath(
+            "gs://parallel_planning_evaluation_framework/dir/dummy.txt"
+        )
+        dir_gs_path = file_gs_path.parent
+        dir_gs_path.mkdir(exist_ok=True, parents=True)
+        file_gs_path.write_text("For creating the target directory.")
+
+        dd = DataDesign(str(dir_gs_path))
+        self.assertEqual(dd.count, 0)
+        self.assertEqual(dd.names, [])
 
     def test_properties(self):
         with TemporaryDirectory() as d:

@@ -16,6 +16,9 @@
 from absl.testing import absltest
 from numpy.random import RandomState
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
+
+from cloudpathlib.local import LocalGSClient, LocalGSPath
 
 from wfa_planning_evaluation_framework.data_generators.fixed_price_generator import (
     FixedPriceGenerator,
@@ -26,6 +29,7 @@ from wfa_planning_evaluation_framework.data_generators.homogeneous_impression_ge
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
 )
+import wfa_planning_evaluation_framework.data_generators.data_set as data_set
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 
 
@@ -36,6 +40,9 @@ class DataSetTest(absltest.TestCase):
         pdf2 = PublisherData([(2, 0.03), (4, 0.06)], "pdf2")
         data_set = DataSet([pdf1, pdf2], "test")
         cls.data_set = data_set
+
+    def tearDown(self):
+        LocalGSClient.reset_default_storage_dir()
 
     def test_properties(self):
         self.assertEqual(self.data_set.publisher_count, 2)
@@ -78,6 +85,24 @@ class DataSetTest(absltest.TestCase):
             self.assertEqual(new_data_set.reach_by_impressions([4, 0]).reach(), 3)
             self.assertEqual(new_data_set.reach_by_impressions([0, 2]).reach(), 2)
             self.assertEqual(new_data_set.reach_by_impressions([4, 2]).reach(), 4)
+
+    @patch.object(data_set, "GSPath", LocalGSPath)
+    def test_read_data_set_with_cloud_path(self):
+        file_gs_path = LocalGSPath(
+            "gs://parallel_planning_evaluation_framework/dir/dummy.txt"
+        )
+        dir_gs_path = file_gs_path.parent
+        dir_gs_path.mkdir(exist_ok=True, parents=True)
+        file_gs_path.write_text("For creating the target directory.")
+
+        self.data_set.write_data_set(str(dir_gs_path))
+        data_set_path = dir_gs_path.joinpath("test")
+        new_data_set = DataSet.read_data_set(str(data_set_path))
+        self.assertEqual(new_data_set.publisher_count, 2)
+        self.assertEqual(new_data_set.name, "test")
+        self.assertEqual(new_data_set.reach_by_impressions([4, 0]).reach(), 3)
+        self.assertEqual(new_data_set.reach_by_impressions([0, 2]).reach(), 2)
+        self.assertEqual(new_data_set.reach_by_impressions([4, 2]).reach(), 4)
 
 
 if __name__ == "__main__":

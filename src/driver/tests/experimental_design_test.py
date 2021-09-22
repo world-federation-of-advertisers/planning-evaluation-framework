@@ -22,6 +22,11 @@ from typing import List
 from typing import Type
 import numpy as np
 import pandas as pd
+
+import apache_beam as beam
+from apache_beam.testing.test_pipeline import TestPipeline
+from apache_beam.testing.util import assert_that, equal_to
+
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
 )
@@ -58,6 +63,7 @@ from wfa_planning_evaluation_framework.driver.experiment import (
 )
 from wfa_planning_evaluation_framework.driver.experimental_design import (
     ExperimentalDesign,
+    CombineDataFrameFn,
 )
 from wfa_planning_evaluation_framework.driver.experimental_trial import (
     ExperimentalTrial,
@@ -189,6 +195,22 @@ class ExperimentalDesignTest(absltest.TestCase):
 
             results = exp.load()
             self.assertEqual(results.shape[0], 8)
+
+    def test_combine_dataFrame_fn(self):
+        num_dfs = 10
+        key = "attr"
+        val = 1
+        dfs = [pd.DataFrame([{key: val}]) for _ in range(num_dfs)]
+        expected = pd.concat(dfs).to_csv()
+
+        with TestPipeline() as p:
+            output = (
+                p
+                | beam.Create(dfs)
+                | beam.CombineGlobally(CombineDataFrameFn())
+                | beam.Map(lambda df: df.to_csv())
+            )
+            assert_that(output, equal_to([expected]))
 
     def test_remove_duplicates(self):
         with TemporaryDirectory() as d:

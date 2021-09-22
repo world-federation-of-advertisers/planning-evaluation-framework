@@ -26,6 +26,8 @@ from typing import List
 from typing import Tuple
 import itertools
 
+from cloudpathlib import GSPath
+
 import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions
 
@@ -148,7 +150,9 @@ class ExperimentalDesign:
             self.generate_trials()
 
         temp_path = pipeline_options.get_all_options()["temp_location"]
-        temp_result_path = temp_path + "/temp_result.csv" if temp_path else "/temp_result.csv"
+        temp_result_path = (
+            temp_path + "/temp_result.csv" if temp_path else "/temp_result.csv"
+        )
         import time
 
         if use_apache_beam:
@@ -173,7 +177,6 @@ class ExperimentalDesign:
         tic = time.perf_counter()
         result = None
         if temp_result_path.startswith("gs://"):
-            from cloudpathlib import GSPath
             temp_result_cloud_path = GSPath(temp_result_path)
             with temp_result_cloud_path.open() as file:
                 result = pd.read_csv(file)

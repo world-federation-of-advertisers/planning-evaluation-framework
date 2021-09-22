@@ -27,6 +27,9 @@ import traceback
 from typing import List
 from typing import NamedTuple
 
+from cloudpathlib import GSClient
+from google.cloud import storage
+
 from wfa_planning_evaluation_framework.data_generators.data_design import (
     DataDesign,
 )
@@ -132,8 +135,6 @@ class ExperimentalTrial:
         np.random.seed(seed)
 
         if self._experiment_dir.startswith("gs://"):
-            from cloudpathlib import GSPath as Path
-
             # When there is no credential provided, GSClients of cloudpathlib
             # will create an anonymous client which can't access non-public
             # buckets. On the other hand, Clients in google.cloud.storage will
@@ -141,11 +142,9 @@ class ExperimentalTrial:
             # result, we first create a Client from google.cloud.storage and
             # then use it to initiate a GSClient object and set it as the
             # default for other operations.
-            from cloudpathlib import GSClient
-            from google.cloud import storage
-
             client = GSClient(storage_client=storage.Client())
             client.set_as_default_client()
+            Path = client.GSPath
         else:
             from pathlib import Path
 

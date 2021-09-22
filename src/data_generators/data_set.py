@@ -21,6 +21,7 @@ from copy import deepcopy
 from os import listdir
 from os.path import isfile, join
 from pathlib import Path
+from cloudpathlib import GSPath
 from typing import Dict
 from typing import Iterable
 from typing import List
@@ -204,12 +205,17 @@ class DataSet:
         """
         if not dataset_dir:
             dataset_dir = self._name
-        fulldir = join(parent_dir, dataset_dir)
-        Path(fulldir).mkdir(parents=True, exist_ok=True)
+
+        parent_dir_path = (
+            GSPath(parent_dir) if parent_dir.startswith("gs://") else Path(parent_dir)
+        )
+
+        full_dir_path = parent_dir_path.joinpath(dataset_dir)
+        full_dir_path.mkdir(parents=True, exist_ok=True)
         for pdf in self._data:
-            with open(join(fulldir, pdf.name), "w") as file:
+            pdf_path = full_dir_path.joinpath(pdf.name)
+            with pdf_path.open("w") as file:
                 pdf.write_publisher_data(file)
-                file.close()
 
     @classmethod
     @lru_cache(maxsize=128)
@@ -227,12 +233,11 @@ class DataSet:
           The DataSet object representing the contents of this directory.
         """
         if dirpath.startswith("gs://"):
-            from cloudpathlib import GSPath as Path
+            dirpath = GSPath(dirpath)
         else:
-            from pathlib import Path
+            dirpath = Path(dirpath)
 
         pdf_list = []
-        dirpath = Path(dirpath)
         for filepath in sorted(dirpath.glob("*")):
             if filepath.is_file():
                 with filepath.open() as file:

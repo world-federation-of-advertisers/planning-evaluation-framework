@@ -153,10 +153,8 @@ class ExperimentalDesign:
         temp_result_path = (
             temp_path + "/temp_result.csv" if temp_path else "/temp_result.csv"
         )
-        import time
 
         if use_apache_beam:
-            tic = time.perf_counter()
             with beam.Pipeline(options=pipeline_options) as pipeline:
                 (
                     pipeline
@@ -167,29 +165,15 @@ class ExperimentalDesign:
                     | "Write combined result"
                     >> beam.Map(lambda df: df.to_csv(temp_result_path, index=False))
                 )
-            toc = time.perf_counter()
-            print(
-                f"=============Pipeline run takes {toc - tic:0.4f} seconds============="
-            )
         elif self._cores != 1:
             self._evaluate_all_trials_in_parallel()
 
-        tic = time.perf_counter()
         result = None
         if temp_result_path.startswith("gs://"):
             temp_result_cloud_path = GSPath(temp_result_path)
             with temp_result_cloud_path.open() as file:
                 result = pd.read_csv(file)
-            toc = time.perf_counter()
-            print(
-                f"=============Reading result file takes {toc - tic:0.4f} seconds============="
-            )
-
         else:
             result = pd.concat(trial.evaluate(self._seed) for trial in self._all_trials)
-            toc = time.perf_counter()
-            print(
-                f"=============Reading .csv files takes {toc - tic:0.4f} seconds============="
-            )
 
         return result

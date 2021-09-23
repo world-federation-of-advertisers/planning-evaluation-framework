@@ -334,10 +334,9 @@ class ExperimentalTrialTest(absltest.TestCase):
             self.assertEqual(result["model_exception"][0], "")
 
     @patch.object(experimental_trial, "GSClient", LocalGSClient)
-    @patch.object(experimental_trial.pd.DataFrame, "to_csv")
     @patch.object(data_design, "GSPath", LocalGSPath)
     @patch.object(data_set, "GSPath", LocalGSPath)
-    def test_evaluate_with_cloud_path(self, mock_pandas_to_csv):
+    def test_evaluate_with_cloud_path(self):
         pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
         pdf2 = PublisherData([(2, 0.02), (2, 0.03), (4, 0.06)], "pdf2")
         data_set = DataSet([pdf1, pdf2], "dataset")
@@ -357,9 +356,6 @@ class ExperimentalTrialTest(absltest.TestCase):
 
         data_design = DataDesign(str(data_design_dir_path))
         data_design.add(data_set)
-
-        # Ignore writing a csv file from DataFrame in this test.
-        mock_pandas_to_csv.return_value = lambda x, index: None
 
         MODELING_STRATEGIES["fake"] = FakeModelingStrategy
         TEST_POINT_STRATEGIES["fake_tps"] = FakeTestPointGenerator

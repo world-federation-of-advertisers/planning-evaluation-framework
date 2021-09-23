@@ -92,7 +92,6 @@ class DataSetTest(absltest.TestCase):
             "gs://parallel_planning_evaluation_framework/dir/dummy.txt"
         )
         dir_gs_path = file_gs_path.parent
-        dir_gs_path.mkdir(exist_ok=True, parents=True)
         file_gs_path.write_text("For creating the target directory.")
 
         self.data_set.write_data_set(str(dir_gs_path))

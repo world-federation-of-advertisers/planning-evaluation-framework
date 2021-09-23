@@ -229,8 +229,7 @@ class ExperimentalTrial:
             axis=1,
         )
         Path(trial_results_path).parent.mkdir(parents=True, exist_ok=True)
-        result.to_csv(trial_results_path, index=False)
-
+        Path(trial_results_path).write_text(result.to_csv(index=False))
         Path(pending_path).unlink()
 
         return result

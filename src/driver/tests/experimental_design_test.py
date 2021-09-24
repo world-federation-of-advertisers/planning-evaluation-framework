@@ -78,7 +78,6 @@ from wfa_planning_evaluation_framework.driver.experimental_design import (
     ExperimentalDesign,
     CombineDataFrameFn,
 )
-import wfa_planning_evaluation_framework.driver.experimental_trial as experimental_trial
 from wfa_planning_evaluation_framework.driver.experimental_trial import (
     ExperimentalTrial,
 )
@@ -234,14 +233,13 @@ class ExperimentalDesignTest(absltest.TestCase):
             self.assertGreater(results["max_nonzero_frequency_from_halo"][0], 0)
             self.assertEqual(results["max_nonzero_frequency_from_data"][0], 1)
 
-    @patch.object(experimental_design, "GSPath", LocalGSPath)
+    @patch.object(experimental_design, "GSClient", LocalGSClient)
     @patch.object(experimental_design, "EvaluateTrialDoFn", FakeEvaluateTrialDoFn)
     @patch.object(data_set, "GSPath", LocalGSPath)
     @patch.object(data_design, "GSPath", LocalGSPath)
-    @patch.object(experimental_trial, "GSClient", LocalGSClient)
     def test_evaluate_with_apache_beam_with_cloud_path(self):
         parent_dir_path = LocalGSPath(
-            "gs://parallel_planning_evaluation_framework/parent"
+            "gs://ExperimentalDesignTest/parent"
         )
         data_design_dir_path = parent_dir_path.joinpath("data_design")
         experiment_dir_path = parent_dir_path.joinpath("experiments")

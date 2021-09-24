@@ -126,6 +126,10 @@ import pandas as pd
 import sys
 from typing import Iterable
 
+from cloudpathlib import GSClient
+from cloudpathlib.client import Client
+from google.cloud import storage
+
 from apache_beam.options.pipeline_options import PipelineOptions
 
 from wfa_planning_evaluation_framework.data_generators.data_design import DataDesign
@@ -162,27 +166,9 @@ class ExperimentDriver:
         self,
         use_apache_beam: bool = False,
         pipeline_options: PipelineOptions = PipelineOptions(),
+        client: Client = None,
     ) -> pd.DataFrame:
         """Performs all experiments defined in an experimental design."""
-        client = None
-        # When there is no credential provided, GSClients of cloudpathlib
-        # will create an anonymous client which can't access non-public
-        # buckets. On the other hand, Clients in google.cloud.storage will
-        # fall back to the default inferred from the environment. As a
-        # result, we first create a Client from google.cloud.storage and
-        # then use it to initiate a GSClient object and set it as the default
-        # for other operations.
-        if pipeline_options.get_all_options()["runner"] in ["direct", "DataflowRunner"]:
-            from cloudpathlib import GSClient
-            from google.cloud import storage
-
-            client = GSClient(storage_client=storage.Client())
-            client.set_as_default_client()
-
-        from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
-        import time
-
-        tic = time.perf_counter()
         data_design = DataDesign(self._data_design_dir)
         experiments = list(self._fetch_experiment_list())
         experimental_design = ExperimentalDesign(
@@ -194,19 +180,11 @@ class ExperimentDriver:
             analysis_type=self._analysis_type,
         )
         experimental_design.generate_trials()
-        print("=============Generated trials=============")
-        toc = time.perf_counter()
-        print(
-            f"=============Reading all datasets takes {toc - tic:0.4f} seconds============="
-        )
-        print(DataSet.read_data_set.cache_info())
 
         result = experimental_design.load(
             use_apache_beam=use_apache_beam,
             pipeline_options=pipeline_options,
         )
-        print("=============Loaded=============")
-        print(DataSet.read_data_set.cache_info())
 
         if self._output_file.startswith("gs://"):
             output_cloud_path = client.GSPath(self._output_file)
@@ -304,9 +282,30 @@ def main(argv):
         ]
     )
     pipeline_options = PipelineOptions(pipeline_args)
+
+    # When there is no credential provided, GSClients of cloudpathlib
+    # will create an anonymous client which can't access non-public
+    # buckets. On the other hand, Clients in google.cloud.storage will
+    # fall back to the default inferred from the environment. As a
+    # result, we first create a Client from google.cloud.storage and
+    # then use it to initiate a GSClient object and set it as the default
+    # for other operations.
+    client = None
+    if (
+        pipeline_options.get_all_options()["runner"]
+        in [
+            "dataflow",
+            "DataflowRunner",
+        ]
+        or known_args.output_file.startswith("gs://")
+    ):
+        client = GSClient(storage_client=storage.Client())
+        client.set_as_default_client()
+
     experiment_driver.execute(
         known_args.use_apache_beam,
         pipeline_options,
+        client,
     )
 
 

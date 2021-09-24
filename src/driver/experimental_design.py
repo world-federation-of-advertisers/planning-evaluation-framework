@@ -26,8 +26,8 @@ from typing import List
 from typing import Tuple
 import itertools
 from pathlib import Path
-from cloudpathlib.local import LocalGSPath
-from cloudpathlib import GSPath
+from cloudpathlib.local import LocalGSClient
+from cloudpathlib import GSClient
 
 import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions
@@ -160,24 +160,20 @@ class ExperimentalDesign:
             temp_location + "/temp_result.csv" if temp_location else "/temp_result.csv"
         )
 
-        if temp_result.startswith("gs://"):
-            # Pickling client objects, which is included in GSPath, is
-            # explicitly not supported in Apache Beam. We only use GSPath when
-            # it is for unit test.
-            temp_result_path = (
-                GSPath(temp_result) if GSPath is LocalGSPath else temp_result
-            )
-        else:
-            temp_result_path = Path(temp_result)
+        # Pickling client objects, which is included in GSPath, is explicitly
+        # not supported in Apache Beam. We only use GSPath when it is for
+        # unit test.
+        client = GSClient.get_default_client()
+        temp_result_path = (
+            client.GSPath(temp_result) if GSClient is LocalGSClient else temp_result
+        )
 
         if use_apache_beam:
             with beam.Pipeline(options=pipeline_options) as pipeline:
                 (
                     pipeline
                     | "Create trial inputs" >> beam.Create(self._all_trials)
-                    | "Evaluate trials"
-                    # >> beam.Map(lambda trial: trial.evaluate(self._seed))
-                    >> beam.ParDo(EvaluateTrialDoFn(), self._seed)
+                    | "Evaluate trials" >> beam.ParDo(EvaluateTrialDoFn(), self._seed)
                     | "Combine results" >> beam.CombineGlobally(CombineDataFrameFn())
                     | "Write combined result"
                     >> beam.Map(lambda df: df.to_csv(temp_result_path, index=False))
@@ -186,8 +182,13 @@ class ExperimentalDesign:
             self._evaluate_all_trials_in_parallel()
 
         result = None
-        if temp_result.startswith("gs://"):
-            with GSPath(temp_result).open() as file:
+        if use_apache_beam:
+            temp_result_path = (
+                client.GSPath(temp_result)
+                if temp_result.startswith("gs://")
+                else Path(temp_result)
+            )
+            with temp_result_path.open() as file:
                 result = pd.read_csv(file)
         else:
             result = pd.concat(trial.evaluate(self._seed) for trial in self._all_trials)

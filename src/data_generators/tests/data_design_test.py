@@ -44,7 +44,7 @@ class DataDesignTest(absltest.TestCase):
     @patch.object(data_design, "GSPath", LocalGSPath)
     def test_constructor_with_cloud_path(self):
         file_gs_path = LocalGSPath(
-            "gs://parallel_planning_evaluation_framework/dir/dummy.txt"
+            "gs://DataDesignTest/dir/dummy.txt"
         )
         dir_gs_path = file_gs_path.parent
         file_gs_path.write_text("For creating the target directory.")

@@ -18,7 +18,15 @@ import numpy as np
 import pandas as pd
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
+from pathlib import Path
+from cloudpathlib.local import LocalGSClient, LocalGSPath
+import apache_beam as beam
+from apache_beam.options.pipeline_options import PipelineOptions
 
+import wfa_planning_evaluation_framework.driver.experiment_driver as experiment_driver
+import wfa_planning_evaluation_framework.driver.experimental_design as experimental_design
+import wfa_planning_evaluation_framework.data_generators.data_design as data_design
+import wfa_planning_evaluation_framework.data_generators.data_set as data_set
 from wfa_planning_evaluation_framework.data_generators.data_design import DataDesign
 from wfa_planning_evaluation_framework.data_generators.synthetic_data_design_generator import (
     SyntheticDataDesignGenerator,
@@ -46,7 +54,21 @@ class FakeExperimentalTrial(ExperimentalTrial):
         )
 
 
+class FakeEvaluateTrialDoFn(beam.DoFn):
+    def process(self, trial, seed):
+        import pandas as pd
+
+        yield pd.DataFrame({"col": [1]})
+
+
 class ExperimentDriverTest(absltest.TestCase):
+    def setUp(self):
+        self.client = LocalGSClient()
+        self.client.set_as_default_client()
+
+    def tearDown(self):
+        LocalGSClient.reset_default_storage_dir()
+
     def test_sample_experimental_design(self):
         sample_design = sample_experimental_design.generate_experimental_design_config(
             seed=1
@@ -124,8 +146,78 @@ class ExperimentDriverTest(absltest.TestCase):
             experiment_driver = ExperimentDriver(
                 data_design_dir, experimental_design, output_file, intermediate_dir, 1
             )
+
             result = experiment_driver.execute()
             self.assertEqual(result.shape[0], 2592)
+
+    @patch.object(experimental_design, "EvaluateTrialDoFn", FakeEvaluateTrialDoFn)
+    def test_experiment_driver_using_apache_beam_locally(self):
+        with TemporaryDirectory() as d:
+            data_design_dir = d + "/data"
+            output_file = d + "/output.csv"
+            intermediate_dir = d + "/intermediates"
+            Path(data_design_dir).mkdir(parents=True, exist_ok=True)
+            Path(intermediate_dir).mkdir(parents=True, exist_ok=True)
+
+            result = self._execute_experiment_driver_with_sample_experimental_design_using_apache_beam(
+                data_design_dir, output_file, intermediate_dir
+            )
+            self.assertEqual(result.shape[0], 2700)
+
+    @patch.object(experiment_driver, "GSClient", LocalGSClient)
+    @patch.object(experimental_design, "GSClient", LocalGSClient)
+    @patch.object(experimental_design, "EvaluateTrialDoFn", FakeEvaluateTrialDoFn)
+    @patch.object(data_set, "GSPath", LocalGSPath)
+    @patch.object(data_design, "GSPath", LocalGSPath)
+    def test_experiment_driver_using_apache_beam_and_cloud_path(self):
+        parent_dir_path = self.client.GSPath("gs://ExperimentDriverTest/parent")
+        data_design_dir_path = parent_dir_path.joinpath("data_design")
+        output_file_path = parent_dir_path.joinpath("output.csv")
+        intermediate_dir_path = parent_dir_path.joinpath("intermediates")
+        data_design_dir_path.joinpath("dummy.txt").write_text(
+            "For creating the target directory."
+        )
+        intermediate_dir_path.joinpath("dummy.txt").write_text(
+            "For creating the target directory."
+        )
+
+        result = self._execute_experiment_driver_with_sample_experimental_design_using_apache_beam(
+            str(data_design_dir_path), str(output_file_path), str(intermediate_dir_path)
+        )
+        self.assertEqual(result.shape[0], 2700)
+
+    def _execute_experiment_driver_with_sample_experimental_design_using_apache_beam(
+        self, data_design_dir, output_file, intermediate_dir
+    ):
+        data_design_generator = SyntheticDataDesignGenerator(
+            data_design_dir, simple_data_design_example.__file__, 1, False
+        )
+        data_design_generator()
+        experimental_design = sample_experimental_design.__file__
+
+        num_workers = 6
+        experiment_driver = ExperimentDriver(
+            data_design_dir,
+            experimental_design,
+            output_file,
+            intermediate_dir,
+            random_seed=1,
+            cores=num_workers,
+        )
+
+        pipeline_args = []
+        pipeline_args.extend(
+            [
+                "--runner=direct",
+                "--direct_running_mode=multi_processing",
+                f"--temp_location={intermediate_dir}",
+                f"--direct_num_workers={num_workers}",
+            ]
+        )
+        pipeline_options = PipelineOptions(pipeline_args)
+        return experiment_driver.execute(
+            use_apache_beam=True, pipeline_options=pipeline_options, client=self.client
+        )
 
 
 if __name__ == "__main__":

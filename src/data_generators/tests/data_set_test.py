@@ -87,7 +87,7 @@ class DataSetTest(absltest.TestCase):
             self.assertEqual(new_data_set.reach_by_impressions([4, 2]).reach(), 4)
 
     @patch.object(data_set, "GSPath", LocalGSPath)
-    def test_read_data_set_with_cloud_path(self):
+    def test_read_and_write_data_set_with_cloud_path(self):
         file_gs_path = LocalGSPath(
             "gs://DataSetTest/dir/dummy.txt"
         )

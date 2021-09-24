@@ -232,10 +232,7 @@ class DataSet:
         Returns:
           The DataSet object representing the contents of this directory.
         """
-        if dirpath.startswith("gs://"):
-            dirpath = GSPath(dirpath)
-        else:
-            dirpath = Path(dirpath)
+        dirpath = GSPath(dirpath) if dirpath.startswith("gs://") else Path(dirpath)
 
         pdf_list = []
         for filepath in sorted(dirpath.glob("*")):

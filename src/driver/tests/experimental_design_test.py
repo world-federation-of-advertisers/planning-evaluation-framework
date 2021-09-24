@@ -77,6 +77,7 @@ import wfa_planning_evaluation_framework.driver.experimental_design as experimen
 from wfa_planning_evaluation_framework.driver.experimental_design import (
     ExperimentalDesign,
     CombineDataFrameFn,
+    EvaluateTrialDoFn,
 )
 from wfa_planning_evaluation_framework.driver.experimental_trial import (
     ExperimentalTrial,
@@ -136,6 +137,14 @@ class FakeTestPointGenerator(TestPointGenerator):
 
     def test_points(self) -> Iterable[List[float]]:
         return [[1.0]]
+
+
+class FakeExperimentalTrial:
+    def __init__(self, base):
+        self._base = base
+
+    def evaluate(self, seed: int):
+        return self._base * seed
 
 
 class FakeEvaluateTrialDoFn(beam.DoFn):
@@ -238,9 +247,7 @@ class ExperimentalDesignTest(absltest.TestCase):
     @patch.object(data_set, "GSPath", LocalGSPath)
     @patch.object(data_design, "GSPath", LocalGSPath)
     def test_evaluate_with_apache_beam_with_cloud_path(self):
-        parent_dir_path = LocalGSPath(
-            "gs://ExperimentalDesignTest/parent"
-        )
+        parent_dir_path = LocalGSPath("gs://ExperimentalDesignTest/parent")
         data_design_dir_path = parent_dir_path.joinpath("data_design")
         experiment_dir_path = parent_dir_path.joinpath("experiments")
         data_design_dir_path.joinpath("dummy.txt").write_text(
@@ -303,6 +310,19 @@ class ExperimentalDesignTest(absltest.TestCase):
         )
         pipeline_options = PipelineOptions(pipeline_args)
         return exp.load(use_apache_beam=True, pipeline_options=pipeline_options)
+
+    def test_evaluate_trial_do_fn(self):
+        num_trials = 10
+        seed = 1
+        expected = list(range(num_trials))
+
+        with TestPipeline() as p:
+            output = (
+                p
+                | beam.Create([FakeExperimentalTrial(i) for i in range(num_trials)])
+                | beam.ParDo(EvaluateTrialDoFn(), seed)
+            )
+            assert_that(output, equal_to(expected))
 
     def test_combine_dataFrame_fn(self):
         num_dfs = 10

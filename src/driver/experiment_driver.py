@@ -283,13 +283,13 @@ def main(argv):
     )
     pipeline_options = PipelineOptions(pipeline_args)
 
-    # When there is no credential provided, GSClients of cloudpathlib
-    # will create an anonymous client which can't access non-public
-    # buckets. On the other hand, Clients in google.cloud.storage will
-    # fall back to the default inferred from the environment. As a
-    # result, we first create a Client from google.cloud.storage and
-    # then use it to initiate a GSClient object and set it as the default
-    # for other operations.
+    # When there is no credential explicitly provided as input argument,
+    # GSClients of cloudpathlib will create an anonymous client which can't
+    # access non-public buckets. On the other hand, Clients in
+    # google.cloud.storage will fall back to the default inferred from the
+    # environment. As a result, we create a Client from google.cloud.storage
+    # and use it to initiate a GSClient object. Then, we set the GSClient
+    # object as the default for authenticating the rest of operations.
     client = None
     if (
         pipeline_options.get_all_options()["runner"]

@@ -25,7 +25,8 @@ from tqdm import tqdm
 from typing import List
 from typing import Tuple
 import itertools
-
+from pathlib import Path
+from cloudpathlib.local import LocalGSPath
 from cloudpathlib import GSPath
 
 import apache_beam as beam
@@ -41,6 +42,11 @@ from wfa_planning_evaluation_framework.driver.experiment import (
 from wfa_planning_evaluation_framework.driver.experimental_trial import (
     ExperimentalTrial,
 )
+
+
+class EvaluateTrialDoFn(beam.DoFn):
+    def process(self, trial, seed):
+        yield trial.evaluate(seed)
 
 
 class CombineDataFrameFn(beam.CombineFn):
@@ -149,10 +155,20 @@ class ExperimentalDesign:
         if not self._all_trials:
             self.generate_trials()
 
-        temp_path = pipeline_options.get_all_options()["temp_location"]
-        temp_result_path = (
-            temp_path + "/temp_result.csv" if temp_path else "/temp_result.csv"
+        temp_location = pipeline_options.get_all_options().get("temp_location", "")
+        temp_result = (
+            temp_location + "/temp_result.csv" if temp_location else "/temp_result.csv"
         )
+
+        if temp_result.startswith("gs://"):
+            # Pickling client objects, which is included in GSPath, is
+            # explicitly not supported in Apache Beam. We only use GSPath when
+            # it is for unit test.
+            temp_result_path = (
+                GSPath(temp_result) if GSPath is LocalGSPath else temp_result
+            )
+        else:
+            temp_result_path = Path(temp_result)
 
         if use_apache_beam:
             with beam.Pipeline(options=pipeline_options) as pipeline:
@@ -160,7 +176,8 @@ class ExperimentalDesign:
                     pipeline
                     | "Create trial inputs" >> beam.Create(self._all_trials)
                     | "Evaluate trials"
-                    >> beam.Map(lambda trial: trial.evaluate(self._seed))
+                    # >> beam.Map(lambda trial: trial.evaluate(self._seed))
+                    >> beam.ParDo(EvaluateTrialDoFn(), self._seed)
                     | "Combine results" >> beam.CombineGlobally(CombineDataFrameFn())
                     | "Write combined result"
                     >> beam.Map(lambda df: df.to_csv(temp_result_path, index=False))
@@ -169,9 +186,8 @@ class ExperimentalDesign:
             self._evaluate_all_trials_in_parallel()
 
         result = None
-        if temp_result_path.startswith("gs://"):
-            temp_result_cloud_path = GSPath(temp_result_path)
-            with temp_result_cloud_path.open() as file:
+        if temp_result.startswith("gs://"):
+            with GSPath(temp_result).open() as file:
                 result = pd.read_csv(file)
         else:
             result = pd.concat(trial.evaluate(self._seed) for trial in self._all_trials)

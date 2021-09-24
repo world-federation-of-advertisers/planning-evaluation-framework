@@ -22,6 +22,9 @@ from typing import List
 from typing import Type
 import numpy as np
 import pandas as pd
+from unittest.mock import patch
+
+from cloudpathlib.local import LocalGSClient, LocalGSPath
 
 import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions
@@ -37,7 +40,9 @@ from wfa_planning_evaluation_framework.data_generators.fixed_price_generator imp
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
 )
+import wfa_planning_evaluation_framework.data_generators.data_design as data_design
 from wfa_planning_evaluation_framework.data_generators.data_design import DataDesign
+import wfa_planning_evaluation_framework.data_generators.data_set as data_set
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.models.reach_curve import (
     ReachCurve,
@@ -68,10 +73,12 @@ from wfa_planning_evaluation_framework.driver.experiment_parameters import (
 from wfa_planning_evaluation_framework.driver.experiment import (
     Experiment,
 )
+import wfa_planning_evaluation_framework.driver.experimental_design as experimental_design
 from wfa_planning_evaluation_framework.driver.experimental_design import (
     ExperimentalDesign,
     CombineDataFrameFn,
 )
+import wfa_planning_evaluation_framework.driver.experimental_trial as experimental_trial
 from wfa_planning_evaluation_framework.driver.experimental_trial import (
     ExperimentalTrial,
 )
@@ -132,7 +139,17 @@ class FakeTestPointGenerator(TestPointGenerator):
         return [[1.0]]
 
 
+class FakeEvaluateTrialDoFn(beam.DoFn):
+    def process(self, trial, seed):
+        import pandas as pd
+
+        yield pd.DataFrame({"col": [1]})
+
+
 class ExperimentalDesignTest(absltest.TestCase):
+    def tearDown(self):
+        LocalGSClient.reset_default_storage_dir()
+
     def _setup(self, tempdir):
         pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
         data_set1 = DataSet([pdf1], "dataset1")
@@ -203,57 +220,12 @@ class ExperimentalDesignTest(absltest.TestCase):
             results = exp.load()
             self.assertEqual(results.shape[0], 8)
 
-    def test_evaluate_with_apache_beam(self):
-        num_workers = 0
-
+    def test_evaluate_with_apache_beam_locally(self):
         with TemporaryDirectory() as d:
-            data1 = HeterogeneousImpressionGenerator(
-                1000, gamma_shape=1.0, gamma_scale=3.0
-            )()
-            pdf1 = PublisherData(FixedPriceGenerator(0.1)(data1))
-            data_set = DataSet([pdf1], "dataset")
             data_design_dir = join(d, "data_design")
             experiment_dir = join(d, "experiments")
-            data_design = DataDesign(data_design_dir)
-            data_design.add(data_set)
 
-            msd = ModelingStrategyDescriptor(
-                "single_publisher", {}, "goerg", {}, "pairwise_union", {}
-            )
-            sparams = SystemParameters(
-                [0.5],
-                LiquidLegionsParameters(13, 1e6, 1),
-                np.random.default_rng(),
-            )
-            eparams = ExperimentParameters(
-                PrivacyBudget(1.0, 0.01), 3, 5, "grid", {"grid_size": 5}
-            )
-            trial_descriptors = [TrialDescriptor(msd, sparams, eparams)]
-
-            exp = ExperimentalDesign(
-                experiment_dir,
-                data_design,
-                trial_descriptors,
-                seed=1,
-                cores=num_workers,
-                analysis_type="single_pub",
-            )
-
-            trials = exp.generate_trials()
-            self.assertLen(trials, 1)
-
-            pipeline_args = []
-            pipeline_args.extend(
-                [
-                    "--runner=direct",
-                    "--direct_running_mode=multi_processing",
-                    f"--temp_location={experiment_dir}",
-                    f"--direct_num_workers={num_workers}",
-                ]
-            )
-            pipeline_options = PipelineOptions(pipeline_args)
-
-            results = exp.load(use_apache_beam=True, pipeline_options=pipeline_options)
+            results = self._evaluate_with_apache_beam(data_design_dir, experiment_dir)
             # We don't check each column in the resulting dataframe, because these have
             # been checked by the preceding unit tests.  However, we make a few strategic
             # probes.
@@ -261,6 +233,78 @@ class ExperimentalDesignTest(absltest.TestCase):
             self.assertAlmostEqual(results["relative_error_at_100"][0], 0.0, delta=0.01)
             self.assertGreater(results["max_nonzero_frequency_from_halo"][0], 0)
             self.assertEqual(results["max_nonzero_frequency_from_data"][0], 1)
+
+    @patch.object(experimental_design, "GSPath", LocalGSPath)
+    @patch.object(experimental_design, "EvaluateTrialDoFn", FakeEvaluateTrialDoFn)
+    @patch.object(data_set, "GSPath", LocalGSPath)
+    @patch.object(data_design, "GSPath", LocalGSPath)
+    @patch.object(experimental_trial, "GSClient", LocalGSClient)
+    def test_evaluate_with_apache_beam_with_cloud_path(self):
+        parent_dir_path = LocalGSPath(
+            "gs://parallel_planning_evaluation_framework/parent"
+        )
+        data_design_dir_path = parent_dir_path.joinpath("data_design")
+        experiment_dir_path = parent_dir_path.joinpath("experiments")
+        data_design_dir_path.joinpath("dummy.txt").write_text(
+            "For creating the target directory."
+        )
+        experiment_dir_path.joinpath("dummy.txt").write_text(
+            "For creating the target directory."
+        )
+
+        results = self._evaluate_with_apache_beam(
+            str(data_design_dir_path), str(experiment_dir_path)
+        )
+        # We don't check each column in the resulting dataframe, because these have
+        # been checked by the preceding unit tests.  However, we make a few strategic
+        # probes.
+        self.assertEqual(results.shape[0], 1)
+        self.assertEqual(results["col"][0], 1)
+
+    def _evaluate_with_apache_beam(self, data_design_dir, experiment_dir):
+        num_workers = 2
+        data1 = HeterogeneousImpressionGenerator(
+            1000, gamma_shape=1.0, gamma_scale=3.0
+        )()
+        pdf1 = PublisherData(FixedPriceGenerator(0.1)(data1))
+        data_set = DataSet([pdf1], "dataset")
+        data_design = DataDesign(data_design_dir)
+        data_design.add(data_set)
+
+        msd = ModelingStrategyDescriptor(
+            "single_publisher", {}, "goerg", {}, "pairwise_union", {}
+        )
+        sparams = SystemParameters(
+            [0.5],
+            LiquidLegionsParameters(13, 1e6, 1),
+            np.random.default_rng(),
+        )
+        eparams = ExperimentParameters(
+            PrivacyBudget(1.0, 0.01), 3, 5, "grid", {"grid_size": 5}
+        )
+        trial_descriptors = [TrialDescriptor(msd, sparams, eparams)]
+
+        exp = ExperimentalDesign(
+            experiment_dir,
+            data_design,
+            trial_descriptors,
+            seed=1,
+            cores=num_workers,
+            analysis_type="single_pub",
+        )
+        exp.generate_trials()
+
+        pipeline_args = []
+        pipeline_args.extend(
+            [
+                "--runner=direct",
+                "--direct_running_mode=multi_processing",
+                f"--temp_location={experiment_dir}",
+                f"--direct_num_workers={num_workers}",
+            ]
+        )
+        pipeline_options = PipelineOptions(pipeline_args)
+        return exp.load(use_apache_beam=True, pipeline_options=pipeline_options)
 
     def test_combine_dataFrame_fn(self):
         num_dfs = 10

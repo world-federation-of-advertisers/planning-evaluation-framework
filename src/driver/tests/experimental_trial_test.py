@@ -342,7 +342,7 @@ class ExperimentalTrialTest(absltest.TestCase):
         data_set = DataSet([pdf1, pdf2], "dataset")
 
         parent_dir_path = LocalGSPath(
-            "gs://parallel_planning_evaluation_framework/parent"
+            "gs://ExperimentalTrialTest/parent"
         )
         data_design_dir_path = parent_dir_path.joinpath("data_design")
         experiment_dir_path = parent_dir_path.joinpath("experiments")

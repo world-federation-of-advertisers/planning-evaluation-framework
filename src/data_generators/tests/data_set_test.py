@@ -89,7 +89,7 @@ class DataSetTest(absltest.TestCase):
     @patch.object(data_set, "GSPath", LocalGSPath)
     def test_read_data_set_with_cloud_path(self):
         file_gs_path = LocalGSPath(
-            "gs://parallel_planning_evaluation_framework/dir/dummy.txt"
+            "gs://DataSetTest/dir/dummy.txt"
         )
         dir_gs_path = file_gs_path.parent
         file_gs_path.write_text("For creating the target directory.")

@@ -142,8 +142,8 @@ class HaloSimulatorTest(parameterized.TestCase):
         reach_point = self.halo.simulated_reach_by_spend(
             [0.06, 0.06], PrivacyBudget(1.0, 0.0), 0.5, 3
         )
-        self.assertEqual(reach_point.reach(1), 4)
-        self.assertEqual(reach_point.reach(2), 1)
+        self.assertEqual(reach_point.reach(1), 5)
+        self.assertEqual(reach_point.reach(2), 0)
         self.assertEqual(reach_point.reach(3), 0)
 
     @patch(

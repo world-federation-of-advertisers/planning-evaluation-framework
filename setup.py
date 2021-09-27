@@ -30,23 +30,24 @@ VERSION = "0.0.1"
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-    "numpy==1.20.2",
-    "pandas==1.2.5",
-    "absl-py==0.12.0",
-    "typing-extensions==3.7.4.3",
-    "pathos==0.2.7",
-    "fsspec==2021.7.0",
-    "gcsfs==2021.7.0",
+    "apache-beam>=2.31.0",
     "google-cloud-storage==1.42.0",
     "cloudpathlib==0.6.0",
+    "absl-py==0.12.0",
+    "pathos==0.2.5",
     "pyfarmhash==0.2.2",
+    "numpy==1.20.2",
     "pyDOE==0.3.8",
     "scipy==1.6.2",
-    "tqdm==4.47.0",
     "lxml==4.5.2",
     "cvxopt==1.2.6",
     "cvxpy==1.1.12",
     "dp-accounting==0.0.1",
+    "pandas==1.2.5",
+    "typing-extensions==3.7.4.3",
+    "fsspec==2021.7.0",
+    "gcsfs==2021.7.0",
+    "tqdm>=4.47.0",
 ]
 
 # What packages are optional?

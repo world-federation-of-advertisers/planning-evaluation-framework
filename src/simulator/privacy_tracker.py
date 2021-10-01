@@ -16,6 +16,7 @@
 from typing import Dict
 from typing import List
 from typing import NamedTuple
+from typing import Optional
 
 DP_NOISE_MECHANISM_LAPLACE = "Laplace"
 DP_NOISE_MECHANISM_DISCRETE_LAPLACE = "Discrete Laplace"
@@ -42,6 +43,27 @@ class PrivacyBudget(NamedTuple):
     delta: float
 
 
+class SamplingBucketIndices(NamedTuple):
+    """Records the indices of sampling buckets.
+
+    For simplicity, we represent buckets as an interval [0, 1). A user is
+    mapped to a real number in this interval. A sampling bucket represents an
+    interval [smallest_index, smallest_index + sampling_rate). This means that
+    all users that get mapped to this interval is used for computing
+    differentially private estimates.
+    """
+
+    smallest_index: float
+    sampling_rate: float
+
+    def contains(self, sampling_bucket: float) -> bool:
+        """Returns whether the sampling bucket is contained in the interval."""
+        return (
+            self.smallest_index <= sampling_bucket
+            and sampling_bucket < self.smallest_index + self.sampling_rate
+        )
+
+
 class NoisingEvent(NamedTuple):
     """Records the addition of differentially private noise
 
@@ -56,6 +78,8 @@ class NoisingEvent(NamedTuple):
     budget: PrivacyBudget  # Privacy budget associated to this event.
     mechanism: str  # See DP_NOISE_MECHANISM above.
     params: Dict  # Mechanism-specific parameters.
+    # See SamplingBucketIndices above.
+    sampling_buckets: SamplingBucketIndices = SamplingBucketIndices(0, 1)
 
 
 class PrivacyTracker:
@@ -77,9 +101,9 @@ class PrivacyTracker:
 
     def __init__(self):
         """Returns an object for recording and tracking privacy budget usage."""
-        self._epsilon_sum = 0.0
-        self._delta_sum = 0.0
         self._noising_events = []  # A list of NoisingEvents
+        # A list of starting points of buckets
+        self._sampling_buckets_starting_points = set([])
 
     @property
     def privacy_consumption(self) -> PrivacyBudget:
@@ -89,7 +113,26 @@ class PrivacyTracker:
         basic composition rule.  This will be expanded in the future
         to support advanced composition (see TODO #1 above).
         """
-        return PrivacyBudget(self._epsilon_sum, self._delta_sum)
+        # Take maximum privacy budget spent across all buckets.
+        max_epsilon = 0
+        max_delta = 0
+        for sampling_bucket_ in self._sampling_buckets_starting_points:
+            consumed_budget = self.privacy_consumption_for_sampling_bucket(
+                sampling_bucket_
+            )
+            max_epsilon = max(max_epsilon, consumed_budget.epsilon)
+            max_delta = max(max_delta, consumed_budget.delta)
+        return PrivacyBudget(max_epsilon, max_delta)
+
+    def privacy_consumption_for_sampling_bucket(self, sampling_bucket) -> PrivacyBudget:
+        """Returns the total privacy budget consumed so far for a given sampling bucket."""
+        epsilon_sum = 0
+        delta_sum = 0
+        for event in self._noising_events:
+            if event.sampling_buckets.contains(sampling_bucket):
+                epsilon_sum += event.budget.epsilon
+                delta_sum += event.budget.delta
+        return PrivacyBudget(epsilon_sum, delta_sum)
 
     @property
     def mechanisms(self) -> List[str]:
@@ -98,6 +141,7 @@ class PrivacyTracker:
 
     def append(self, event: NoisingEvent) -> None:
         """Records an application of differentially private noise."""
-        self._epsilon_sum += event.budget.epsilon
-        self._delta_sum += event.budget.delta
         self._noising_events.append(event)
+        self._sampling_buckets_starting_points.add(
+            event.sampling_buckets.smallest_index
+        )

@@ -16,7 +16,6 @@
 from typing import Dict
 from typing import List
 from typing import NamedTuple
-from typing import Optional
 
 DP_NOISE_MECHANISM_LAPLACE = "Laplace"
 DP_NOISE_MECHANISM_DISCRETE_LAPLACE = "Discrete Laplace"

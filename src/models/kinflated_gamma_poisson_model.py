@@ -244,6 +244,7 @@ class KInflatedGammaPoissonModel(ReachCurve):
             raise ValueError(
                 "Cannot have a model with fewer impressions than reached people"
             )
+        self._data = data
         self._reach_point = data[0]
         self._kmax = kmax
         self._debug = debug
@@ -604,7 +605,7 @@ class KInflatedGammaPoissonModel(ReachCurve):
 
         self._fit(impressions[0] + 1)
 
-        p = impressions[0] / self._max_impressions
+        p = min(impressions[0] / self._max_impressions, 1.0)
         freqs = self._max_reach * self._dist.kreach(np.arange(1, max_frequency), p)
         kplus = self._max_reach * self._dist.kplusreach(max_frequency, p)
         hist = list(freqs) + [kplus]

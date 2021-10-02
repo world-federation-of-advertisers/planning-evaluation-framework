@@ -96,7 +96,7 @@ class ExperimentDriverTest(absltest.TestCase):
         sp_design = list(
             single_publisher_design.generate_experimental_design_config(seed=1)
         )
-        self.assertLen(sp_design, 100)
+        self.assertLen(sp_design, 225)
 
     @patch(
         "wfa_planning_evaluation_framework.driver.experiment.ExperimentalTrial",

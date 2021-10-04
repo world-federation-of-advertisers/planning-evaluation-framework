@@ -17,6 +17,7 @@ import copy
 from typing import List
 import numpy as np
 from cvxopt import matrix
+from heapq import heappushpop, heapify
 from cvxopt import solvers
 from typing import Iterable
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
@@ -24,8 +25,13 @@ from wfa_planning_evaluation_framework.models.reach_surface import ReachSurface
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 
 solvers.options["show_progress"] = False
-THRESHOLD = 10 ** -5
-MAX_ITERATION = 10000
+
+MIN_IMPROVEMENT_PER_ROUND = 1e-3
+MAX_NUM_ROUNDS = 1000
+DISTANCE_TO_THE_WALL = 0.01
+NUM_NEAR_THE_WALL = 10
+MIN_NUM_INIT = 30
+MAX_NUM_INIT = 10
 
 
 class GeneralizedMixtureReachSurface(ReachSurface):
@@ -81,6 +87,33 @@ class GeneralizedMixtureReachSurface(ReachSurface):
         ).flatten()
         super().__init__(data=reach_points)
 
+    def _define_criteria(
+        self,
+        min_improvement_per_round: float = MIN_IMPROVEMENT_PER_ROUND,
+        max_num_rounds: int = MAX_NUM_ROUNDS,
+        distance_to_the_wall: float = DISTANCE_TO_THE_WALL,
+        num_near_the_wall: int = NUM_NEAR_THE_WALL,
+        min_num_init: int = MIN_NUM_INIT,
+        max_num_init: int = MAX_NUM_INIT,
+    ):
+        self._min_improvement = min_improvement_per_round
+        self._max_num_rounds = max_num_rounds
+        self._distance_to_the_wall = distance_to_the_wall
+        self._num_near_the_wall = num_near_the_wall
+        self._min_num_init = min_num_init
+        self._max_num_init = max_num_init
+
+    def get_theta(self, x):
+        return (1 - (1 - x).prod(axis=1)) / x.sum(axis=1)
+
+    def get_x(self, a, r):
+        return np.array(
+            [
+                a[[j + i * self._c for i in range(self._p)]] * r / self._N
+                for j in range(self._c)
+            ]
+        )
+
     def update_theta_from_a(self, a, r):
         """Udpate theta using equation:
 
@@ -103,14 +136,7 @@ class GeneralizedMixtureReachSurface(ReachSurface):
           th[i][j] = theta(a[1][j] r[i][1] / N, a[2][j] r[i][2] / N, ...,
           a[p][j] r[i][p] / N)
         """
-        theta = []
-        for k in range(self._n):
-            theta_k = np.zeros(self._c)
-            for j in range(self._c):
-                x = a[[j + i * self._c for i in range(self._p)]] * r[k] / self._N
-                theta_k[j] = (1 - np.prod(1 - x)) / np.sum(x)
-            theta.append(theta_k)
-        return theta
+        return [self.get_theta(self.get_x(a, r[k])) for k in range(self._n)]
 
     def solve_a_given_z(self, z, show_status=False):
         """A key intermediate step to fit GM model.
@@ -160,7 +186,8 @@ class GeneralizedMixtureReachSurface(ReachSurface):
             each training point.
 
         Returns:
-          a length-n list of length-(p * c) vectors indicating each r_i * theta_j / N for each training point.
+          a length-n list of length-(p * c) vectors indicating each r_i *
+          theta_j / N for each training point.
         """
         return [
             np.matmul(r[k].reshape(self._p, 1), theta[k].reshape(1, self._c)).flatten()
@@ -189,7 +216,45 @@ class GeneralizedMixtureReachSurface(ReachSurface):
             + np.matmul(np.transpose(self._q), a)
         )[0]
 
-    def _fit(self) -> None:
+    def init_a_sampler(self):
+        return np.random.dirichlet(np.ones(self._c) / 5, size=self._p).flatten()
+
+    def _fit_multi_init_a(self, random_seed: int = 0):
+        np.random.seed(random_seed)
+        max_heap = [-np.Inf] * self._num_near_the_wall
+        heapify(max_heap)
+
+        # A List following the max heap order to save the negative losses to
+        # save the smallest k locally optimum losses.
+        # We take negative loss simply because we need a min heap to save the
+        # smallest k values but python only (conveniently) supports a max heap.
+        num_init = 0
+        self._fitted_loss = np.Inf
+
+        def _close_enough(heap: List[float]) -> bool:
+            smallest_loss, kth_smallest_loss = -max(heap), -min(heap)
+            return kth_smallest_loss < (1 + self._distance_to_the_wall) * smallest_loss
+
+        while (
+            num_init < self._min_num_init or not _close_enough(max_heap)
+        ) and num_init < self._max_num_init:
+            init_a = self.init_a_sampler()
+            local_fit, local_loss, local_converge = self._fit_one_init_a(init_a)
+            heappushpop(max_heap, -local_loss)
+            # update the smallest k locally optimum losses
+            if local_loss < self._fitted_loss:
+                self._fitted_loss = local_loss
+                self.a = local_fit
+                self._model_success = local_converge
+            num_init += 1
+        self._model_success = (local_converge, _close_enough(max_heap))
+        self._k_smallest_losses = sorted([-l for l in max_heap])
+
+    def _fit_one_init_a(self, initial_a):
+        prev_loss = 10000000000  # np.Inf #self._loss(initial_a)
+        cur_loss = prev_loss - 1
+        num_rounds = 0
+
         reach_vectors = np.array(
             [
                 self.get_reach_vector(reach_point.impressions)
@@ -197,19 +262,25 @@ class GeneralizedMixtureReachSurface(ReachSurface):
             ]
         )
 
-        cur_a = self._initial_a.copy()
+        cur_a = initial_a.copy()
         cur_theta = self.update_theta_from_a(cur_a, reach_vectors)
-        old_loss = float("inf")
 
-        for iter in range(MAX_ITERATION):
+        while (
+            num_rounds < self._max_num_rounds
+            and cur_loss < prev_loss - self._min_improvement
+        ):
+            # lbd = self._round(lbd)
             cur_a = self.update_a_from_theta(cur_theta, reach_vectors)
-            new_loss = self._loss(cur_a)
-            loss_improvement = old_loss - new_loss
-            if loss_improvement < THRESHOLD:
-                self.a = cur_a
-                return
+            prev_loss = cur_loss
+            cur_loss = self._loss(cur_a)
+            # print("cur_loss",cur_loss)
+            num_rounds += 1
             cur_theta = self.update_theta_from_a(cur_a, reach_vectors)
-            old_loss = new_loss
+        return cur_a, cur_loss, (cur_loss >= prev_loss - self._min_improvement)
+
+    def _fit(self) -> None:
+        self._define_criteria()
+        self._fit_multi_init_a()
 
     def by_impressions(
         self, impressions: Iterable[int], max_frequency: int = 1

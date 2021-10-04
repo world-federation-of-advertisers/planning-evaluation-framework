@@ -110,8 +110,8 @@ class GeneralizedMixtureReachSurfaceTest(absltest.TestCase):
 
     def test_by_impressions(self):
         universe_size = 200
-        num_publishers = 8
-        num_clusters = 5
+        num_publishers = 20
+        num_clusters = 10
         training_size = 200
         decay_rate = 0.8
         random_seed = 1
@@ -160,3 +160,91 @@ class GeneralizedMixtureReachSurfaceTest(absltest.TestCase):
 
 if __name__ == "__main__":
     absltest.main()
+
+#   def generate_dataset(self, npub, imp_gen, nusers, imp_params, overlap_gen,
+#                        overlap_params):
+#     fixed_price_gen = FixedPriceGenerator(cost_per_impression=0.1)
+#     pub_datas = []
+#     for i in range(npub):
+#       instantiated_imp_gen = imp_gen(n=nusers[i], **imp_params[i])
+#       pub_datas.append(PublisherData(fixed_price_gen(instantiated_imp_gen())))
+#     self.dataset = overlap_gen(pub_datas, **overlap_params)
+#     self.max_reaches = [d.max_reach for d in self.dataset._data]
+
+#   def fit_single_pub_models(self, npub, single_pub_model, single_pub_params):
+#     curves = []
+#     for i in range(npub):
+#       rp = deepcopy(self.noised_single_pub_training_points[i])
+#       assert rp._spends[i] > 0, f'The {i}th rp does not have spend[{i}] > 0.'
+#       rp._spends = tuple([rp._spends[i]])
+#       rp._impressions = tuple([rp._impressions[i]])
+#       curve = single_pub_model([rp], **single_pub_params)
+#       curve._fit()
+#       curves.append(curve)
+#     predicted_max_reaches = [c.max_reach for c in self.curves]
+#     return curves
+
+#   def test_by_impressions_involved_one(self):
+#     universe_size = 10000
+#     num_publishers = 2
+#     num_clusters = 10
+
+#     training_size = 200
+#     decay_rate = 0.8
+#     random_seed = 1
+
+#     data_set = self.generate_dataset(
+#         npub=num_publishers,
+#         imp_gen=HeterogeneousImpressionGenerator,
+#         nusers=[5000, 5000],
+#         imp_params=[{
+#             'gamma_shape': 1,
+#             'gamma_scale': 2
+#         }, {
+#             'gamma_shape': 1,
+#             'gamma_scale': 3
+#         }],
+#         overlap_gen=IndependentOverlapDataSet,
+#         overlap_params={
+#             'universe_size': universe_size,
+#             'random_generator': random_generator
+#         })
+
+#     reach_curves = self.fit_single_pub_models(num_publishers, GoergModel, {})
+
+#     # reach_curves = self.generate_sample_reach_curves(num_publishers, decay_rate,
+#     #                                                  universe_size)
+
+#     N = max([reach_curve.max_reach for reach_curve in reach_curves]) * 2
+
+#     true_a = random_generator.dirichlet(
+#         np.ones(num_clusters), size=num_publishers).flatten()
+
+#     training_reach_points = self.generate_sample_reach_points(
+#         num_clusters,
+#         num_publishers,
+#         true_a,
+#         reach_curves,
+#         training_size,
+#         universe_size,
+#         N,
+#         1,
+#     )
+
+#     surface = GeneralizedMixtureReachSurface(reach_curves,
+#                                              training_reach_points,
+#                                              num_clusters)
+
+#     test_reach_points = self.generate_sample_reach_points(
+#         num_clusters,
+#         num_publishers,
+#         true_a,
+#         reach_curves,
+#         training_size,
+#         universe_size,
+#         N,
+#         2,
+#     )
+
+#     self.assertPointsAlmostEqualToPrediction(surface, training_reach_points)
+#     self.assertPointsAlmostEqualToPrediction(surface, test_reach_points)

@@ -23,6 +23,7 @@ from typing import Type
 import numpy as np
 import pandas as pd
 from unittest.mock import patch
+import logging
 
 from cloudpathlib.local import LocalGSClient, LocalGSPath
 
@@ -309,13 +310,17 @@ class ExperimentalDesignTest(absltest.TestCase):
             ]
         )
         pipeline_options = PipelineOptions(pipeline_args)
-        return exp.load(use_apache_beam=True, pipeline_options=pipeline_options)
+        logging.disable(logging.CRITICAL)
+        results = exp.load(use_apache_beam=True, pipeline_options=pipeline_options)
+        logging.disable(logging.NOTSET)
+        return results
 
     def test_evaluate_trial_do_fn(self):
         num_trials = 10
         seed = 1
         expected = list(range(num_trials))
 
+        logging.disable(logging.CRITICAL)
         with TestPipeline() as p:
             output = (
                 p
@@ -323,6 +328,7 @@ class ExperimentalDesignTest(absltest.TestCase):
                 | beam.ParDo(EvaluateTrialDoFn(), seed)
             )
             assert_that(output, equal_to(expected))
+        logging.disable(logging.NOTSET)
 
     def test_combine_dataFrame_fn(self):
         num_dfs = 10
@@ -331,6 +337,7 @@ class ExperimentalDesignTest(absltest.TestCase):
         dfs = [pd.DataFrame([{key: val}]) for _ in range(num_dfs)]
         expected = pd.concat(dfs).to_csv()
 
+        logging.disable(logging.CRITICAL)
         with TestPipeline() as p:
             output = (
                 p
@@ -339,6 +346,7 @@ class ExperimentalDesignTest(absltest.TestCase):
                 | beam.Map(lambda df: df.to_csv())
             )
             assert_that(output, equal_to([expected]))
+        logging.disable(logging.NOTSET)
 
     def test_remove_duplicates(self):
         with TemporaryDirectory() as d:

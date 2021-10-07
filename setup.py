@@ -30,11 +30,10 @@ VERSION = "0.0.1"
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-    "apache-beam>=2.31.0",
     "google-cloud-storage==1.42.0",
     "cloudpathlib==0.6.0",
     "absl-py==0.12.0",
-    "pathos==0.2.5",
+    "pathos>=0.2.7",
     "pyfarmhash==0.2.2",
     "numpy==1.20.2",
     "pyDOE==0.3.8",
@@ -43,7 +42,7 @@ REQUIRED = [
     "cvxopt==1.2.6",
     "cvxpy==1.1.12",
     "dp-accounting==0.0.1",
-    "pandas==1.2.5",
+    "pandas>=1.2.5",
     "typing-extensions==3.7.4.3",
     "fsspec==2021.7.0",
     "gcsfs==2021.7.0",

@@ -1,8 +1,7 @@
-apache-beam>=2.31.0
 google-cloud-storage==1.42.0
 cloudpathlib==0.6.0
 absl-py==0.12.0
-pathos==0.2.5
+pathos>=0.2.7
 pyfarmhash==0.2.2
 matplotlib>=3.0.3
 numpy==1.20.2
@@ -14,4 +13,7 @@ cvxopt==1.2.6
 cvxpy==1.1.12
 dp-accounting==0.0.1
 tqdm>=4.47.0
+fsspec==2021.7.0
+gcsfs==2021.7.0
+pandas>=1.2.5
 git+git://github.com/world-federation-of-advertisers/cardinality_estimation_evaluation_framework/@master#egg=wfa_cardinality_estimation_evaluation_framework

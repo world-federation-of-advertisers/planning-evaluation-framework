@@ -22,6 +22,7 @@ from pathlib import Path
 from cloudpathlib.local import LocalGSClient, LocalGSPath
 import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions
+import logging
 
 import wfa_planning_evaluation_framework.driver.experiment_driver as experiment_driver
 import wfa_planning_evaluation_framework.driver.experimental_design as experimental_design
@@ -215,9 +216,13 @@ class ExperimentDriverTest(absltest.TestCase):
             ]
         )
         pipeline_options = PipelineOptions(pipeline_args)
-        return experiment_driver.execute(
+
+        logging.disable(logging.CRITICAL)
+        result = experiment_driver.execute(
             use_apache_beam=True, pipeline_options=pipeline_options, client=self.client
         )
+        logging.disable(logging.NOTSET)
+        return result
 
 
 if __name__ == "__main__":

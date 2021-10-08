@@ -44,15 +44,13 @@ Usage:
     python3 experiment_driver.py \
     --data_design_dir=gs://<bucket_name>/<subpath/to/data_design_dir> \
     --experimental_design=gs://<bucket_name>/<subpath/to/experimental_design_dir> \
-    --output_file=<output_file> \
+    --output_file=gs://<bucket_name>/<subpath/to/output_file> \
     --intermediates_dir=gs://<bucket_name>/<subpath/to/intermediates_dir> \
-    --seed=<random_seed> \
-    --cores=<number_of_cores> \
     [--analysis_type=single_pub]]
     --use_apache_beam \
     --runner=DataflowRunner \
     --region=<region> \
-    --project=<project_id> \
+    --project=<gcp_project_id> \
     --staging_location=gs://<bucket_name>/<subpath/to/staging_dir> \
     --setup_file <path/to/setup.py> \
     --extra_package=<path/to/wfa_cardinality_estimation_evaluation_framework-0.0.tar.gz>

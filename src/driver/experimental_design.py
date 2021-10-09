@@ -25,7 +25,7 @@ from tqdm import tqdm
 from typing import List
 from typing import Tuple
 import itertools
-from cloudpathlib.local import LocalGSClient
+from cloudpathlib.local import LocalGSPath
 
 import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions
@@ -156,18 +156,17 @@ class ExperimentalDesign:
         if not self._all_trials:
             self.generate_trials()
 
-        fs_path_client = FilesystemPathClient()
-
         temp_location = pipeline_options.get_all_options().get("temp_location", "")
         temp_result = (
             temp_location + "/temp_result.csv" if temp_location else "/temp_result.csv"
         )
 
+        fs_path_client = FilesystemPathClient()
+        temp_result_path = fs_path_client.get_fs_path(temp_result)
         # Pickling client objects, which is included in GSPath, is explicitly
         # not supported in Apache Beam. We only use Path object when it is for
         # unit test.
-        temp_result_path = fs_path_client.get_fs_path(temp_result)
-        if isinstance(temp_result_path, LocalGSClient):
+        if not isinstance(temp_result_path, LocalGSPath):
             temp_result_path = temp_result
 
         if use_apache_beam:

@@ -245,7 +245,10 @@ class ExperimentalDesignTest(absltest.TestCase):
     @patch.object(filesystem_path_client, "GSClient", LocalGSClient)
     @patch.object(experimental_design, "EvaluateTrialDoFn", FakeEvaluateTrialDoFn)
     def test_evaluate_with_apache_beam_with_cloud_path(self):
-        parent_dir_path = LocalGSPath("gs://ExperimentalDesignTest/parent")
+        fs_path_client = filesystem_path_client.FilesystemPathClient()
+        parent_dir_path = fs_path_client.get_fs_path(
+            "gs://ExperimentalDesignTest/parent"
+        )
         data_design_dir_path = parent_dir_path.joinpath("data_design")
         experiment_dir_path = parent_dir_path.joinpath("experiments")
         data_design_dir_path.joinpath("dummy.txt").write_text(

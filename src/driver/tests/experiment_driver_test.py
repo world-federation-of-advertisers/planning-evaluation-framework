@@ -64,10 +64,6 @@ class FakeEvaluateTrialDoFn(beam.DoFn):
 
 
 class ExperimentDriverTest(absltest.TestCase):
-    def setUp(self):
-        self.client = LocalGSClient()
-        self.client.set_as_default_client()
-
     def tearDown(self):
         LocalGSClient.reset_default_storage_dir()
 
@@ -169,7 +165,8 @@ class ExperimentDriverTest(absltest.TestCase):
     @patch.object(filesystem_path_client, "GSClient", LocalGSClient)
     @patch.object(experimental_design, "EvaluateTrialDoFn", FakeEvaluateTrialDoFn)
     def test_experiment_driver_using_apache_beam_and_cloud_path(self):
-        parent_dir_path = self.client.GSPath("gs://ExperimentDriverTest/parent")
+        fs_path_client = filesystem_path_client.FilesystemPathClient()
+        parent_dir_path = fs_path_client.get_fs_path("gs://ExperimentDriverTest/parent")
         data_design_dir_path = parent_dir_path.joinpath("data_design")
         output_file_path = parent_dir_path.joinpath("output.csv")
         intermediate_dir_path = parent_dir_path.joinpath("intermediates")

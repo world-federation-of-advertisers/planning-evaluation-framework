@@ -283,14 +283,7 @@ def main(argv):
     )
     pipeline_options = PipelineOptions(pipeline_args)
 
-    # When there is no credential explicitly provided as input argument,
-    # GSClients of cloudpathlib will create an anonymous client which can't
-    # access non-public buckets. On the other hand, Clients in
-    # google.cloud.storage will fall back to the default inferred from the
-    # environment. As a result, we create a Client from google.cloud.storage
-    # and use it to initiate a GSClient object. Then, we set the GSClient
-    # object as the default for authenticating the rest of operations.
-    client = None
+    # Set up a default GS client for later GS file operations
     if (
         pipeline_options.get_all_options()["runner"]
         in [
@@ -299,8 +292,7 @@ def main(argv):
         ]
         or known_args.output_file.startswith("gs://")
     ):
-        client = GSClient(storage_client=storage.Client())
-        client.set_as_default_client()
+        client = FilesystemPathClient.get_default_gs_client()
 
     experiment_driver.execute(
         known_args.use_apache_beam,

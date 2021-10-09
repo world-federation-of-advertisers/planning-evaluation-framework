@@ -43,6 +43,7 @@ from wfa_planning_evaluation_framework.driver import (
     analysis_example_experimental_design,
 )
 from wfa_planning_evaluation_framework.driver import single_publisher_design
+import wfa_planning_evaluation_framework.data_generators.filesystem_path_client as filesystem_path_client
 
 
 class FakeExperimentalTrial(ExperimentalTrial):
@@ -165,11 +166,8 @@ class ExperimentDriverTest(absltest.TestCase):
             )
             self.assertEqual(result.shape[0], 2700)
 
-    @patch.object(experiment_driver, "GSClient", LocalGSClient)
-    @patch.object(experimental_design, "GSClient", LocalGSClient)
+    @patch.object(filesystem_path_client, "GSClient", LocalGSClient)
     @patch.object(experimental_design, "EvaluateTrialDoFn", FakeEvaluateTrialDoFn)
-    @patch.object(data_set, "GSPath", LocalGSPath)
-    @patch.object(data_design, "GSPath", LocalGSPath)
     def test_experiment_driver_using_apache_beam_and_cloud_path(self):
         parent_dir_path = self.client.GSPath("gs://ExperimentDriverTest/parent")
         data_design_dir_path = parent_dir_path.joinpath("data_design")
@@ -219,7 +217,7 @@ class ExperimentDriverTest(absltest.TestCase):
 
         logging.disable(logging.CRITICAL)
         result = experiment_driver.execute(
-            use_apache_beam=True, pipeline_options=pipeline_options, client=self.client
+            use_apache_beam=True, pipeline_options=pipeline_options
         )
         logging.disable(logging.NOTSET)
         return result

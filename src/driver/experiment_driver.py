@@ -125,7 +125,6 @@ import sys
 from typing import Iterable
 
 from cloudpathlib import GSClient
-from cloudpathlib.client import Client
 from google.cloud import storage
 
 from apache_beam.options.pipeline_options import PipelineOptions
@@ -136,6 +135,9 @@ from wfa_planning_evaluation_framework.driver.experimental_design import (
 )
 from wfa_planning_evaluation_framework.driver.trial_descriptor import (
     TrialDescriptor,
+)
+from wfa_planning_evaluation_framework.data_generators.filesystem_path_client import (
+    FilesystemPathClient,
 )
 
 
@@ -164,7 +166,6 @@ class ExperimentDriver:
         self,
         use_apache_beam: bool = False,
         pipeline_options: PipelineOptions = PipelineOptions(),
-        client: Client = None,
     ) -> pd.DataFrame:
         """Performs all experiments defined in an experimental design."""
         data_design = DataDesign(self._data_design_dir)
@@ -184,8 +185,9 @@ class ExperimentDriver:
             pipeline_options=pipeline_options,
         )
 
+        fs_path_client = FilesystemPathClient()
         if self._output_file.startswith("gs://"):
-            output_cloud_path = client.GSPath(self._output_file)
+            output_cloud_path = fs_path_client.get_fs_path(self._output_file)
             output_cloud_path.write_text(result.to_csv(index=False))
         else:
             result.to_csv(self._output_file, index=False)
@@ -303,7 +305,6 @@ def main(argv):
     experiment_driver.execute(
         known_args.use_apache_beam,
         pipeline_options,
-        client,
     )
 
 

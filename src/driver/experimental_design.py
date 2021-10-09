@@ -25,9 +25,7 @@ from tqdm import tqdm
 from typing import List
 from typing import Tuple
 import itertools
-from pathlib import Path
 from cloudpathlib.local import LocalGSClient
-from cloudpathlib import GSClient
 
 import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions
@@ -41,6 +39,9 @@ from wfa_planning_evaluation_framework.driver.experiment import (
 )
 from wfa_planning_evaluation_framework.driver.experimental_trial import (
     ExperimentalTrial,
+)
+from wfa_planning_evaluation_framework.data_generators.filesystem_path_client import (
+    FilesystemPathClient,
 )
 
 
@@ -155,18 +156,19 @@ class ExperimentalDesign:
         if not self._all_trials:
             self.generate_trials()
 
+        fs_path_client = FilesystemPathClient()
+
         temp_location = pipeline_options.get_all_options().get("temp_location", "")
         temp_result = (
             temp_location + "/temp_result.csv" if temp_location else "/temp_result.csv"
         )
 
         # Pickling client objects, which is included in GSPath, is explicitly
-        # not supported in Apache Beam. We only use GSPath when it is for
+        # not supported in Apache Beam. We only use Path object when it is for
         # unit test.
-        client = GSClient.get_default_client()
-        temp_result_path = (
-            client.GSPath(temp_result) if GSClient is LocalGSClient else temp_result
-        )
+        temp_result_path = fs_path_client.get_fs_path(temp_result)
+        if isinstance(temp_result_path, LocalGSClient):
+            temp_result_path = temp_result
 
         if use_apache_beam:
             with beam.Pipeline(options=pipeline_options) as pipeline:
@@ -183,11 +185,7 @@ class ExperimentalDesign:
 
         result = None
         if use_apache_beam:
-            temp_result_path = (
-                client.GSPath(temp_result)
-                if temp_result.startswith("gs://")
-                else Path(temp_result)
-            )
+            temp_result_path = fs_path_client.get_fs_path(temp_result)
             with temp_result_path.open() as file:
                 result = pd.read_csv(file)
         else:

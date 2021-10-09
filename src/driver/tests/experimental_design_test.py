@@ -41,9 +41,7 @@ from wfa_planning_evaluation_framework.data_generators.fixed_price_generator imp
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
 )
-import wfa_planning_evaluation_framework.data_generators.data_design as data_design
 from wfa_planning_evaluation_framework.data_generators.data_design import DataDesign
-import wfa_planning_evaluation_framework.data_generators.data_set as data_set
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.models.reach_curve import (
     ReachCurve,
@@ -93,6 +91,7 @@ from wfa_planning_evaluation_framework.driver.test_point_generator import (
 from wfa_planning_evaluation_framework.driver.trial_descriptor import (
     TrialDescriptor,
 )
+import wfa_planning_evaluation_framework.data_generators.filesystem_path_client as filesystem_path_client
 
 
 class FakeReachSurface(ReachSurface):
@@ -243,10 +242,8 @@ class ExperimentalDesignTest(absltest.TestCase):
             self.assertGreater(results["max_nonzero_frequency_from_halo"][0], 0)
             self.assertEqual(results["max_nonzero_frequency_from_data"][0], 1)
 
-    @patch.object(experimental_design, "GSClient", LocalGSClient)
+    @patch.object(filesystem_path_client, "GSClient", LocalGSClient)
     @patch.object(experimental_design, "EvaluateTrialDoFn", FakeEvaluateTrialDoFn)
-    @patch.object(data_set, "GSPath", LocalGSPath)
-    @patch.object(data_design, "GSPath", LocalGSPath)
     def test_evaluate_with_apache_beam_with_cloud_path(self):
         parent_dir_path = LocalGSPath("gs://ExperimentalDesignTest/parent")
         data_design_dir_path = parent_dir_path.joinpath("data_design")

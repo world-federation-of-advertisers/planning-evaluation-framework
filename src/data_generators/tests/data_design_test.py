@@ -22,7 +22,7 @@ from cloudpathlib.local import LocalGSClient, LocalGSPath
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
 )
-import wfa_planning_evaluation_framework.data_generators.data_design as data_design
+import wfa_planning_evaluation_framework.data_generators.filesystem_path_client as filesystem_path_client
 from wfa_planning_evaluation_framework.data_generators.data_design import DataDesign
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 
@@ -41,11 +41,9 @@ class DataDesignTest(absltest.TestCase):
     def tearDown(self):
         LocalGSClient.reset_default_storage_dir()
 
-    @patch.object(data_design, "GSPath", LocalGSPath)
+    @patch.object(filesystem_path_client, "GSClient", LocalGSClient)
     def test_constructor_with_cloud_path(self):
-        file_gs_path = LocalGSPath(
-            "gs://DataDesignTest/dir/dummy.txt"
-        )
+        file_gs_path = LocalGSPath("gs://DataDesignTest/dir/dummy.txt")
         dir_gs_path = file_gs_path.parent
         file_gs_path.write_text("For creating the target directory.")
 

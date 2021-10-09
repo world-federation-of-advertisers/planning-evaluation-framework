@@ -29,7 +29,7 @@ from wfa_planning_evaluation_framework.data_generators.homogeneous_impression_ge
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
 )
-import wfa_planning_evaluation_framework.data_generators.data_set as data_set
+import wfa_planning_evaluation_framework.data_generators.filesystem_path_client as filesystem_path_client
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 
 
@@ -86,11 +86,9 @@ class DataSetTest(absltest.TestCase):
             self.assertEqual(new_data_set.reach_by_impressions([0, 2]).reach(), 2)
             self.assertEqual(new_data_set.reach_by_impressions([4, 2]).reach(), 4)
 
-    @patch.object(data_set, "GSPath", LocalGSPath)
+    @patch.object(filesystem_path_client, "GSClient", LocalGSClient)
     def test_read_and_write_data_set_with_cloud_path(self):
-        file_gs_path = LocalGSPath(
-            "gs://DataSetTest/dir/dummy.txt"
-        )
+        file_gs_path = LocalGSPath("gs://DataSetTest/dir/dummy.txt")
         dir_gs_path = file_gs_path.parent
         file_gs_path.write_text("For creating the target directory.")
 

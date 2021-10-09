@@ -20,8 +20,6 @@ from collections import defaultdict
 from copy import deepcopy
 from os import listdir
 from os.path import isfile, join
-from pathlib import Path
-from cloudpathlib import GSPath
 from typing import Dict
 from typing import Iterable
 from typing import List
@@ -30,6 +28,9 @@ from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
 )
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
+from wfa_planning_evaluation_framework.data_generators.filesystem_path_client import (
+    FilesystemPathClient,
+)
 
 
 class DataSet:
@@ -206,9 +207,8 @@ class DataSet:
         if not dataset_dir:
             dataset_dir = self._name
 
-        parent_dir_path = (
-            GSPath(parent_dir) if parent_dir.startswith("gs://") else Path(parent_dir)
-        )
+        fs_path_client = FilesystemPathClient()
+        parent_dir_path = fs_path_client.get_fs_path(parent_dir)
 
         full_dir_path = parent_dir_path.joinpath(dataset_dir)
         full_dir_path.mkdir(parents=True, exist_ok=True)
@@ -232,7 +232,8 @@ class DataSet:
         Returns:
           The DataSet object representing the contents of this directory.
         """
-        dirpath = GSPath(dirpath) if dirpath.startswith("gs://") else Path(dirpath)
+        fs_path_client = FilesystemPathClient()
+        dirpath = fs_path_client.get_fs_path(dirpath)
 
         pdf_list = []
         for filepath in sorted(dirpath.glob("*")):

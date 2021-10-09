@@ -30,9 +30,7 @@ from cloudpathlib.local import LocalGSClient, LocalGSPath
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
 )
-import wfa_planning_evaluation_framework.data_generators.data_design as data_design
 from wfa_planning_evaluation_framework.data_generators.data_design import DataDesign
-import wfa_planning_evaluation_framework.data_generators.data_set as data_set
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.data_generators.heterogeneous_impression_generator import (
     HeterogeneousImpressionGenerator,
@@ -76,7 +74,6 @@ from wfa_planning_evaluation_framework.driver.experiment_parameters import (
     TEST_POINT_STRATEGIES,
     ExperimentParameters,
 )
-import wfa_planning_evaluation_framework.driver.experimental_trial as experimental_trial
 from wfa_planning_evaluation_framework.driver.experimental_trial import (
     ExperimentalTrial,
 )
@@ -90,6 +87,7 @@ from wfa_planning_evaluation_framework.driver.test_point_generator import (
 from wfa_planning_evaluation_framework.driver.trial_descriptor import (
     TrialDescriptor,
 )
+import wfa_planning_evaluation_framework.data_generators.filesystem_path_client as filesystem_path_client
 
 
 class FakeReachSurface(ReachSurface):
@@ -333,17 +331,13 @@ class ExperimentalTrialTest(absltest.TestCase):
             self.assertEqual(result["model_succeeded"][0], 1)
             self.assertEqual(result["model_exception"][0], "")
 
-    @patch.object(experimental_trial, "GSClient", LocalGSClient)
-    @patch.object(data_design, "GSPath", LocalGSPath)
-    @patch.object(data_set, "GSPath", LocalGSPath)
+    @patch.object(filesystem_path_client, "GSClient", LocalGSClient)
     def test_evaluate_with_cloud_path(self):
         pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
         pdf2 = PublisherData([(2, 0.02), (2, 0.03), (4, 0.06)], "pdf2")
         data_set = DataSet([pdf1, pdf2], "dataset")
 
-        parent_dir_path = LocalGSPath(
-            "gs://ExperimentalTrialTest/parent"
-        )
+        parent_dir_path = LocalGSPath("gs://ExperimentalTrialTest/parent")
         data_design_dir_path = parent_dir_path.joinpath("data_design")
         experiment_dir_path = parent_dir_path.joinpath("experiments")
 

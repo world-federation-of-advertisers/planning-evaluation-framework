@@ -27,9 +27,6 @@ import traceback
 from typing import List
 from typing import NamedTuple
 
-from cloudpathlib import GSClient
-from google.cloud import storage
-
 from wfa_planning_evaluation_framework.data_generators.data_design import (
     DataDesign,
 )
@@ -58,6 +55,9 @@ from wfa_planning_evaluation_framework.driver.trial_descriptor import (
 from wfa_planning_evaluation_framework.driver.test_point_aggregator import (
     aggregate,
     aggregate_on_exception,
+)
+from wfa_planning_evaluation_framework.data_generators.filesystem_path_client import (
+    FilesystemPathClient,
 )
 
 # The output dataframe will contain the estimation error for each of the
@@ -134,34 +134,22 @@ class ExperimentalTrial:
         rng = np.random.default_rng(seed=seed)
         np.random.seed(seed)
 
-        if self._experiment_dir.startswith("gs://"):
-            # When there is no credential provided, GSClients of cloudpathlib
-            # will create an anonymous client which can't access non-public
-            # buckets. On the other hand, Clients in google.cloud.storage will
-            # fall back to the default inferred from the environment. As a
-            # result, we first create a Client from google.cloud.storage and
-            # then use it to initiate a GSClient object and set it as the
-            # default for other operations.
-            client = GSClient(storage_client=storage.Client())
-            client.set_as_default_client()
-            Path = client.GSPath
-        else:
-            from pathlib import Path
+        fs_path_client = FilesystemPathClient()
 
         trial_results_path = self._compute_trial_results_path()
-        if Path(trial_results_path).is_file():
+        if fs_path_client.get_fs_path(trial_results_path).is_file():
             logging.vlog(2, "  --> Returning previously computed result")
             return pd.read_csv(trial_results_path)
 
         # The pending directory contains one entry for each currently executing
         # experimental trial.  If a computation appears to hang, this can be
         # used to check which evaluations are still pending.
-        experiment_dir_parent = Path(self._experiment_dir).parent
-        pending_path = Path(
+        experiment_dir_parent = fs_path_client.get_fs_path(self._experiment_dir).parent
+        pending_path = fs_path_client.get_fs_path(
             f"{experiment_dir_parent}/pending/{hashlib.md5(trial_results_path.encode()).hexdigest()}"
         )
-        Path(pending_path).parent.mkdir(parents=True, exist_ok=True)
-        Path(pending_path).write_text(
+        pending_path.parent.mkdir(parents=True, exist_ok=True)
+        pending_path.write_text(
             f"{datetime.now()}\n{self._data_set_name}\n{self._trial_descriptor}\n\n"
         )
 
@@ -228,9 +216,13 @@ class ExperimentalTrial:
             ],
             axis=1,
         )
-        Path(trial_results_path).parent.mkdir(parents=True, exist_ok=True)
-        Path(trial_results_path).write_text(result.to_csv(index=False))
-        Path(pending_path).unlink()
+        fs_path_client.get_fs_path(trial_results_path).parent.mkdir(
+            parents=True, exist_ok=True
+        )
+        fs_path_client.get_fs_path(trial_results_path).write_text(
+            result.to_csv(index=False)
+        )
+        pending_path.unlink()
 
         return result
 

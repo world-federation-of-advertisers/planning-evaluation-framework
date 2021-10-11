@@ -14,6 +14,7 @@
 """Tests for filesystem_path_client.py."""
 
 from absl.testing import absltest
+from absl.testing import parameterized
 from unittest.mock import patch
 
 from pathlib import Path
@@ -32,26 +33,25 @@ class FakeGSClient:
         self.check = True
 
 
-class FilesystemPathClientTest(absltest.TestCase):
+class FilesystemPathClientTest(parameterized.TestCase):
     def tearDown(self):
         FilesystemPathClient.reset_default_gs_client()
 
-    def test_get_fs_path_with_local_path(self):
-        local_path = "/local/path"
-        expected = Path(local_path)
-
+    @parameterized.named_parameters(
+        {
+            "testcase_name": "with_local_path",
+            "path": "/local/path",
+            "expected": Path("/local/path"),
+        },
+        {
+            "testcase_name": "with_gs_path",
+            "path": "gs://path",
+            "expected": GSPath("gs://path"),
+        },
+    )
+    def test_get_fs_path(self, path, expected):
         fs_path_client = FilesystemPathClient()
-        path = fs_path_client.get_fs_path(local_path)
-
-        self.assertEqual(expected, path)
-
-    def test_get_fs_path_with_gs_path(self):
-        gs_path = "gs://path"
-        expected = GSPath(gs_path)
-
-        fs_path_client = FilesystemPathClient()
-        path = fs_path_client.get_fs_path(gs_path)
-
+        path = fs_path_client.get_fs_path(path)
         self.assertEqual(expected, path)
 
     @patch.object(filesystem_path_client, "GSClient", FakeGSClient)

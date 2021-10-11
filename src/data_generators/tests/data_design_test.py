@@ -42,16 +42,6 @@ class DataDesignTest(absltest.TestCase):
         filesystem_path_client.FilesystemPathClient.reset_default_gs_client()
         LocalGSClient.reset_default_storage_dir()
 
-    @patch.object(filesystem_path_client, "GSClient", LocalGSClient)
-    def test_constructor_with_cloud_path(self):
-        file_gs_path = LocalGSPath("gs://DataDesignTest/dir/dummy.txt")
-        dir_gs_path = file_gs_path.parent
-        file_gs_path.write_text("For creating the target directory.")
-
-        dd = DataDesign(str(dir_gs_path))
-        self.assertEqual(dd.count, 0)
-        self.assertEqual(dd.names, [])
-
     def test_properties(self):
         with TemporaryDirectory() as d:
             dd = DataDesign(d)
@@ -63,6 +53,22 @@ class DataDesignTest(absltest.TestCase):
             dd.add(self.data_set2)
             self.assertEqual(dd.count, 2)
             self.assertEqual(dd.names, ["ds1", "ds2"])
+
+    @patch.object(filesystem_path_client, "GSClient", LocalGSClient)
+    def test_properties_with_cloud_path(self):
+        file_gs_path = LocalGSPath("gs://DataDesignTest/dir1/dir2/dir3/dummy.txt")
+        file_gs_path.write_text("For creating the target directory.")
+        dir_gs_path = file_gs_path.parent
+
+        dd = DataDesign(str(dir_gs_path))
+        self.assertEqual(dd.count, 0)
+        self.assertEqual(dd.names, [])
+        dd.add(self.data_set1)
+        self.assertEqual(dd.count, 1)
+        self.assertEqual(dd.names, ["ds1"])
+        dd.add(self.data_set2)
+        self.assertEqual(dd.count, 2)
+        self.assertEqual(dd.names, ["ds1", "ds2"])
 
     def test_lookup(self):
         with TemporaryDirectory() as d:

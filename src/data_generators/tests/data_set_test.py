@@ -42,6 +42,7 @@ class DataSetTest(absltest.TestCase):
         cls.data_set = data_set
 
     def tearDown(self):
+        filesystem_path_client.FilesystemPathClient.reset_default_gs_client()
         LocalGSClient.reset_default_storage_dir()
 
     def test_properties(self):

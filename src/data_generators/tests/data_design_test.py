@@ -39,6 +39,7 @@ class DataDesignTest(absltest.TestCase):
         cls.data_set2 = DataSet([pdf21, pdf22], "ds2")
 
     def tearDown(self):
+        filesystem_path_client.FilesystemPathClient.reset_default_gs_client()
         LocalGSClient.reset_default_storage_dir()
 
     @patch.object(filesystem_path_client, "GSClient", LocalGSClient)

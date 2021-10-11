@@ -21,6 +21,10 @@ class FilesystemPathClient:
 
         return cls._default_gs_client
 
+    @classmethod
+    def reset_default_gs_client(cls):
+        cls._default_gs_client = None
+
     def _get_path_module(self, path):
         if path.startswith("gs://"):
             return self.get_default_gs_client().GSPath

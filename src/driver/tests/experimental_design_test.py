@@ -156,6 +156,7 @@ class FakeEvaluateTrialDoFn(beam.DoFn):
 
 class ExperimentalDesignTest(absltest.TestCase):
     def tearDown(self):
+        filesystem_path_client.FilesystemPathClient.reset_default_gs_client()
         LocalGSClient.reset_default_storage_dir()
 
     def _setup(self, tempdir):

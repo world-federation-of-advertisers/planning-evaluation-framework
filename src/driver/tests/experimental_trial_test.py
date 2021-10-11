@@ -165,6 +165,7 @@ class GoergTestPointGenerator(TestPointGenerator):
 
 class ExperimentalTrialTest(absltest.TestCase):
     def tearDown(self):
+        filesystem_path_client.FilesystemPathClient.reset_default_gs_client()
         LocalGSClient.reset_default_storage_dir()
 
     def test_privacy_tracking_vars_dataframe(self):

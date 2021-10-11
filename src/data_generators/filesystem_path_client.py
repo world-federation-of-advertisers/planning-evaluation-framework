@@ -43,7 +43,6 @@ class FilesystemPathClient:
         set it as the default for other operations. Then, the GSClient object
         is returned.
         """
-
         if cls._default_gs_client is None:
             cls._default_gs_client = GSClient(storage_client=storage.Client())
             cls._default_gs_client.set_as_default_client()

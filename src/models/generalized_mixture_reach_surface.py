@@ -148,7 +148,7 @@ class GeneralizedMixtureReachSurface(ReachSurface):
           N: total universe size
 
         Returns:
-          a: a c x p matrix that minimizes minimizes
+          a: a c x p matrix that minimizes
           sum_{k=1..n} [ y^k - sum_{i=1..p} sum_{j=1..c} a_i_j z_i_j^k} ]^2
           subject to the constraints that a[i][j] >= 0 and row sums are one.
         """

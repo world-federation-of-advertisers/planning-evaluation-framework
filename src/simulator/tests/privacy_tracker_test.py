@@ -113,6 +113,56 @@ class PrivacyTrackerTest(parameterized.TestCase):
 
     @parameterized.named_parameters(
         {
+            "testcase_name": "strictly_not_contained",
+            "sampling_bucket": 0.4,
+            "expected_epsilon": 0,
+            "expected_delta": 0,
+        },
+        {
+            "testcase_name": "strictly_contained_before_wrap_around",
+            "sampling_bucket": 0.8,
+            "expected_epsilon": 0.1,
+            "expected_delta": 0.01,
+        },
+        {
+            "testcase_name": "strictly_contained_after_wrap_around",
+            "sampling_bucket": 0.2,
+            "expected_epsilon": 0.1,
+            "expected_delta": 0.01,
+        },
+        {
+            "testcase_name": "border_starting_point",
+            "sampling_bucket": 0.7,
+            "expected_epsilon": 0.1,
+            "expected_delta": 0.01,
+        },
+        {
+            "testcase_name": "border_ending_point",
+            "sampling_bucket": 0.3,
+            "expected_epsilon": 0,
+            "expected_delta": 0,
+        },
+    )
+    def test_privacy_consumption_for_sampling_bucket_single_event_wrap_around(
+        self, sampling_bucket, expected_epsilon, expected_delta
+    ):
+        tracker = privacy_tracker.PrivacyTracker()
+        tracker.append(
+            privacy_tracker.NoisingEvent(
+                privacy_tracker.PrivacyBudget(0.1, 0.01),
+                privacy_tracker.DP_NOISE_MECHANISM_LAPLACE,
+                {},
+                privacy_tracker.SamplingBucketIndices(0.7, 0.6),
+            )
+        )
+        bucket_budget_consumption = tracker.privacy_consumption_for_sampling_bucket(
+            sampling_bucket
+        )
+        self.assertAlmostEqual(bucket_budget_consumption.epsilon, expected_epsilon)
+        self.assertAlmostEqual(bucket_budget_consumption.delta, expected_delta)
+
+    @parameterized.named_parameters(
+        {
             "testcase_name": "not_contained",
             "sampling_bucket": 0.05,
             "expected_epsilon": 0,

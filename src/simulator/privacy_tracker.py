@@ -47,9 +47,9 @@ class SamplingBucketIndices(NamedTuple):
 
     For simplicity, we represent buckets as an interval [0, 1). A user is
     mapped to a real number in this interval. A sampling bucket represents an
-    interval [smallest_index, smallest_index + sampling_rate). This means that
-    all users that get mapped to this interval is used for computing
-    differentially private estimates.
+    interval [smallest_index, smallest_index + sampling_rate) mod [0, 1).
+    This means that all users that get mapped to this interval are used for
+    computing differentially private estimates.
     """
 
     smallest_index: float
@@ -57,10 +57,10 @@ class SamplingBucketIndices(NamedTuple):
 
     def contains(self, sampling_bucket: float) -> bool:
         """Returns whether the sampling bucket is contained in the interval."""
-        return (
-            self.smallest_index <= sampling_bucket
-            and sampling_bucket < self.smallest_index + self.sampling_rate
-        )
+        if self.smallest_index <= sampling_bucket:
+            return sampling_bucket < self.smallest_index + self.sampling_rate
+        else:
+            return sampling_bucket < self.smallest_index + self.sampling_rate - 1
 
 
 class NoisingEvent(NamedTuple):
@@ -101,8 +101,9 @@ class PrivacyTracker:
     def __init__(self):
         """Returns an object for recording and tracking privacy budget usage."""
         self._noising_events = []  # A list of NoisingEvents
-        # A list of starting points of buckets
-        self._sampling_buckets_starting_points = set([])
+        # A list of starting points of buckets. 0 is needed for the case of wrap
+        # around.
+        self._sampling_buckets_starting_points = set([0])
 
     @property
     def privacy_consumption(self) -> PrivacyBudget:
@@ -112,7 +113,8 @@ class PrivacyTracker:
         basic composition rule.  This will be expanded in the future
         to support advanced composition (see TODO #1 above).
         """
-        # Take maximum privacy budget spent across all buckets.
+        # Take maximum privacy budget spent across all buckets. For this, it
+        # suffices to take the starting points of the buckets.
         max_epsilon = 0
         max_delta = 0
         for sampling_bucket_ in self._sampling_buckets_starting_points:
@@ -124,7 +126,12 @@ class PrivacyTracker:
         return PrivacyBudget(max_epsilon, max_delta)
 
     def privacy_consumption_for_sampling_bucket(self, sampling_bucket) -> PrivacyBudget:
-        """Returns the total privacy budget consumed so far for a given sampling bucket."""
+        """Returns the total privacy budget consumed so far for a given sampling bucket.
+
+        Total privacy consumption is currently computed using the
+        basic composition rule.  This will be expanded in the future
+        to support advanced composition (see TODO #1 above).
+        """
         epsilon_sum = 0
         delta_sum = 0
         for event in self._noising_events:

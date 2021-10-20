@@ -70,15 +70,6 @@ class GeneralizedMixtureReachSurfaceTest(absltest.TestCase):
             reach_curves.append(curve)
         return reach_curves
 
-    # def generate_sample_reach_curves(self, num_publishers, decay_rate, universe_size):
-    #     max_reaches = [
-    #         universe_size * (decay_rate ** pub_num) for pub_num in range(num_publishers)
-    #     ]
-    #     return [
-    #         LinearCappedReachCurve([ReachPoint([max_reach], (max_reach,))])
-    #         for max_reach in max_reaches
-    #     ]
-
     def generate_sample_reach_points(
         self,
         num_clusters,

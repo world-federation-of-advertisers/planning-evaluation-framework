@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """A concrete class of the wrapper of filesystem pathlib module."""
-from pathlib import Path
+import pathlib
 from typing import Optional, IO, Iterable
 
 from wfa_planning_evaluation_framework.filesystem_wrapper import filesystem_wrapper_base
@@ -24,96 +24,96 @@ class FilesystemPathlibWrapper(filesystem_wrapper_base.FilesystemWrapperBase):
     The implementation follows the style of the Python standard library's
     [`pathlib` module](https://docs.python.org/3/library/pathlib.html)
     """
+
     def __init__(self):
         super().__init__()
 
-    def glob(
-        self, 
-        path: str, 
-        pattern: str
-    ) -> Iterable[filesystem_wrapper_base._GENERIC_PATH_TYPE]:
-        """Iterate over the subtree of the given path and yield all existing 
-        files (of any kind, including directories) matching the given relative 
+    def glob(self, path: str, pattern: str) -> Iterable[str]:
+        """Iterate over the subtree of the given path and yield all existing
+        files (of any kind, including directories) matching the given relative
         pattern.
         """
-        return Path(path).glob(pattern)
+        for obj in pathlib.Path(path).glob(pattern):
+            yield str(obj)
 
     def open(
-        self, 
-        path: str, 
-        mode: str = 'r', 
-        buffering: int = -1, 
+        self,
+        path: str,
+        mode: str = "r",
+        buffering: int = -1,
         encoding: Optional[str] = None,
-        errors: Optional[str] = None, 
+        errors: Optional[str] = None,
         newline: Optional[bool] = None,
     ) -> IO:
         """
         Open the file pointed by the given path and return a file object, as
         the built-in open() function does.
         """
-        return Path(path).open(mode=mode, buffering=buffering, encoding=encoding, errors=errors, newline=newline)
+        return pathlib.Path(path).open(
+            mode=mode,
+            buffering=buffering,
+            encoding=encoding,
+            errors=errors,
+            newline=newline,
+        )
 
     def write_text(
-        self, 
-        path: str, 
-        data: str, 
+        self,
+        path: str,
+        data: str,
         encoding: Optional[str] = None,
-        errors: Optional[str] = None, 
+        errors: Optional[str] = None,
         newline: Optional[bool] = None,
     ) -> None:
         """
-        Open the file at the given path in text mode, write to it, and close 
+        Open the file at the given path in text mode, write to it, and close
         the file.
         """
-        Path(path).write_text(data=data, encoding=encoding, errors=errors, newline=newline)
+        del newline  # newline argument is added to pathlib.Path after Python v3.11.0
+        pathlib.Path(path).write_text(data=data, encoding=encoding, errors=errors)
 
     def mkdir(
-        self, 
-        path: str, 
-        mode: Optional[int] = 0o777, 
-        parents: bool = False, 
-        exist_ok: bool = False
+        self,
+        path: str,
+        mode: Optional[int] = 0o777,
+        parents: bool = False,
+        exist_ok: bool = False,
     ) -> None:
         """
         Create a new directory at the given path.
         """
-        Path(path).mkdir(mode=mode, parents=parents, exist_ok=exist_ok)
+        pathlib.Path(path).mkdir(mode=mode, parents=parents, exist_ok=exist_ok)
 
-    def unlink(
-        self, 
-        path: str, 
-        missing_ok: bool = False
-    ) -> None:
+    def unlink(self, path: str, missing_ok: bool = False) -> None:
         """
         Remove the file or link at the given path.
         If the path is a directory, use rmdir() instead.
         """
-        Path(path).unlink(missing_ok=missing_ok)
+        pathlib.Path(path).unlink(missing_ok=missing_ok)
 
     def exists(self, path: str) -> bool:
         """
         Whether the given path exists.
         """
-        return Path(path).exists()
+        return pathlib.Path(path).exists()
 
     def is_dir(self, path: str) -> bool:
         """
         Whether the given path is a directory.
         """
-        return Path(path).is_dir()
+        return pathlib.Path(path).is_dir()
 
     def is_file(self, path: str) -> bool:
         """
         Whether the given path is a regular file (also True for symlinks
         pointing to regular files).
         """
-        return Path(path).is_file()
+        return pathlib.Path(path).is_file()
 
-    def joinpath(self, *args) -> filesystem_wrapper_base._GENERIC_PATH_TYPE:
-        """Combine path(s) in one or several arguments, and return a new path
-        """
-        return Path(args)
+    def joinpath(self, *args) -> str:
+        """Combine path(s) in one or several arguments, and return a new path"""
+        return str(pathlib.Path(*args))
 
-    def parent(self, path: str) -> filesystem_wrapper_base._GENERIC_PATH_TYPE:
+    def parent(self, path: str) -> str:
         """The logical parent of the given path."""
-        return Path(path).parent
+        return str(pathlib.Path(path).parent)

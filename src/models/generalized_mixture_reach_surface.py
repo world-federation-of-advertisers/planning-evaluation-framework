@@ -269,11 +269,9 @@ class GeneralizedMixtureReachSurface(ReachSurface):
             num_rounds < self._max_num_rounds
             and cur_loss < prev_loss - self._min_improvement
         ):
-            # lbd = self._round(lbd)
             cur_a = self.update_a_from_theta(cur_theta, reach_vectors)
             prev_loss = cur_loss
             cur_loss = self._loss(cur_a)
-            # print("cur_loss",cur_loss)
             num_rounds += 1
             cur_theta = self.update_theta_from_a(cur_a, reach_vectors)
         return cur_a, cur_loss, (cur_loss >= prev_loss - self._min_improvement)

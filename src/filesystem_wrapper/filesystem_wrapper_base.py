@@ -14,7 +14,6 @@
 """Base class for filesystem wrappers."""
 from typing import Optional, IO, TypeVar, Iterable
 
-_GENERIC_PATH_TYPE = TypeVar("GENERIC_PATH_TYPE")
 
 class FilesystemWrapperBase:
     """Base class for filesystem wrappers.
@@ -22,20 +21,21 @@ class FilesystemWrapperBase:
     The implementation follows the style of the Python standard library's
     [`pathlib` module](https://docs.python.org/3/library/pathlib.html)
     """
-    def glob(self, path: str, pattern: str) -> Iterable[_GENERIC_PATH_TYPE]:
-        """Iterate over the subtree of the given path and yield all existing 
-        files (of any kind, including directories) matching the given relative 
+
+    def glob(self, path: str, pattern: str) -> Iterable[str]:
+        """Iterate over the subtree of the given path and yield all existing
+        files (of any kind, including directories) matching the given relative
         pattern.
         """
         raise NotImplementedError()
 
     def open(
-        self, 
-        path: str, 
-        mode: str = 'r', 
-        buffering: int = -1, 
+        self,
+        path: str,
+        mode: str = "r",
+        buffering: int = -1,
         encoding: Optional[str] = None,
-        errors: Optional[str] = None, 
+        errors: Optional[str] = None,
         newline: Optional[bool] = None,
     ) -> IO:
         """
@@ -45,36 +45,32 @@ class FilesystemWrapperBase:
         raise NotImplementedError()
 
     def write_text(
-        self, 
-        path: str, 
-        data: str, 
+        self,
+        path: str,
+        data: str,
         encoding: Optional[str] = None,
-        errors: Optional[str] = None, 
+        errors: Optional[str] = None,
         newline: Optional[bool] = None,
     ) -> None:
         """
-        Open the file at the given path in text mode, write to it, and close 
+        Open the file at the given path in text mode, write to it, and close
         the file.
         """
         raise NotImplementedError()
 
     def mkdir(
-        self, 
-        path: str, 
-        mode: Optional[int] = 0o777, 
-        parents: bool = False, 
-        exist_ok: bool = False
+        self,
+        path: str,
+        mode: Optional[int] = 0o777,
+        parents: bool = False,
+        exist_ok: bool = False,
     ) -> None:
         """
         Create a new directory at the given path.
         """
         raise NotImplementedError()
 
-    def unlink(
-        self, 
-        path: str, 
-        missing_ok: bool = False
-    ) -> None:
+    def unlink(self, path: str, missing_ok: bool = False) -> None:
         """
         Remove the file or link at the given path.
         If the path is a directory, use rmdir() instead.
@@ -100,11 +96,10 @@ class FilesystemWrapperBase:
         """
         raise NotImplementedError()
 
-    def joinpath(self, *args) -> None:
-        """Combine path(s) in one or several arguments, and return a new path
-        """
+    def joinpath(self, *args) -> str:
+        """Combine path(s) in one or several arguments, and return a new path"""
         raise NotImplementedError()
 
-    def parent(self, path: str) -> _GENERIC_PATH_TYPE:
+    def parent(self, path: str) -> str:
         """The logical parent of the given path."""
         raise NotImplementedError()

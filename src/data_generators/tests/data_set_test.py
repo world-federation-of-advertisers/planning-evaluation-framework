@@ -110,9 +110,10 @@ class DataSetTest(absltest.TestCase):
         dir_gs_path = file_gs_path.parent
         file_gs_path.write_text("For creating the target directory.")
 
-        self.data_set.write_data_set(str(dir_gs_path))
+        filesystem = filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper()
+        self.data_set.write_data_set(str(dir_gs_path), filesystem=filesystem)
         data_set_path = dir_gs_path.joinpath("test")
-        new_data_set = DataSet.read_data_set(str(data_set_path))
+        new_data_set = DataSet.read_data_set(str(data_set_path), filesystem=filesystem)
         self.assertEqual(new_data_set.publisher_count, 2)
         self.assertEqual(new_data_set.name, "test")
         self.assertEqual(new_data_set.reach_by_impressions([4, 0]).reach(), 3)

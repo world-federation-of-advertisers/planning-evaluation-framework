@@ -29,6 +29,14 @@ class FilesystemPathlibWrapper(filesystem_wrapper_base.FilesystemWrapperBase):
     def __init__(self):
         super().__init__()
 
+    def name(self, path: str) -> str:
+        """The final path component, if any."""
+        return str(pathlib.Path(path).name)
+
+    def parent(self, path: str) -> str:
+        """The logical parent of the given path."""
+        return str(pathlib.Path(path).parent)
+
     def glob(self, path: str, pattern: str) -> Iterable[str]:
         """Iterate over the subtree of the given path and yield all existing
         files (of any kind, including directories) matching the given relative
@@ -114,7 +122,3 @@ class FilesystemPathlibWrapper(filesystem_wrapper_base.FilesystemWrapperBase):
     def joinpath(self, *args) -> str:
         """Combine path(s) in one or several arguments, and return a new path"""
         return str(pathlib.Path(*args))
-
-    def parent(self, path: str) -> str:
-        """The logical parent of the given path."""
-        return str(pathlib.Path(path).parent)

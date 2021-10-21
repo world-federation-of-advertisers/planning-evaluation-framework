@@ -171,7 +171,7 @@ The following command will evaluate the Experiments defined in `driver/single_pu
 against the Datasets that were created in the previous step:
 
 ```
-python3 driver/experiment_driver.py \
+python3 driver/experiment_driver.py -- \
   --data_design_dir=$DIR/data \
   --experimental_design=driver/single_publisher_design.py \
   --output_file=$DIR/results \
@@ -184,7 +184,7 @@ Setting `cores=0` enables multithreading on all available cores.
 In addition, you may use Apache Beam to evaluate the Experiments in two different modes -- direct runner and Dataflow runner. For the direct runner mode, use multi-processing with the execution command:
 
 ```
-python3 driver/experiment_driver.py \
+python3 driver/experiment_driver.py -- \
   --data_design_dir=$DIR/data \
   --experimental_design=driver/single_publisher_design.py \
   --output_file=$DIR/results \
@@ -198,7 +198,7 @@ python3 driver/experiment_driver.py \
 
 For running with the Dataflow runner, the command is:
 ```
-python3 experiment_driver.py \
+python3 experiment_driver.py -- \
   --data_design_dir=gs://<bucket_name>/<subpath/to/data_design_dir> \
   --experimental_design=gs://<bucket_name>/<subpath/to/experimental_design_dir> \
   --output_file=gs://<bucket_name>/<subpath/to/output_file> \

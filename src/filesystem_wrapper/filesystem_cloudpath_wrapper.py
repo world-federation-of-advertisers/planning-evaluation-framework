@@ -57,6 +57,14 @@ class FilesystemCloudpathWrapper(filesystem_wrapper_base.FilesystemWrapperBase):
         """Reset the default client"""
         cls._default_client = None
 
+    def name(self, path: str) -> str:
+        """The final path component, if any."""
+        return str(CloudPath(path).name)
+
+    def parent(self, path: str) -> str:
+        """The logical parent of the given path."""
+        return str(CloudPath(path).parent)
+
     def glob(self, path: str, pattern: str) -> Iterable[str]:
         """Iterate over the subtree of the given path and yield all existing
         files (of any kind, including directories) matching the given relative
@@ -151,7 +159,3 @@ class FilesystemCloudpathWrapper(filesystem_wrapper_base.FilesystemWrapperBase):
         root_folder = root[1]
         path = CloudPath(f"{cloud_domain}://").joinpath(root_folder, *args[1:])
         return str(path)
-
-    def parent(self, path: str) -> str:
-        """The logical parent of the given path."""
-        return str(CloudPath(path).parent)

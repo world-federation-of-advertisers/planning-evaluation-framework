@@ -38,7 +38,9 @@ class FilesystemPathlibWrapperTest(absltest.TestCase):
         cloudpathlib.local.LocalGSClient,
     )
     def setUp(self):
-        # Client setup
+        # Client setup:
+        #   1. Set up the default client in FilesystemCloudpathWrapper.
+        #   2. Get default client inferred from the one in FilesystemCloudpathWrapper
         filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper.set_default_client_to_GSClient()
         self.client = cloudpathlib.local.LocalGSClient.get_default_client()
 
@@ -65,6 +67,16 @@ class FilesystemPathlibWrapperTest(absltest.TestCase):
     def tearDown(self):
         cloudpathlib.local.LocalGSClient.reset_default_storage_dir()
         filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper.reset_default_client()
+
+    def test_name(self):
+        dir_name = "dir"
+        path = os.path.join(self.bucket_gs_path, dir_name)
+        self.assertEqual(self.filesystem.name(path), dir_name)
+
+    def test_parent(self):
+        dir_name = "dir"
+        path = os.path.join(self.bucket_gs_path, dir_name)
+        self.assertEqual(self.filesystem.parent(path), self.bucket_gs_path)
 
     def test_glob(self):
         pattern = "*"
@@ -122,11 +134,6 @@ class FilesystemPathlibWrapperTest(absltest.TestCase):
         expected = os.path.join(*inputs)
 
         self.assertEqual(path, expected)
-
-    def test_parent(self):
-        dir_name = "dir"
-        path = os.path.join(self.bucket_gs_path, dir_name)
-        self.assertEqual(self.filesystem.parent(path), self.bucket_gs_path)
 
 
 if __name__ == "__main__":

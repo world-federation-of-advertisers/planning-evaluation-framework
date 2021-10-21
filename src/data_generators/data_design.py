@@ -22,15 +22,24 @@ DataSets within a DataDesign are loaded lazily.
 from os import listdir
 from os.path import exists, isdir, join
 from typing import List
-from cloudpathlib import GSPath
-from pathlib import Path
+
+from wfa_planning_evaluation_framework.filesystem_wrapper import (
+    filesystem_wrapper_base,
+)
+from wfa_planning_evaluation_framework.filesystem_wrapper import (
+    filesystem_pathlib_wrapper,
+)
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
+
+
+FsWrapperBase = filesystem_wrapper_base.FilesystemWrapperBase
+FsPathlibWrapper = filesystem_pathlib_wrapper.FilesystemPathlibWrapper
 
 
 class DataDesign:
     """A collection of DataSets used for evaluating an ExperimentalDesign."""
 
-    def __init__(self, dirpath: str):
+    def __init__(self, dirpath: str, filesystem: FsWrapperBase = FsPathlibWrapper()):
         """Constructor
 
         Args:
@@ -39,15 +48,11 @@ class DataDesign:
         """
         self._dirpath = dirpath
         self._data_set_names = set()
-        if dirpath.startswith("gs://"):
-            dirpath = GSPath(dirpath)
-        else:
-            dirpath = Path(dirpath)
 
-        dirpath.mkdir(parents=True, exist_ok=True)
-        for p in sorted(dirpath.glob("*")):
-            if p.is_dir():
-                self._data_set_names.add(p.name)
+        filesystem.mkdir(dirpath, parents=True, exist_ok=True)
+        for p in sorted(filesystem.glob(dirpath, "*")):
+            if filesystem.is_dir(p):
+                self._data_set_names.add(filesystem.name(p))
 
     @property
     def count(self) -> int:
@@ -63,14 +68,16 @@ class DataDesign:
         """Returns the DataSet having the given name."""
         return DataSet.read_data_set(join(self._dirpath, name))
 
-    def add(self, data_set: DataSet) -> None:
+    def add(
+        self, data_set: DataSet, filesystem: FsWrapperBase = FsPathlibWrapper()
+    ) -> None:
         """Adds a DataSet to this DataDesign."""
-        data_set_path = join(self._dirpath, data_set.name)
-        if exists(data_set_path):
+        data_set_path = filesystem.joinpath(self._dirpath, data_set.name)
+        if filesystem.exists(data_set_path):
             raise ValueError(
                 "This DataDesign already contains a DataSet with name {}".format(
                     data_set.name
                 )
             )
-        data_set.write_data_set(self._dirpath)
+        data_set.write_data_set(self._dirpath, filesystem=filesystem)
         self._data_set_names.add(data_set.name)

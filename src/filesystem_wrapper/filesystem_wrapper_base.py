@@ -24,6 +24,16 @@ class FilesystemWrapperBase(metaclass=abc.ABCMeta):
     """
 
     @abc.abstractmethod
+    def name(self, path: str) -> str:
+        """The final path component, if any."""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def parent(self, path: str) -> str:
+        """The logical parent of the given path."""
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def glob(self, path: str, pattern: str) -> Iterable[str]:
         """Iterate over the subtree of the given path and yield all existing
         files (of any kind, including directories) matching the given relative
@@ -108,9 +118,4 @@ class FilesystemWrapperBase(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def joinpath(self, *args) -> str:
         """Combine path(s) in one or several arguments, and return a new path"""
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def parent(self, path: str) -> str:
-        """The logical parent of the given path."""
         raise NotImplementedError

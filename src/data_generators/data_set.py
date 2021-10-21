@@ -257,6 +257,4 @@ class DataSet:
                         raise RuntimeError(
                             "In publisher file {}".format(filepath)
                         ) from e
-
-        name = dirpath.split("/")[-1]
-        return cls(pdf_list, name)
+        return cls(pdf_list, filesystem.name(dirpath))

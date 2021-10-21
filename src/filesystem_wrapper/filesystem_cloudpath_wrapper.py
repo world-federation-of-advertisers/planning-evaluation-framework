@@ -13,10 +13,15 @@
 # limitations under the License.
 """A concrete class of the wrapper of filesystem cloudpath module."""
 
-import cloudpathlib
 from typing import Optional, IO, Iterable
 
+import cloudpathlib
+from google.cloud import storage
+
 from wfa_planning_evaluation_framework.filesystem_wrapper import filesystem_wrapper_base
+
+GSClient = cloudpathlib.GSClient
+CloudPath = cloudpathlib.CloudPath
 
 
 class FilesystemCloudpathWrapper(filesystem_wrapper_base.FilesystemWrapperBase):
@@ -26,15 +31,38 @@ class FilesystemCloudpathWrapper(filesystem_wrapper_base.FilesystemWrapperBase):
     [`pathlib` module](https://docs.python.org/3/library/pathlib.html)
     """
 
+    _default_client = None
+
     def __init__(self):
         super().__init__()
+
+    @classmethod
+    def set_default_client_to_GSClient(cls) -> None:
+        """Get the default Google Cloud Storage client object used by cloudpathlib.
+
+        When there is no credential provided, GSClient of cloudpathlib will
+        create an anonymous client which can't access non-public buckets. On
+        the other hand, Client in google.cloud.storage will fall back to the
+        default inferred from the environment. As a result, if there is no
+        default GSClient object, we first create a Client from
+        google.cloud.storage and then use it to initiate a GSClient object and
+        set it as the default for other operations.
+        """
+        if cls._default_client is None:
+            cls._default_client = GSClient(storage_client=storage.Client())
+            cls._default_client.set_as_default_client()
+
+    @classmethod
+    def reset_default_client(cls) -> None:
+        """Reset the default client"""
+        cls._default_client = None
 
     def glob(self, path: str, pattern: str) -> Iterable[str]:
         """Iterate over the subtree of the given path and yield all existing
         files (of any kind, including directories) matching the given relative
         pattern.
         """
-        for obj in cloudpathlib.CloudPath(path).glob(pattern):
+        for obj in CloudPath(path).glob(pattern):
             yield str(obj)
 
     def open(
@@ -50,7 +78,7 @@ class FilesystemCloudpathWrapper(filesystem_wrapper_base.FilesystemWrapperBase):
         Open the file pointed by the given path and return a file object, as
         the built-in open() function does.
         """
-        return cloudpathlib.CloudPath(path).open(
+        return CloudPath(path).open(
             mode=mode,
             buffering=buffering,
             encoding=encoding,
@@ -71,9 +99,7 @@ class FilesystemCloudpathWrapper(filesystem_wrapper_base.FilesystemWrapperBase):
         the file.
         """
         del newline  # Not used in CloudPath
-        cloudpathlib.CloudPath(path).write_text(
-            data=data, encoding=encoding, errors=errors
-        )
+        CloudPath(path).write_text(data=data, encoding=encoding, errors=errors)
 
     def mkdir(
         self,
@@ -85,7 +111,7 @@ class FilesystemCloudpathWrapper(filesystem_wrapper_base.FilesystemWrapperBase):
         """
         Create a new directory at the given path.
         """
-        # not possible to make empty directory on cloud storage
+        # It's not possible to make empty directory on cloud storage
         pass
 
     def unlink(self, path: str, missing_ok: bool = False) -> None:
@@ -94,26 +120,26 @@ class FilesystemCloudpathWrapper(filesystem_wrapper_base.FilesystemWrapperBase):
         If the path is a directory, use rmdir() instead.
         """
         del missing_ok  # Not used in CloudPath
-        cloudpathlib.CloudPath(path).unlink()
+        CloudPath(path).unlink()
 
     def exists(self, path: str) -> bool:
         """
         Whether the given path exists.
         """
-        return cloudpathlib.CloudPath(path).exists()
+        return CloudPath(path).exists()
 
     def is_dir(self, path: str) -> bool:
         """
         Whether the given path is a directory.
         """
-        return cloudpathlib.CloudPath(path).is_dir()
+        return CloudPath(path).is_dir()
 
     def is_file(self, path: str) -> bool:
         """
         Whether the given path is a regular file (also True for symlinks
         pointing to regular files).
         """
-        return cloudpathlib.CloudPath(path).is_file()
+        return CloudPath(path).is_file()
 
     def joinpath(self, *args) -> str:
         """Combine path(s) in one or several arguments, and return a new path"""
@@ -123,11 +149,9 @@ class FilesystemCloudpathWrapper(filesystem_wrapper_base.FilesystemWrapperBase):
         root = args[0].split(CLOUD_PATH_START_SYMBOL)
         cloud_domain = root[0]
         root_folder = root[1]
-        path = cloudpathlib.CloudPath(f"{cloud_domain}://").joinpath(
-            root_folder, *args[1:]
-        )
+        path = CloudPath(f"{cloud_domain}://").joinpath(root_folder, *args[1:])
         return str(path)
 
     def parent(self, path: str) -> str:
         """The logical parent of the given path."""
-        return str(cloudpathlib.CloudPath(path).parent)
+        return str(CloudPath(path).parent)

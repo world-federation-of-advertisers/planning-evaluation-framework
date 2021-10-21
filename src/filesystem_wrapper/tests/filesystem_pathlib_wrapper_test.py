@@ -31,6 +31,20 @@ class FilesystemPathlibWrapperTest(absltest.TestCase):
         for name in tempfile_names:
             pathlib.Path(tempdir).joinpath(name).touch()
 
+    def test_name(self):
+        parent_dir = "parent_dir"
+        child_dir = "child_dir"
+        path = os.path.join(parent_dir, child_dir)
+
+        self.assertEqual(self.filesystem.name(path), child_dir)
+
+    def test_parent(self):
+        parent_dir = "parent_dir"
+        child_dir = "child_dir"
+        path = os.path.join(parent_dir, child_dir)
+
+        self.assertEqual(self.filesystem.parent(path), parent_dir)
+
     def test_glob(self):
         pattern = "*"
         num_tempfiles = 10
@@ -112,13 +126,6 @@ class FilesystemPathlibWrapperTest(absltest.TestCase):
         expected = os.path.join(parent_dir, child_dir, grandchild_dir)
 
         self.assertEqual(path, expected)
-
-    def test_parent(self):
-        parent_dir = "parent_dir"
-        child_dir = "child_dir"
-        path = os.path.join(parent_dir, child_dir)
-
-        self.assertEqual(self.filesystem.parent(path), parent_dir)
 
 
 if __name__ == "__main__":

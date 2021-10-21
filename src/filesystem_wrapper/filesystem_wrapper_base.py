@@ -12,23 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Base class for filesystem wrappers."""
+import abc
 from typing import Optional, IO, TypeVar, Iterable
 
 
-class FilesystemWrapperBase:
+class FilesystemWrapperBase(metaclass=abc.ABCMeta):
     """Base class for filesystem wrappers.
 
     The implementation follows the style of the Python standard library's
     [`pathlib` module](https://docs.python.org/3/library/pathlib.html)
     """
 
+    @abc.abstractmethod
     def glob(self, path: str, pattern: str) -> Iterable[str]:
         """Iterate over the subtree of the given path and yield all existing
         files (of any kind, including directories) matching the given relative
         pattern.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
+    @abc.abstractmethod
     def open(
         self,
         path: str,
@@ -42,8 +45,9 @@ class FilesystemWrapperBase:
         Open the file pointed by the given path and return a file object, as
         the built-in open() function does.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
+    @abc.abstractmethod
     def write_text(
         self,
         path: str,
@@ -56,8 +60,9 @@ class FilesystemWrapperBase:
         Open the file at the given path in text mode, write to it, and close
         the file.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
+    @abc.abstractmethod
     def mkdir(
         self,
         path: str,
@@ -68,38 +73,44 @@ class FilesystemWrapperBase:
         """
         Create a new directory at the given path.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
+    @abc.abstractmethod
     def unlink(self, path: str, missing_ok: bool = False) -> None:
         """
         Remove the file or link at the given path.
         If the path is a directory, use rmdir() instead.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
+    @abc.abstractmethod
     def exists(self, path: str) -> bool:
         """
         Whether the given path exists.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
+    @abc.abstractmethod
     def is_dir(self, path: str) -> bool:
         """
         Whether the given path is a directory.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
+    @abc.abstractmethod
     def is_file(self, path: str) -> bool:
         """
         Whether the given path is a regular file (also True for symlinks
         pointing to regular files).
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
+    @abc.abstractmethod
     def joinpath(self, *args) -> str:
         """Combine path(s) in one or several arguments, and return a new path"""
-        raise NotImplementedError()
+        raise NotImplementedError
 
+    @abc.abstractmethod
     def parent(self, path: str) -> str:
         """The logical parent of the given path."""
-        raise NotImplementedError()
+        raise NotImplementedError

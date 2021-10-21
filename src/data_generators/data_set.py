@@ -16,20 +16,27 @@
 Represents real or simulated impression log data for multiple publishers.
 """
 
+from typing import Dict, Iterable, List
 from collections import defaultdict
 from copy import deepcopy
 from os import listdir
 from os.path import isfile, join
-from pathlib import Path
-from cloudpathlib import GSPath
-from typing import Dict
-from typing import Iterable
-from typing import List
 from functools import lru_cache
+
+from wfa_planning_evaluation_framework.filesystem_wrapper import (
+    filesystem_wrapper_base,
+)
+from wfa_planning_evaluation_framework.filesystem_wrapper import (
+    filesystem_pathlib_wrapper,
+)
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
 )
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
+
+
+FsWrapperBase = filesystem_wrapper_base.FilesystemWrapperBase
+FsPathlibWrapper = filesystem_pathlib_wrapper.FilesystemPathlibWrapper
 
 
 class DataSet:
@@ -193,7 +200,12 @@ class DataSet:
         kplus_reaches = self._counts_to_histogram(counts, max_frequency)
         return ReachPoint(impressions, kplus_reaches, spends)
 
-    def write_data_set(self, parent_dir: str, dataset_dir: str = None) -> None:
+    def write_data_set(
+        self,
+        parent_dir: str,
+        dataset_dir: str = None,
+        filesystem: FsWrapperBase = FsPathlibWrapper(),
+    ) -> None:
         """Writes this DataSet object to disk.
 
         Args:
@@ -202,24 +214,23 @@ class DataSet:
             specified, then the name given in the object constructor is
             used.  If no name was given in the object constructor, then a
             random name is used.
+          filesystem:  The filesystem object that manages all file operations.
         """
         if not dataset_dir:
             dataset_dir = self._name
 
-        parent_dir_path = (
-            GSPath(parent_dir) if parent_dir.startswith("gs://") else Path(parent_dir)
-        )
-
-        full_dir_path = parent_dir_path.joinpath(dataset_dir)
-        full_dir_path.mkdir(parents=True, exist_ok=True)
+        full_dir_path = filesystem.joinpath(parent_dir, dataset_dir)
+        filesystem.mkdir(full_dir_path, parents=True, exist_ok=True)
         for pdf in self._data:
-            pdf_path = full_dir_path.joinpath(pdf.name)
-            with pdf_path.open("w") as file:
+            pdf_path = filesystem.joinpath(full_dir_path, pdf.name)
+            with filesystem.open(pdf_path, "w") as file:
                 pdf.write_publisher_data(file)
 
     @classmethod
     @lru_cache(maxsize=128)
-    def read_data_set(cls, dirpath: str) -> "DataSet":
+    def read_data_set(
+        cls, dirpath: str, filesystem: FsWrapperBase = FsPathlibWrapper()
+    ) -> "DataSet":
         """Reads a DataSet from disk.
 
         A DataSet is given by a directory containing a collection of files,
@@ -229,15 +240,15 @@ class DataSet:
         Args:
           dirpath:  Directory containing the PublisherDataSets that comprise
             this DataSet.
+          filesystem:  The filesystem object that manages all file operations.
         Returns:
           The DataSet object representing the contents of this directory.
         """
-        dirpath = GSPath(dirpath) if dirpath.startswith("gs://") else Path(dirpath)
 
         pdf_list = []
-        for filepath in sorted(dirpath.glob("*")):
-            if filepath.is_file():
-                with filepath.open() as file:
+        for filepath in sorted(filesystem.glob(dirpath, "*")):
+            if filesystem.is_file(filepath):
+                with filesystem.open(filepath) as file:
                     try:
                         pdf = PublisherData.read_publisher_data(file)
                         pdf.name = str(filepath)
@@ -246,4 +257,6 @@ class DataSet:
                         raise RuntimeError(
                             "In publisher file {}".format(filepath)
                         ) from e
-        return cls(pdf_list, dirpath.name)
+
+        name = dirpath.split("/")[-1]
+        return cls(pdf_list, name)

@@ -17,7 +17,10 @@ from absl.testing import absltest
 from unittest.mock import patch
 from tempfile import TemporaryDirectory
 
-from cloudpathlib.local import LocalGSClient, LocalGSPath
+import cloudpathlib.local
+from wfa_planning_evaluation_framework.filesystem_wrapper import (
+    filesystem_cloudpath_wrapper,
+)
 
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
@@ -39,19 +42,41 @@ class DataDesignTest(absltest.TestCase):
         cls.data_set2 = DataSet([pdf21, pdf22], "ds2")
 
     def tearDown(self):
-        LocalGSClient.reset_default_storage_dir()
+        cloudpathlib.local.LocalGSClient.reset_default_storage_dir()
+        filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper.reset_default_client()
 
-    @patch.object(data_design, "GSPath", LocalGSPath)
+    @patch.object(
+        filesystem_cloudpath_wrapper,
+        "CloudPath",
+        cloudpathlib.local.LocalGSPath,
+    )
+    @patch.object(
+        filesystem_cloudpath_wrapper,
+        "GSClient",
+        cloudpathlib.local.LocalGSClient,
+    )
     def test_constructor_with_cloud_path(self):
-        file_gs_path = LocalGSPath(
-            "gs://DataDesignTest/dir/dummy.txt"
-        )
-        dir_gs_path = file_gs_path.parent
-        file_gs_path.write_text("For creating the target directory.")
+        # Client setup:
+        #   1. Set up the default client in FilesystemCloudpathWrapper.
+        #   2. Get default client inferred from the one in FilesystemCloudpathWrapper
+        filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper.set_default_client_to_GSClient()
+        client = cloudpathlib.local.LocalGSClient.get_default_client()
 
-        dd = DataDesign(str(dir_gs_path))
+        file_gs_path = client.CloudPath("gs://DataDesignTest/dir1/dir2/dir3/dummy.txt")
+        file_gs_path.write_text("For creating the target directory.")
+        dir_gs_path = file_gs_path.parent
+
+        filesystem = filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper()
+
+        dd = DataDesign(str(dir_gs_path), filesystem)
         self.assertEqual(dd.count, 0)
         self.assertEqual(dd.names, [])
+        dd.add(self.data_set1, filesystem)
+        self.assertEqual(dd.count, 1)
+        self.assertEqual(dd.names, ["ds1"])
+        dd.add(self.data_set2, filesystem)
+        self.assertEqual(dd.count, 2)
+        self.assertEqual(dd.names, ["ds1", "ds2"])
 
     def test_properties(self):
         with TemporaryDirectory() as d:

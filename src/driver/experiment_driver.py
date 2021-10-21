@@ -18,7 +18,7 @@ writing the output as a DataFrame in CSV format.
 
 Usage:
   Local machine without Apache Beam
-    python3 experiment_driver.py \
+    python3 experiment_driver.py -- \
     --data_design_dir=<data_design_dir> \
     --experimental_design=<experimental_design> \
     --output_file=<output_file> \
@@ -28,7 +28,7 @@ Usage:
     [--analysis_type=single_pub]]
 
   DirectRuuner:
-    python3 experiment_driver.py \
+    python3 experiment_driver.py -- \
     --data_design_dir=<data_design_dir> \
     --experimental_design=<experimental_design> \
     --output_file=<output_file> \
@@ -41,7 +41,7 @@ Usage:
     --direct_running_mode=multi_processing
 
   DataflowRunner:
-    python3 experiment_driver.py \
+    python3 experiment_driver.py -- \
     --data_design_dir=gs://<bucket_name>/<subpath/to/data_design_dir> \
     --experimental_design=gs://<bucket_name>/<subpath/to/experimental_design_dir> \
     --output_file=gs://<bucket_name>/<subpath/to/output_file> \

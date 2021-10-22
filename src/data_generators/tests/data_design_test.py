@@ -43,23 +43,15 @@ class DataDesignTest(absltest.TestCase):
 
     def tearDown(self):
         cloudpathlib.local.LocalGSClient.reset_default_storage_dir()
-        filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper.reset_default_client()
+        cloudpathlib.local.localclient.clean_temp_dirs()
 
     @patch.object(
         filesystem_cloudpath_wrapper,
         "CloudPath",
         cloudpathlib.local.LocalGSPath,
     )
-    @patch.object(
-        filesystem_cloudpath_wrapper,
-        "GSClient",
-        cloudpathlib.local.LocalGSClient,
-    )
     def test_constructor_with_cloud_path(self):
-        # Client setup:
-        #   1. Set up the default client in FilesystemCloudpathWrapper.
-        #   2. Get default client inferred from the one in FilesystemCloudpathWrapper
-        filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper.set_default_client_to_GSClient()
+        # Client setup
         client = cloudpathlib.local.LocalGSClient.get_default_client()
 
         file_gs_path = client.CloudPath("gs://DataDesignTest/dir1/dir2/dir3/dummy.txt")
@@ -71,10 +63,10 @@ class DataDesignTest(absltest.TestCase):
         dd = DataDesign(str(dir_gs_path), filesystem)
         self.assertEqual(dd.count, 0)
         self.assertEqual(dd.names, [])
-        dd.add(self.data_set1, filesystem)
+        dd.add(self.data_set1)
         self.assertEqual(dd.count, 1)
         self.assertEqual(dd.names, ["ds1"])
-        dd.add(self.data_set2, filesystem)
+        dd.add(self.data_set2)
         self.assertEqual(dd.count, 2)
         self.assertEqual(dd.names, ["ds1", "ds2"])
 
@@ -100,6 +92,30 @@ class DataDesignTest(absltest.TestCase):
             self.assertEqual(ds1.reach_by_impressions([4, 2]).reach(), 4)
             ds2 = dd2.by_name("ds2")
             self.assertEqual(ds2.reach_by_impressions([4, 2]).reach(), 3)
+
+    @patch.object(
+        filesystem_cloudpath_wrapper,
+        "CloudPath",
+        cloudpathlib.local.LocalGSPath,
+    )
+    def test_lookup_with_cloud_path(self):
+        # Client setup
+        client = cloudpathlib.local.LocalGSClient.get_default_client()
+
+        file_gs_path = client.CloudPath("gs://DataDesignTest/dir1/dir2/dir3/dummy.txt")
+        file_gs_path.write_text("For creating the target directory.")
+        dir_gs_path = file_gs_path.parent
+
+        filesystem = filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper()
+
+        dd1 = DataDesign(str(dir_gs_path), filesystem)
+        dd1.add(self.data_set1)
+        dd1.add(self.data_set2)
+        dd2 = DataDesign(str(dir_gs_path), filesystem)
+        ds1 = dd2.by_name("ds1")
+        self.assertEqual(ds1.reach_by_impressions([4, 2]).reach(), 4)
+        ds2 = dd2.by_name("ds2")
+        self.assertEqual(ds2.reach_by_impressions([4, 2]).reach(), 3)
 
 
 if __name__ == "__main__":

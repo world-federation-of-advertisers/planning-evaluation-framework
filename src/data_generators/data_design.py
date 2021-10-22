@@ -48,11 +48,12 @@ class DataDesign:
         """
         self._dirpath = dirpath
         self._data_set_names = set()
+        self._filesystem = filesystem
 
-        filesystem.mkdir(dirpath, parents=True, exist_ok=True)
-        for p in sorted(filesystem.glob(dirpath, "*")):
-            if filesystem.is_dir(p):
-                self._data_set_names.add(filesystem.name(p))
+        self._filesystem.mkdir(dirpath, parents=True, exist_ok=True)
+        for p in sorted(self._filesystem.glob(dirpath, "*")):
+            if self._filesystem.is_dir(p):
+                self._data_set_names.add(self._filesystem.name(p))
 
     @property
     def count(self) -> int:
@@ -66,18 +67,16 @@ class DataDesign:
 
     def by_name(self, name: str) -> DataSet:
         """Returns the DataSet having the given name."""
-        return DataSet.read_data_set(join(self._dirpath, name))
+        return DataSet.read_data_set(join(self._dirpath, name), self._filesystem)
 
-    def add(
-        self, data_set: DataSet, filesystem: FsWrapperBase = FsPathlibWrapper()
-    ) -> None:
+    def add(self, data_set: DataSet) -> None:
         """Adds a DataSet to this DataDesign."""
-        data_set_path = filesystem.joinpath(self._dirpath, data_set.name)
-        if filesystem.exists(data_set_path):
+        data_set_path = self._filesystem.joinpath(self._dirpath, data_set.name)
+        if self._filesystem.exists(data_set_path):
             raise ValueError(
                 "This DataDesign already contains a DataSet with name {}".format(
                     data_set.name
                 )
             )
-        data_set.write_data_set(self._dirpath, filesystem=filesystem)
+        data_set.write_data_set(self._dirpath, filesystem=self._filesystem)
         self._data_set_names.add(data_set.name)

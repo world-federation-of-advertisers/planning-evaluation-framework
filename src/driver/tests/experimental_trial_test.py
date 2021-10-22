@@ -25,14 +25,12 @@ import numpy as np
 import pandas as pd
 from unittest.mock import patch
 
-from cloudpathlib.local import LocalGSClient, LocalGSPath
+import cloudpathlib.local
 
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
 )
-import wfa_planning_evaluation_framework.data_generators.data_design as data_design
 from wfa_planning_evaluation_framework.data_generators.data_design import DataDesign
-import wfa_planning_evaluation_framework.data_generators.data_set as data_set
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.data_generators.heterogeneous_impression_generator import (
     HeterogeneousImpressionGenerator,
@@ -76,7 +74,6 @@ from wfa_planning_evaluation_framework.driver.experiment_parameters import (
     TEST_POINT_STRATEGIES,
     ExperimentParameters,
 )
-import wfa_planning_evaluation_framework.driver.experimental_trial as experimental_trial
 from wfa_planning_evaluation_framework.driver.experimental_trial import (
     ExperimentalTrial,
 )
@@ -89,6 +86,9 @@ from wfa_planning_evaluation_framework.driver.test_point_generator import (
 )
 from wfa_planning_evaluation_framework.driver.trial_descriptor import (
     TrialDescriptor,
+)
+from wfa_planning_evaluation_framework.filesystem_wrapper import (
+    filesystem_cloudpath_wrapper,
 )
 
 
@@ -167,7 +167,8 @@ class GoergTestPointGenerator(TestPointGenerator):
 
 class ExperimentalTrialTest(absltest.TestCase):
     def tearDown(self):
-        LocalGSClient.reset_default_storage_dir()
+        cloudpathlib.local.LocalGSClient.reset_default_storage_dir()
+        cloudpathlib.local.localclient.clean_temp_dirs()
 
     def test_privacy_tracking_vars_dataframe(self):
         tracker = PrivacyTracker()
@@ -333,17 +334,22 @@ class ExperimentalTrialTest(absltest.TestCase):
             self.assertEqual(result["model_succeeded"][0], 1)
             self.assertEqual(result["model_exception"][0], "")
 
-    @patch.object(experimental_trial, "GSClient", LocalGSClient)
-    @patch.object(data_design, "GSPath", LocalGSPath)
-    @patch.object(data_set, "GSPath", LocalGSPath)
+    @patch.object(
+        filesystem_cloudpath_wrapper,
+        "CloudPath",
+        cloudpathlib.local.LocalGSPath,
+    )
     def test_evaluate_with_cloud_path(self):
+        # Client setup
+        client = cloudpathlib.local.LocalGSClient.get_default_client()
+
+        filesystem = filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper()
+
         pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
         pdf2 = PublisherData([(2, 0.02), (2, 0.03), (4, 0.06)], "pdf2")
         data_set = DataSet([pdf1, pdf2], "dataset")
 
-        parent_dir_path = LocalGSPath(
-            "gs://ExperimentalTrialTest/parent"
-        )
+        parent_dir_path = client.CloudPath("gs://ExperimentalTrialTest/parent")
         data_design_dir_path = parent_dir_path.joinpath("data_design")
         experiment_dir_path = parent_dir_path.joinpath("experiments")
 
@@ -354,7 +360,7 @@ class ExperimentalTrialTest(absltest.TestCase):
             "For creating the target directory."
         )
 
-        data_design = DataDesign(str(data_design_dir_path))
+        data_design = DataDesign(str(data_design_dir_path), filesystem)
         data_design.add(data_set)
 
         MODELING_STRATEGIES["fake"] = FakeModelingStrategy
@@ -373,7 +379,7 @@ class ExperimentalTrialTest(absltest.TestCase):
         trial = ExperimentalTrial(
             str(experiment_dir_path), data_design, "dataset", trial_descriptor
         )
-        result = trial.evaluate(seed=1)
+        result = trial.evaluate(seed=1, filesystem=filesystem)
         # We don't check each column in the resulting dataframe, because these have
         # been checked by the preceding unit tests.  However, we make a few strategic
         # probes.

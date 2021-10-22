@@ -45,7 +45,7 @@ class DataSetTest(absltest.TestCase):
 
     def tearDown(self):
         cloudpathlib.local.LocalGSClient.reset_default_storage_dir()
-        filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper.reset_default_client()
+        cloudpathlib.local.localclient.clean_temp_dirs()
 
     def test_properties(self):
         self.assertEqual(self.data_set.publisher_count, 2)
@@ -94,16 +94,8 @@ class DataSetTest(absltest.TestCase):
         "CloudPath",
         cloudpathlib.local.LocalGSPath,
     )
-    @patch.object(
-        filesystem_cloudpath_wrapper,
-        "GSClient",
-        cloudpathlib.local.LocalGSClient,
-    )
     def test_read_and_write_data_set_with_cloud_path(self):
-        # Client setup:
-        #   1. Set up the default client in FilesystemCloudpathWrapper.
-        #   2. Get default client inferred from the one in FilesystemCloudpathWrapper
-        filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper.set_default_client_to_GSClient()
+        # Client setup
         client = cloudpathlib.local.LocalGSClient.get_default_client()
 
         file_gs_path = client.CloudPath("gs://DataSetTest/dir/dummy.txt")

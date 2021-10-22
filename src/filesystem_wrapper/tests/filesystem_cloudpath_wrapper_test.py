@@ -32,16 +32,8 @@ from wfa_planning_evaluation_framework.filesystem_wrapper import (
     cloudpathlib.local.LocalGSPath,
 )
 class FilesystemPathlibWrapperTest(absltest.TestCase):
-    @patch.object(
-        filesystem_cloudpath_wrapper,
-        "GSClient",
-        cloudpathlib.local.LocalGSClient,
-    )
     def setUp(self):
-        # Client setup:
-        #   1. Set up the default client in FilesystemCloudpathWrapper.
-        #   2. Get default client inferred from the one in FilesystemCloudpathWrapper
-        filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper.set_default_client_to_GSClient()
+        # Client setup
         self.client = cloudpathlib.local.LocalGSClient.get_default_client()
 
         # Set up paths of temporary directories and files
@@ -66,7 +58,7 @@ class FilesystemPathlibWrapperTest(absltest.TestCase):
 
     def tearDown(self):
         cloudpathlib.local.LocalGSClient.reset_default_storage_dir()
-        filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper.reset_default_client()
+        cloudpathlib.local.localclient.clean_temp_dirs()
 
     def test_name(self):
         dir_name = "dir"

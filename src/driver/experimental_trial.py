@@ -62,9 +62,13 @@ from wfa_planning_evaluation_framework.filesystem_wrapper import (
 from wfa_planning_evaluation_framework.filesystem_wrapper import (
     filesystem_pathlib_wrapper,
 )
+from wfa_planning_evaluation_framework.filesystem_wrapper import (
+    filesystem_cloudpath_wrapper,
+)
 
 FsWrapperBase = filesystem_wrapper_base.FilesystemWrapperBase
 FsPathlibWrapper = filesystem_pathlib_wrapper.FilesystemPathlibWrapper
+FsCloudPathWrapper = filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper
 
 # The output dataframe will contain the estimation error for each of the
 # following relative spend fractions.  In other words, if r is one of the
@@ -131,6 +135,7 @@ class ExperimentalTrial:
         Args:
           seed:  A seed value that is used to initialize the random
             number generator.
+          filesystem:  The filesystem object that manages all file operations.
 
         Returns:
           A single row DataFrame containing the results of the evaluation
@@ -143,6 +148,10 @@ class ExperimentalTrial:
         np.random.seed(seed)
 
         trial_results_path = self._compute_trial_results_path()
+
+        if FsCloudPathWrapper.is_valid_to_set_gs_client(trial_results_path, filesystem):
+            FsCloudPathWrapper.set_default_client_to_gs_client()
+
         if filesystem.is_file(trial_results_path):
             logging.vlog(2, "  --> Returning previously computed result")
             return pd.read_csv(trial_results_path)

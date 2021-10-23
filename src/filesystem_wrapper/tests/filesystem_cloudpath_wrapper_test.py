@@ -17,13 +17,22 @@ import pathlib
 import os
 import glob
 from absl.testing import absltest
+from absl.testing import parameterized
 from unittest.mock import patch
 
 import cloudpathlib.local
 
+
+from wfa_planning_evaluation_framework.filesystem_wrapper import (
+    filesystem_pathlib_wrapper,
+)
 from wfa_planning_evaluation_framework.filesystem_wrapper import (
     filesystem_cloudpath_wrapper,
 )
+
+
+FsPathlibWrapper = filesystem_pathlib_wrapper.FilesystemPathlibWrapper
+FsCloudPathWrapper = filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper
 
 
 @patch.object(
@@ -31,7 +40,7 @@ from wfa_planning_evaluation_framework.filesystem_wrapper import (
     "CloudPath",
     cloudpathlib.local.LocalGSPath,
 )
-class FilesystemPathlibWrapperTest(absltest.TestCase):
+class FilesystemPathlibWrapperTest(parameterized.TestCase):
     def setUp(self):
         # Client setup
         self.client = cloudpathlib.local.LocalGSClient.get_default_client()
@@ -59,6 +68,37 @@ class FilesystemPathlibWrapperTest(absltest.TestCase):
     def tearDown(self):
         cloudpathlib.local.LocalGSClient.reset_default_storage_dir()
         cloudpathlib.local.localclient.clean_temp_dirs()
+
+    @parameterized.named_parameters(
+        {
+            "testcase_name": "non_gs_path_pathlib_filesystem",
+            "path": "some/fake/local/path",
+            "filesystem": FsPathlibWrapper(),
+            "expected": False,
+        },
+        {
+            "testcase_name": "gs_path_pathlib_filesystem",
+            "path": "gs://some/fake/gs/path",
+            "filesystem": FsPathlibWrapper(),
+            "expected": False,
+        },
+        {
+            "testcase_name": "non_gs_path_gs_cloud_filesystem",
+            "path": "some/fake/local/path",
+            "filesystem": FsCloudPathWrapper(),
+            "expected": False,
+        },
+        {
+            "testcase_name": "gs_path_gs_cloud_filesystem",
+            "path": "gs://some/fake/gs/path",
+            "filesystem": FsCloudPathWrapper(),
+            "expected": True,
+        },
+    )
+    def test_is_valid_to_set_gs_client(self, path, filesystem, expected):
+        self.assertEqual(
+            FsCloudPathWrapper.is_valid_to_set_gs_client(path, filesystem), expected
+        )
 
     def test_name(self):
         dir_name = "dir"

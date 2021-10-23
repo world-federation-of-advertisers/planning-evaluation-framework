@@ -37,7 +37,7 @@ class FilesystemCloudpathWrapper(filesystem_wrapper_base.FilesystemWrapperBase):
         super().__init__()
 
     @classmethod
-    def set_default_client_to_GSClient(cls) -> None:
+    def set_default_client_to_gs_client(cls) -> None:
         """Get the default Google Cloud Storage client object used by cloudpathlib.
 
         When there is no credential provided, GSClient of cloudpathlib will
@@ -56,6 +56,10 @@ class FilesystemCloudpathWrapper(filesystem_wrapper_base.FilesystemWrapperBase):
     def reset_default_client(cls) -> None:
         """Reset the default client"""
         cls._default_client = None
+
+    @classmethod
+    def has_gs_client(cls) -> bool:
+        return isinstance(_default_client, GSClient)
 
     def name(self, path: str) -> str:
         """The final path component, if any."""

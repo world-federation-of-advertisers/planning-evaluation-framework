@@ -58,8 +58,14 @@ class FilesystemCloudpathWrapper(filesystem_wrapper_base.FilesystemWrapperBase):
         cls._default_client = None
 
     @classmethod
-    def has_gs_client(cls) -> bool:
-        return isinstance(_default_client, GSClient)
+    def is_valid_to_set_gs_client(
+        cls, path: str, filesystem: filesystem_wrapper_base.FilesystemWrapperBase
+    ) -> bool:
+        return (
+            path.startswith("gs://")
+            and isinstance(filesystem, cls)
+            and not isinstance(cls._default_client, GSClient)
+        )
 
     def name(self, path: str) -> str:
         """The final path component, if any."""

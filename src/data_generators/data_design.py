@@ -45,6 +45,7 @@ class DataDesign:
         Args:
           dirpath:  The directory on disk where the DataSets comprising this
             DataDesign will be stored.
+          filesystem:  The filesystem object that manages all file operations.
         """
         self._dirpath = dirpath
         self._data_set_names = set()

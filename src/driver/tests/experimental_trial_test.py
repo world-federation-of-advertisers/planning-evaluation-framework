@@ -339,6 +339,11 @@ class ExperimentalTrialTest(absltest.TestCase):
         "CloudPath",
         cloudpathlib.local.LocalGSPath,
     )
+    @patch.object(
+        filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper,
+        "set_default_client_to_gs_client",
+        cloudpathlib.local.LocalGSClient.get_default_client,
+    )
     def test_evaluate_with_cloud_path(self):
         # Client setup
         client = cloudpathlib.local.LocalGSClient.get_default_client()

@@ -87,7 +87,7 @@ from wfa_planning_evaluation_framework.driver.test_point_generator import (
 from wfa_planning_evaluation_framework.driver.trial_descriptor import (
     TrialDescriptor,
 )
-from wfa_planning_evaluation_framework.filesystem_wrapper import (
+from wfa_planning_evaluation_framework.filesystem_wrappers import (
     filesystem_cloudpath_wrapper,
 )
 

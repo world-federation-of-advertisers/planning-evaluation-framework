@@ -132,13 +132,13 @@ from wfa_planning_evaluation_framework.driver.experimental_design import (
 from wfa_planning_evaluation_framework.driver.trial_descriptor import (
     TrialDescriptor,
 )
-from wfa_planning_evaluation_framework.filesystem_wrapper import (
+from wfa_planning_evaluation_framework.filesystem_wrappers import (
     filesystem_wrapper_base,
 )
-from wfa_planning_evaluation_framework.filesystem_wrapper import (
+from wfa_planning_evaluation_framework.filesystem_wrappers import (
     filesystem_pathlib_wrapper,
 )
-from wfa_planning_evaluation_framework.filesystem_wrapper import (
+from wfa_planning_evaluation_framework.filesystem_wrappers import (
     filesystem_cloudpath_wrapper,
 )
 

@@ -25,7 +25,8 @@ import pandas as pd
 from unittest.mock import patch
 import logging
 
-from cloudpathlib.local import LocalGSClient, LocalGSPath
+import pathlib
+import cloudpathlib.local
 
 import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions
@@ -93,6 +94,12 @@ from wfa_planning_evaluation_framework.driver.test_point_generator import (
 from wfa_planning_evaluation_framework.driver.trial_descriptor import (
     TrialDescriptor,
 )
+from wfa_planning_evaluation_framework.filesystem_wrapper import (
+    filesystem_pathlib_wrapper,
+)
+from wfa_planning_evaluation_framework.filesystem_wrapper import (
+    filesystem_cloudpath_wrapper,
+)
 
 
 class FakeReachSurface(ReachSurface):
@@ -144,20 +151,44 @@ class FakeExperimentalTrial:
     def __init__(self, base):
         self._base = base
 
-    def evaluate(self, seed: int):
+    def evaluate(self, seed: int, filesystem):
         return self._base * seed
 
 
 class FakeEvaluateTrialDoFn(beam.DoFn):
-    def process(self, trial, seed):
+    def process(self, trial, seed, filesystem):
         import pandas as pd
 
         yield pd.DataFrame({"col": [1]})
 
 
+def fake_open(
+    self,
+    path,
+    mode="r",
+    buffering=-1,
+    encoding=None,
+    errors=None,
+    newline=None,
+):
+    if path.startswith("gs://"):
+        path = cloudpathlib.local.LocalGSPath(path)
+    else:
+        path = pathlib.Path(path)
+
+    return path.open(
+        mode=mode,
+        buffering=buffering,
+        encoding=encoding,
+        errors=errors,
+        newline=newline,
+    )
+
+
 class ExperimentalDesignTest(absltest.TestCase):
     def tearDown(self):
-        LocalGSClient.reset_default_storage_dir()
+        cloudpathlib.local.LocalGSClient.reset_default_storage_dir()
+        cloudpathlib.local.localclient.clean_temp_dirs()
 
     def _setup(self, tempdir):
         pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
@@ -243,12 +274,29 @@ class ExperimentalDesignTest(absltest.TestCase):
             self.assertGreater(results["max_nonzero_frequency_from_halo"][0], 0)
             self.assertEqual(results["max_nonzero_frequency_from_data"][0], 1)
 
-    @patch.object(experimental_design, "GSClient", LocalGSClient)
     @patch.object(experimental_design, "EvaluateTrialDoFn", FakeEvaluateTrialDoFn)
-    @patch.object(data_set, "GSPath", LocalGSPath)
-    @patch.object(data_design, "GSPath", LocalGSPath)
+    @patch.object(
+        filesystem_cloudpath_wrapper,
+        "CloudPath",
+        cloudpathlib.local.LocalGSPath,
+    )
+    @patch.object(
+        filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper,
+        "set_default_client_to_gs_client",
+        cloudpathlib.local.LocalGSClient.get_default_client,
+    )
+    @patch.object(
+        filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper,
+        "open",
+        fake_open,
+    )
     def test_evaluate_with_apache_beam_with_cloud_path(self):
-        parent_dir_path = LocalGSPath("gs://ExperimentalDesignTest/parent")
+        # Client setup
+        client = cloudpathlib.local.LocalGSClient.get_default_client()
+
+        filesystem = filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper()
+
+        parent_dir_path = client.CloudPath("gs://ExperimentalDesignTest/parent")
         data_design_dir_path = parent_dir_path.joinpath("data_design")
         experiment_dir_path = parent_dir_path.joinpath("experiments")
         data_design_dir_path.joinpath("dummy.txt").write_text(
@@ -259,7 +307,10 @@ class ExperimentalDesignTest(absltest.TestCase):
         )
 
         results = self._evaluate_with_apache_beam(
-            str(data_design_dir_path), str(experiment_dir_path)
+            data_design_dir=str(data_design_dir_path),
+            experiment_dir=str(experiment_dir_path),
+            use_cloud_path=True,
+            filesystem=filesystem,
         )
         # We don't check each column in the resulting dataframe, because these have
         # been checked by the preceding unit tests.  However, we make a few strategic
@@ -267,14 +318,20 @@ class ExperimentalDesignTest(absltest.TestCase):
         self.assertEqual(results.shape[0], 1)
         self.assertEqual(results["col"][0], 1)
 
-    def _evaluate_with_apache_beam(self, data_design_dir, experiment_dir):
+    def _evaluate_with_apache_beam(
+        self,
+        data_design_dir,
+        experiment_dir,
+        use_cloud_path=False,
+        filesystem=filesystem_pathlib_wrapper.FilesystemPathlibWrapper(),
+    ):
         num_workers = 2
         data1 = HeterogeneousImpressionGenerator(
             1000, gamma_shape=1.0, gamma_scale=3.0
         )()
         pdf1 = PublisherData(FixedPriceGenerator(0.1)(data1))
         data_set = DataSet([pdf1], "dataset")
-        data_design = DataDesign(data_design_dir)
+        data_design = DataDesign(data_design_dir, filesystem)
         data_design.add(data_set)
 
         msd = ModelingStrategyDescriptor(
@@ -297,15 +354,24 @@ class ExperimentalDesignTest(absltest.TestCase):
             seed=1,
             cores=num_workers,
             analysis_type="single_pub",
+            filesystem=filesystem,
         )
         exp.generate_trials()
+
+        temp_location = None
+        if use_cloud_path:
+            client = cloudpathlib.local.LocalGSClient.get_default_client()
+            experiment_dir_cloud_path = client.CloudPath(experiment_dir)
+            temp_location = client._cloud_path_to_local(experiment_dir_cloud_path)
+        else:
+            temp_location = experiment_dir
 
         pipeline_args = []
         pipeline_args.extend(
             [
                 "--runner=direct",
                 "--direct_running_mode=multi_processing",
-                f"--temp_location={experiment_dir}",
+                f"--temp_location={temp_location}",
                 f"--direct_num_workers={num_workers}",
             ]
         )
@@ -325,7 +391,7 @@ class ExperimentalDesignTest(absltest.TestCase):
             output = (
                 p
                 | beam.Create([FakeExperimentalTrial(i) for i in range(num_trials)])
-                | beam.ParDo(EvaluateTrialDoFn(), seed)
+                | beam.ParDo(EvaluateTrialDoFn(), seed, None)
             )
             assert_that(output, equal_to(expected))
         logging.disable(logging.NOTSET)

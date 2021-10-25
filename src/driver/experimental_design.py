@@ -42,11 +42,21 @@ from wfa_planning_evaluation_framework.driver.experiment import (
 from wfa_planning_evaluation_framework.driver.experimental_trial import (
     ExperimentalTrial,
 )
+from wfa_planning_evaluation_framework.filesystem_wrapper import (
+    filesystem_wrapper_base,
+)
+from wfa_planning_evaluation_framework.filesystem_wrapper import (
+    filesystem_pathlib_wrapper,
+)
+
+
+FsWrapperBase = filesystem_wrapper_base.FilesystemWrapperBase
+FsPathlibWrapper = filesystem_pathlib_wrapper.FilesystemPathlibWrapper
 
 
 class EvaluateTrialDoFn(beam.DoFn):
-    def process(self, trial, seed):
-        yield trial.evaluate(seed)
+    def process(self, trial, seed, filesystem):
+        yield trial.evaluate(seed, filesystem)
 
 
 class CombineDataFrameFn(beam.CombineFn):
@@ -75,6 +85,7 @@ class ExperimentalDesign:
         seed: int = 1,
         cores: int = 1,
         analysis_type: str = "",
+        filesystem: FsWrapperBase = FsPathlibWrapper(),
     ):
         """Constructs an ExperimentalDesign object.
 
@@ -96,6 +107,7 @@ class ExperimentalDesign:
           analysis_type:  Type of analysis.  Can be empty of "single_pub".  If
             "single_pub" is specified, then additional columns are added to the
             output that are specific to single publisher analysis.
+          filesystem:  The filesystem object that manages all file operations.
         """
         self._experiment_dir = experiment_dir
         self._data_design = data_design
@@ -104,6 +116,7 @@ class ExperimentalDesign:
         self._all_trials = None
         self._cores = cores
         self._analysis_type = analysis_type
+        self._filesystem = filesystem
 
     def _remove_duplicates(
         self, trials: List[ExperimentalTrial]
@@ -141,10 +154,24 @@ class ExperimentalDesign:
         ntrials = len(self._all_trials)
 
         def process_trial(i):
-            self._all_trials[i].evaluate(self._seed)
+            self._all_trials[i].evaluate(self._seed, self._filesystem)
 
         with ProcessPool(self._cores) as pool:
             list(tqdm(pool.uimap(process_trial, range(ntrials)), total=ntrials))
+
+    def _evaluate_all_trials_using_apache_beam(
+        self, pipeline_options: PipelineOptions, result_path: str
+    ):
+        with beam.Pipeline(options=pipeline_options) as pipeline:
+            (
+                pipeline
+                | "Create trial inputs" >> beam.Create(self._all_trials)
+                | "Evaluate trials"
+                >> beam.ParDo(EvaluateTrialDoFn(), self._seed, self._filesystem)
+                | "Combine results" >> beam.CombineGlobally(CombineDataFrameFn())
+                | "Write combined result"
+                >> beam.Map(lambda df: df.to_csv(result_path, index=False))
+            )
 
     def load(
         self,
@@ -156,41 +183,25 @@ class ExperimentalDesign:
             self.generate_trials()
 
         temp_location = pipeline_options.get_all_options().get("temp_location", "")
-        temp_result = (
+        temp_result_path = (
             temp_location + "/temp_result.csv" if temp_location else "/temp_result.csv"
         )
 
-        # Pickling client objects, which is included in GSPath, is explicitly
-        # not supported in Apache Beam. We only use GSPath when it is for
-        # unit test.
-        client = GSClient.get_default_client()
-        temp_result_path = (
-            client.GSPath(temp_result) if GSClient is LocalGSClient else temp_result
-        )
-
         if use_apache_beam:
-            with beam.Pipeline(options=pipeline_options) as pipeline:
-                (
-                    pipeline
-                    | "Create trial inputs" >> beam.Create(self._all_trials)
-                    | "Evaluate trials" >> beam.ParDo(EvaluateTrialDoFn(), self._seed)
-                    | "Combine results" >> beam.CombineGlobally(CombineDataFrameFn())
-                    | "Write combined result"
-                    >> beam.Map(lambda df: df.to_csv(temp_result_path, index=False))
-                )
+            self._evaluate_all_trials_using_apache_beam(
+                pipeline_options, temp_result_path
+            )
         elif self._cores != 1:
             self._evaluate_all_trials_in_parallel()
 
         result = None
         if use_apache_beam:
-            temp_result_path = (
-                client.GSPath(temp_result)
-                if temp_result.startswith("gs://")
-                else Path(temp_result)
-            )
-            with temp_result_path.open() as file:
+            with self._filesystem.open(temp_result_path) as file:
                 result = pd.read_csv(file)
         else:
-            result = pd.concat(trial.evaluate(self._seed) for trial in self._all_trials)
+            result = pd.concat(
+                trial.evaluate(self._seed, self._filesystem)
+                for trial in self._all_trials
+            )
 
         return result

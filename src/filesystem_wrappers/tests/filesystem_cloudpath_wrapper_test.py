@@ -66,8 +66,8 @@ class FilesystemPathlibWrapperTest(parameterized.TestCase):
         self.filesystem = filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper()
 
     def tearDown(self):
-        cloudpathlib.local.LocalGSClient.reset_default_storage_dir()
         cloudpathlib.local.localclient.clean_temp_dirs()
+        cloudpathlib.local.LocalGSClient.reset_default_storage_dir()
 
     @parameterized.named_parameters(
         {

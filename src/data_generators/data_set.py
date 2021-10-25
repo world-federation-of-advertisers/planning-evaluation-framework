@@ -23,10 +23,10 @@ from os import listdir
 from os.path import isfile, join
 from functools import lru_cache
 
-from wfa_planning_evaluation_framework.filesystem_wrapper import (
+from wfa_planning_evaluation_framework.filesystem_wrappers import (
     filesystem_wrapper_base,
 )
-from wfa_planning_evaluation_framework.filesystem_wrapper import (
+from wfa_planning_evaluation_framework.filesystem_wrappers import (
     filesystem_pathlib_wrapper,
 )
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (

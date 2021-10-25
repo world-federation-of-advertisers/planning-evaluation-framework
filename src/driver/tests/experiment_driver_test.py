@@ -44,10 +44,10 @@ from wfa_planning_evaluation_framework.driver import (
     analysis_example_experimental_design,
 )
 from wfa_planning_evaluation_framework.driver import single_publisher_design
-from wfa_planning_evaluation_framework.filesystem_wrapper import (
+from wfa_planning_evaluation_framework.filesystem_wrappers import (
     filesystem_pathlib_wrapper,
 )
-from wfa_planning_evaluation_framework.filesystem_wrapper import (
+from wfa_planning_evaluation_framework.filesystem_wrappers import (
     filesystem_cloudpath_wrapper,
 )
 import wfa_planning_evaluation_framework.driver.tests.experimental_design_test as experimental_design_test

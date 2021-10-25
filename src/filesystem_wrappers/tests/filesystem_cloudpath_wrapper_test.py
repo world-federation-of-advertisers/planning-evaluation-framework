@@ -23,10 +23,10 @@ from unittest.mock import patch
 import cloudpathlib.local
 
 
-from wfa_planning_evaluation_framework.filesystem_wrapper import (
+from wfa_planning_evaluation_framework.filesystem_wrappers import (
     filesystem_pathlib_wrapper,
 )
-from wfa_planning_evaluation_framework.filesystem_wrapper import (
+from wfa_planning_evaluation_framework.filesystem_wrappers import (
     filesystem_cloudpath_wrapper,
 )
 

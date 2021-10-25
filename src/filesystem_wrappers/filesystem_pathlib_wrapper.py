@@ -16,7 +16,7 @@
 import pathlib
 from typing import Optional, IO, Iterable
 
-from wfa_planning_evaluation_framework.filesystem_wrapper import filesystem_wrapper_base
+from wfa_planning_evaluation_framework.filesystem_wrappers import filesystem_wrapper_base
 
 
 class FilesystemPathlibWrapper(filesystem_wrapper_base.FilesystemWrapperBase):

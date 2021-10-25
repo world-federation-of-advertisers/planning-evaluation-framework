@@ -43,7 +43,7 @@ REQUIRED = [
     "cvxpy==1.1.12",
     "dp-accounting==0.0.1",
     "pandas>=1.2.5",
-    "typing-extensions==3.7.4.3",
+    "typing-extensions==3.10.0.2",
     "fsspec==2021.7.0",
     "gcsfs==2021.7.0",
     "tqdm>=4.47.0",

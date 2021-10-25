@@ -18,7 +18,7 @@ from typing import Optional, IO, Iterable
 import cloudpathlib
 from google.cloud import storage
 
-from wfa_planning_evaluation_framework.filesystem_wrapper import filesystem_wrapper_base
+from wfa_planning_evaluation_framework.filesystem_wrappers import filesystem_wrapper_base
 
 
 GSClient = cloudpathlib.GSClient

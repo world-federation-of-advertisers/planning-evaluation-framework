@@ -42,9 +42,7 @@ from wfa_planning_evaluation_framework.data_generators.fixed_price_generator imp
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
 )
-import wfa_planning_evaluation_framework.data_generators.data_design as data_design
 from wfa_planning_evaluation_framework.data_generators.data_design import DataDesign
-import wfa_planning_evaluation_framework.data_generators.data_set as data_set
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.models.reach_curve import (
     ReachCurve,

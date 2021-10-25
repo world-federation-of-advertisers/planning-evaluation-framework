@@ -123,11 +123,6 @@ import numpy as np
 import pandas as pd
 import sys
 from typing import Iterable
-
-from cloudpathlib import GSClient
-from cloudpathlib.client import Client
-from google.cloud import storage
-
 from apache_beam.options.pipeline_options import PipelineOptions
 
 from wfa_planning_evaluation_framework.data_generators.data_design import DataDesign
@@ -137,6 +132,20 @@ from wfa_planning_evaluation_framework.driver.experimental_design import (
 from wfa_planning_evaluation_framework.driver.trial_descriptor import (
     TrialDescriptor,
 )
+from wfa_planning_evaluation_framework.filesystem_wrapper import (
+    filesystem_wrapper_base,
+)
+from wfa_planning_evaluation_framework.filesystem_wrapper import (
+    filesystem_pathlib_wrapper,
+)
+from wfa_planning_evaluation_framework.filesystem_wrapper import (
+    filesystem_cloudpath_wrapper,
+)
+
+
+FsWrapperBase = filesystem_wrapper_base.FilesystemWrapperBase
+FsPathlibWrapper = filesystem_pathlib_wrapper.FilesystemPathlibWrapper
+FsCloudPathWrapper = filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper
 
 
 class ExperimentDriver:
@@ -164,10 +173,10 @@ class ExperimentDriver:
         self,
         use_apache_beam: bool = False,
         pipeline_options: PipelineOptions = PipelineOptions(),
-        client: Client = None,
+        filesystem: FsWrapperBase = FsPathlibWrapper(),
     ) -> pd.DataFrame:
         """Performs all experiments defined in an experimental design."""
-        data_design = DataDesign(self._data_design_dir)
+        data_design = DataDesign(self._data_design_dir, filesystem)
         experiments = list(self._fetch_experiment_list())
         experimental_design = ExperimentalDesign(
             self._intermediate_dir,
@@ -176,6 +185,7 @@ class ExperimentDriver:
             self._seed,
             self._cores,
             analysis_type=self._analysis_type,
+            filesystem=filesystem,
         )
         experimental_design.generate_trials()
 
@@ -183,12 +193,7 @@ class ExperimentDriver:
             use_apache_beam=use_apache_beam,
             pipeline_options=pipeline_options,
         )
-
-        if self._output_file.startswith("gs://"):
-            output_cloud_path = client.GSPath(self._output_file)
-            output_cloud_path.write_text(result.to_csv(index=False))
-        else:
-            result.to_csv(self._output_file, index=False)
+        filesystem.write_text(self._output_file, result.to_csv(index=False))
 
         return result
 
@@ -281,29 +286,22 @@ def main(argv):
     )
     pipeline_options = PipelineOptions(pipeline_args)
 
-    # When there is no credential explicitly provided as input argument,
-    # GSClients of cloudpathlib will create an anonymous client which can't
-    # access non-public buckets. On the other hand, Clients in
-    # google.cloud.storage will fall back to the default inferred from the
-    # environment. As a result, we create a Client from google.cloud.storage
-    # and use it to initiate a GSClient object. Then, we set the GSClient
-    # object as the default for authenticating the rest of operations.
-    client = None
-    if (
-        pipeline_options.get_all_options()["runner"]
-        in [
-            "dataflow",
-            "DataflowRunner",
-        ]
-        or known_args.output_file.startswith("gs://")
-    ):
-        client = GSClient(storage_client=storage.Client())
-        client.set_as_default_client()
+    # Set up a filesystem object according to the runner mode
+    # Currently, we only support GCS for the data storage for the Dataflow runner.
+    filesystem = None
+    if pipeline_options.get_all_options()["runner"] in [
+        "dataflow",
+        "DataflowRunner",
+    ]:
+        FsCloudPathWrapper.set_default_client_to_gs_client()
+        filesystem = FsCloudPathWrapper()
+    else:
+        filesystem = FsPathlibWrapper()
 
     experiment_driver.execute(
         known_args.use_apache_beam,
         pipeline_options,
-        client,
+        filesystem,
     )
 
 

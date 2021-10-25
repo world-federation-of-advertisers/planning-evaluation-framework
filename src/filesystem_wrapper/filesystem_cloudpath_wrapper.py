@@ -20,6 +20,7 @@ from google.cloud import storage
 
 from wfa_planning_evaluation_framework.filesystem_wrapper import filesystem_wrapper_base
 
+
 GSClient = cloudpathlib.GSClient
 CloudPath = cloudpathlib.CloudPath
 
@@ -30,8 +31,6 @@ class FilesystemCloudpathWrapper(filesystem_wrapper_base.FilesystemWrapperBase):
     The implementation follows the style of the Python standard library's
     [`pathlib` module](https://docs.python.org/3/library/pathlib.html)
     """
-
-    _default_client = None
 
     def __init__(self):
         super().__init__()
@@ -48,24 +47,14 @@ class FilesystemCloudpathWrapper(filesystem_wrapper_base.FilesystemWrapperBase):
         google.cloud.storage and then use it to initiate a GSClient object and
         set it as the default for other operations.
         """
-        if cls._default_client is None:
-            cls._default_client = GSClient(storage_client=storage.Client())
-            cls._default_client.set_as_default_client()
-
-    @classmethod
-    def reset_default_client(cls) -> None:
-        """Reset the default client"""
-        cls._default_client = None
+        default_client = GSClient(storage_client=storage.Client())
+        default_client.set_as_default_client()
 
     @classmethod
     def is_valid_to_set_gs_client(
         cls, path: str, filesystem: filesystem_wrapper_base.FilesystemWrapperBase
     ) -> bool:
-        return (
-            path.startswith("gs://")
-            and isinstance(filesystem, cls)
-            and not isinstance(cls._default_client, GSClient)
-        )
+        return path.startswith("gs://") and isinstance(filesystem, cls)
 
     def name(self, path: str) -> str:
         """The final path component, if any."""

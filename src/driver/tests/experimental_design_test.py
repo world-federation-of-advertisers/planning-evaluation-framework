@@ -187,8 +187,8 @@ def fake_open(
 
 class ExperimentalDesignTest(absltest.TestCase):
     def tearDown(self):
-        cloudpathlib.local.LocalGSClient.reset_default_storage_dir()
         cloudpathlib.local.localclient.clean_temp_dirs()
+        cloudpathlib.local.LocalGSClient.reset_default_storage_dir()
 
     def _setup(self, tempdir):
         pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")

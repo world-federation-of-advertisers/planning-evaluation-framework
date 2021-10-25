@@ -167,8 +167,8 @@ class GoergTestPointGenerator(TestPointGenerator):
 
 class ExperimentalTrialTest(absltest.TestCase):
     def tearDown(self):
-        cloudpathlib.local.LocalGSClient.reset_default_storage_dir()
         cloudpathlib.local.localclient.clean_temp_dirs()
+        cloudpathlib.local.LocalGSClient.reset_default_storage_dir()
 
     def test_privacy_tracking_vars_dataframe(self):
         tracker = PrivacyTracker()

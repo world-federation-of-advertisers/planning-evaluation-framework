@@ -69,8 +69,8 @@ class ExperimentDriverTest(absltest.TestCase):
         self.client.set_as_default_client()
 
     def tearDown(self):
-        cloudpathlib.local.LocalGSClient.reset_default_storage_dir()
         cloudpathlib.local.localclient.clean_temp_dirs()
+        cloudpathlib.local.LocalGSClient.reset_default_storage_dir()
 
     def test_sample_experimental_design(self):
         sample_design = sample_experimental_design.generate_experimental_design_config(

@@ -94,6 +94,7 @@ setup(
         "wfa_planning_evaluation_framework.data_generators",
         "wfa_planning_evaluation_framework.simulator",
         "wfa_planning_evaluation_framework.driver",
+        "wfa_planning_evaluation_framework.filesystem_wrappers",
     ],
     package_dir={"wfa_planning_evaluation_framework": "src"},
     install_requires=REQUIRED,

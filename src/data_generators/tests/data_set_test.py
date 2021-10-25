@@ -44,8 +44,8 @@ class DataSetTest(absltest.TestCase):
         cls.data_set = data_set
 
     def tearDown(self):
-        cloudpathlib.local.LocalGSClient.reset_default_storage_dir()
         cloudpathlib.local.localclient.clean_temp_dirs()
+        cloudpathlib.local.LocalGSClient.reset_default_storage_dir()
 
     def test_properties(self):
         self.assertEqual(self.data_set.publisher_count, 2)

@@ -42,15 +42,15 @@ class DataDesignTest(absltest.TestCase):
         cls.data_set2 = DataSet([pdf21, pdf22], "ds2")
 
     def tearDown(self):
-        cloudpathlib.local.LocalGSClient.reset_default_storage_dir()
         cloudpathlib.local.localclient.clean_temp_dirs()
+        cloudpathlib.local.LocalGSClient.reset_default_storage_dir()
 
     @patch.object(
         filesystem_cloudpath_wrapper,
         "CloudPath",
         cloudpathlib.local.LocalGSPath,
     )
-    def test_constructor_with_cloud_path(self):
+    def test_properties_with_cloud_path(self):
         # Client setup
         client = cloudpathlib.local.LocalGSClient.get_default_client()
 

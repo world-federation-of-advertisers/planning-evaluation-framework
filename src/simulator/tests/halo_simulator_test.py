@@ -196,8 +196,8 @@ class HaloSimulatorTest(parameterized.TestCase):
         expected_reach_points = []
 
         self.assertEqual(expected_reach_points, reach_points)
-        self.assertEqual(halo.privacy_tracker._epsilon_sum, 0)
-        self.assertEqual(halo.privacy_tracker._delta_sum, 0)
+        self.assertEqual(halo.privacy_tracker.privacy_consumption.epsilon, 0)
+        self.assertEqual(halo.privacy_tracker.privacy_consumption.delta, 0)
         self.assertEqual(len(halo.privacy_tracker._noising_events), 0)
 
     @parameterized.named_parameters(
@@ -347,12 +347,12 @@ class HaloSimulatorTest(parameterized.TestCase):
         ]
 
         self.assertEqual(
-            halo.privacy_tracker._epsilon_sum,
+            halo.privacy_tracker.privacy_consumption.epsilon,
             expected_noise_event_primitive_regions.budget.epsilon
             + expected_noise_event_cardinality.budget.epsilon,
         )
         self.assertEqual(
-            halo.privacy_tracker._delta_sum,
+            halo.privacy_tracker.privacy_consumption.delta,
             expected_noise_event_primitive_regions.budget.delta
             + expected_noise_event_cardinality.budget.delta,
         )
@@ -572,10 +572,10 @@ class HaloSimulatorTest(parameterized.TestCase):
 
         self.assertEqual(noised_regions, expected_regions)
         self.assertEqual(
-            halo.privacy_tracker._epsilon_sum, budget.epsilon * privacy_budget_split
+            halo.privacy_tracker.privacy_consumption.epsilon, budget.epsilon * privacy_budget_split
         )
         self.assertEqual(
-            halo.privacy_tracker._delta_sum, budget.delta * privacy_budget_split
+            halo.privacy_tracker.privacy_consumption.delta, budget.delta * privacy_budget_split
         )
         self.assertEqual(len(halo.privacy_tracker._noising_events), 1)
         self.assertEqual(
@@ -653,10 +653,10 @@ class HaloSimulatorTest(parameterized.TestCase):
         self.assertEqual(scaled_regions, expected)
 
         self.assertEqual(
-            halo.privacy_tracker._epsilon_sum, budget.epsilon * privacy_budget_split
+            halo.privacy_tracker.privacy_consumption.epsilon, budget.epsilon * privacy_budget_split
         )
         self.assertEqual(
-            halo.privacy_tracker._delta_sum, budget.delta * privacy_budget_split
+            halo.privacy_tracker.privacy_consumption.delta, budget.delta * privacy_budget_split
         )
         self.assertEqual(len(halo.privacy_tracker._noising_events), 1)
         self.assertEqual(

@@ -16,7 +16,9 @@
 import pathlib
 from typing import Optional, IO, Iterable
 
-from wfa_planning_evaluation_framework.filesystem_wrappers import filesystem_wrapper_base
+from wfa_planning_evaluation_framework.filesystem_wrappers import (
+    filesystem_wrapper_base,
+)
 
 
 class FilesystemPathlibWrapper(filesystem_wrapper_base.FilesystemWrapperBase):
@@ -93,12 +95,12 @@ class FilesystemPathlibWrapper(filesystem_wrapper_base.FilesystemWrapperBase):
         """
         pathlib.Path(path).mkdir(mode=mode, parents=parents, exist_ok=exist_ok)
 
-    def unlink(self, path: str, missing_ok: bool = False) -> None:
+    def unlink(self, path: str) -> None:
         """
         Remove the file or link at the given path.
         If the path is a directory, use rmdir() instead.
         """
-        pathlib.Path(path).unlink(missing_ok=missing_ok)
+        pathlib.Path(path).unlink()
 
     def exists(self, path: str) -> bool:
         """

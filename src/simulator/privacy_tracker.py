@@ -115,8 +115,8 @@ class PrivacyTracker:
         """
         # Take maximum privacy budget spent across all buckets. For this, it
         # suffices to take the starting points of the buckets.
-        max_epsilon = 0
-        max_delta = 0
+        max_epsilon = 0.0
+        max_delta = 0.0
         for sampling_bucket_ in self._sampling_buckets_starting_points:
             consumed_budget = self.privacy_consumption_for_sampling_bucket(
                 sampling_bucket_
@@ -132,8 +132,8 @@ class PrivacyTracker:
         basic composition rule.  This will be expanded in the future
         to support advanced composition (see TODO #1 above).
         """
-        epsilon_sum = 0
-        delta_sum = 0
+        epsilon_sum = 0.0
+        delta_sum = 0.0
         for event in self._noising_events:
             if event.sampling_buckets.contains(sampling_bucket):
                 epsilon_sum += event.budget.epsilon

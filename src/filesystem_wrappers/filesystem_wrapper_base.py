@@ -86,7 +86,7 @@ class FilesystemWrapperBase(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def unlink(self, path: str, missing_ok: bool = False) -> None:
+    def unlink(self, path: str) -> None:
         """
         Remove the file or link at the given path.
         If the path is a directory, use rmdir() instead.

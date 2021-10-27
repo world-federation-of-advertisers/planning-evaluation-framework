@@ -18,7 +18,9 @@ from typing import Optional, IO, Iterable
 import cloudpathlib
 from google.cloud import storage
 
-from wfa_planning_evaluation_framework.filesystem_wrappers import filesystem_wrapper_base
+from wfa_planning_evaluation_framework.filesystem_wrappers import (
+    filesystem_wrapper_base,
+)
 
 
 GSClient = cloudpathlib.GSClient
@@ -35,8 +37,7 @@ class FilesystemCloudpathWrapper(filesystem_wrapper_base.FilesystemWrapperBase):
     def __init__(self):
         super().__init__()
 
-    @classmethod
-    def set_default_client_to_gs_client(cls) -> None:
+    def set_default_client_to_gs_client(self) -> None:
         """Get the default Google Cloud Storage client object used by cloudpathlib.
 
         When there is no credential provided, GSClient of cloudpathlib will
@@ -49,12 +50,6 @@ class FilesystemCloudpathWrapper(filesystem_wrapper_base.FilesystemWrapperBase):
         """
         default_client = GSClient(storage_client=storage.Client())
         default_client.set_as_default_client()
-
-    @classmethod
-    def is_valid_to_set_gs_client(
-        cls, path: str, filesystem: filesystem_wrapper_base.FilesystemWrapperBase
-    ) -> bool:
-        return path.startswith("gs://") and isinstance(filesystem, cls)
 
     def name(self, path: str) -> str:
         """The final path component, if any."""
@@ -121,12 +116,11 @@ class FilesystemCloudpathWrapper(filesystem_wrapper_base.FilesystemWrapperBase):
         # It's not possible to make empty directory on cloud storage
         pass
 
-    def unlink(self, path: str, missing_ok: bool = False) -> None:
+    def unlink(self, path: str) -> None:
         """
         Remove the file or link at the given path.
         If the path is a directory, use rmdir() instead.
         """
-        del missing_ok  # Not used in CloudPath
         CloudPath(path).unlink()
 
     def exists(self, path: str) -> bool:

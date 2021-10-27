@@ -293,8 +293,8 @@ def main(argv):
         "dataflow",
         "DataflowRunner",
     ]:
-        FsCloudPathWrapper.set_default_client_to_gs_client()
         filesystem = FsCloudPathWrapper()
+        filesystem.set_default_client_to_gs_client()
     else:
         filesystem = FsPathlibWrapper()
 

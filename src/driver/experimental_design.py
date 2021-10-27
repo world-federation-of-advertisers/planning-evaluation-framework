@@ -25,9 +25,6 @@ from tqdm import tqdm
 from typing import List
 from typing import Tuple
 import itertools
-from pathlib import Path
-from cloudpathlib.local import LocalGSClient
-from cloudpathlib import GSClient
 
 import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions

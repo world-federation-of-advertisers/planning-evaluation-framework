@@ -13,19 +13,13 @@
 # limitations under the License.
 """Tests for modeling_strategy_descriptor."""
 
+from typing import Dict, Iterable, List, Type
 from absl.testing import absltest
 from os.path import join
 from tempfile import TemporaryDirectory
-from typing import Dict
-from typing import Iterable
-from typing import List
-from typing import Type
 import math
 import numpy as np
 import pandas as pd
-from unittest.mock import patch
-
-import cloudpathlib.local
 
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
@@ -86,9 +80,6 @@ from wfa_planning_evaluation_framework.driver.test_point_generator import (
 )
 from wfa_planning_evaluation_framework.driver.trial_descriptor import (
     TrialDescriptor,
-)
-from wfa_planning_evaluation_framework.filesystem_wrappers import (
-    filesystem_cloudpath_wrapper,
 )
 
 
@@ -166,10 +157,6 @@ class GoergTestPointGenerator(TestPointGenerator):
 
 
 class ExperimentalTrialTest(absltest.TestCase):
-    def tearDown(self):
-        cloudpathlib.local.localclient.clean_temp_dirs()
-        cloudpathlib.local.LocalGSClient.reset_default_storage_dir()
-
     def test_privacy_tracking_vars_dataframe(self):
         tracker = PrivacyTracker()
         eparams = ExperimentParameters(
@@ -333,68 +320,6 @@ class ExperimentalTrialTest(absltest.TestCase):
             self.assertEqual(result["npoints"][0], 1)
             self.assertEqual(result["model_succeeded"][0], 1)
             self.assertEqual(result["model_exception"][0], "")
-
-    @patch.object(
-        filesystem_cloudpath_wrapper,
-        "CloudPath",
-        cloudpathlib.local.LocalGSPath,
-    )
-    @patch.object(
-        filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper,
-        "set_default_client_to_gs_client",
-        cloudpathlib.local.LocalGSClient.get_default_client,
-    )
-    def test_evaluate_with_cloud_path(self):
-        # Client setup
-        client = cloudpathlib.local.LocalGSClient.get_default_client()
-
-        filesystem = filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper()
-
-        pdf1 = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)], "pdf1")
-        pdf2 = PublisherData([(2, 0.02), (2, 0.03), (4, 0.06)], "pdf2")
-        data_set = DataSet([pdf1, pdf2], "dataset")
-
-        parent_dir_path = client.CloudPath("gs://ExperimentalTrialTest/parent")
-        data_design_dir_path = parent_dir_path.joinpath("data_design")
-        experiment_dir_path = parent_dir_path.joinpath("experiments")
-
-        data_design_dir_path.joinpath("dummy.txt").write_text(
-            "For creating the target directory."
-        )
-        experiment_dir_path.joinpath("dummy.txt").write_text(
-            "For creating the target directory."
-        )
-
-        data_design = DataDesign(str(data_design_dir_path), filesystem)
-        data_design.add(data_set)
-
-        MODELING_STRATEGIES["fake"] = FakeModelingStrategy
-        TEST_POINT_STRATEGIES["fake_tps"] = FakeTestPointGenerator
-
-        msd = ModelingStrategyDescriptor(
-            "fake", {"x": 1}, "goerg", {}, "pairwise_union", {}
-        )
-        sparams = SystemParameters(
-            [0.9, 0.9],
-            LiquidLegionsParameters(13, 1e6, 1),
-            np.random.default_rng(),
-        )
-        eparams = ExperimentParameters(PrivacyBudget(1.0, 0.01), 3, 5, "fake_tps")
-        trial_descriptor = TrialDescriptor(msd, sparams, eparams)
-        trial = ExperimentalTrial(
-            str(experiment_dir_path), data_design, "dataset", trial_descriptor
-        )
-        result = trial.evaluate(seed=1, filesystem=filesystem)
-        # We don't check each column in the resulting dataframe, because these have
-        # been checked by the preceding unit tests.  However, we make a few strategic
-        # probes.
-        self.assertEqual(result.shape[0], 1)
-        self.assertEqual(result["dataset"][0], "dataset")
-        self.assertEqual(result["replica_id"][0], 3)
-        self.assertEqual(result["privacy_budget_epsilon"][0], 1.0)
-        self.assertEqual(result["npoints"][0], 1)
-        self.assertEqual(result["model_succeeded"][0], 1)
-        self.assertEqual(result["model_exception"][0], "")
 
     def test_evaluate_when_there_is_a_modeling_exception(self):
         with TemporaryDirectory() as d:

@@ -190,26 +190,24 @@ python3 driver/experiment_driver.py -- \
   --output_file=$DIR/results \
   --intermediates_dir=$DIR/intermediates \
   --cores=0 \
-  [--analysis_type=single_pub]]
   --use_apache_beam \
   --runner=direct \
   --direct_running_mode=multi_processing
 ```
 
-For running with the Dataflow runner, the command is:
+For running with the Dataflow runner, make sure the data is uploaded to your bucket in Google Cloud Storage, i.e. gs://\<bucket_name\>/\<subpath/to/data_design_dir\>, before running the command below:
 ```
 python3 experiment_driver.py -- \
   --data_design_dir=gs://<bucket_name>/<subpath/to/data_design_dir> \
-  --experimental_design=gs://<bucket_name>/<subpath/to/experimental_design_dir> \
+  --experimental_design=driver/single_publisher_design.py \
   --output_file=gs://<bucket_name>/<subpath/to/output_file> \
   --intermediates_dir=gs://<bucket_name>/<subpath/to/intermediates_dir> \
-  [--analysis_type=single_pub]]
   --use_apache_beam \
   --runner=DataflowRunner \
   --region=<region> \
   --project=<gcp_project_id> \
   --staging_location=gs://<bucket_name>/<subpath/to/staging_dir> \
-  --setup_file <path/to/setup.py> \
+  --setup_file=<path/to/setup.py> \
   --extra_package=<path/to/wfa_cardinality_estimation_evaluation_framework-0.0.tar.gz>
 ```
 

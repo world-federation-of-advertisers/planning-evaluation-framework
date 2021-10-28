@@ -195,7 +195,7 @@ python3 driver/experiment_driver.py -- \
   --direct_running_mode=multi_processing
 ```
 
-For running with the Dataflow runner, make sure the data is uploaded to your bucket in Google Cloud Storage, i.e. gs://\<bucket_name\>/\<subpath/to/data_design_dir\>, before running the command below:
+For running with the Dataflow runner, make sure the data is uploaded to your bucket in Google Cloud Storage, i.e. `gs://<bucket_name>/<subpath/to/data_design_dir>`, before running the command below:
 ```
 python3 experiment_driver.py -- \
   --data_design_dir=gs://<bucket_name>/<subpath/to/data_design_dir> \
@@ -211,8 +211,7 @@ python3 experiment_driver.py -- \
   --extra_package=<path/to/wfa_cardinality_estimation_evaluation_framework-0.0.tar.gz>
 ```
 
-Even with the help of multi-processing/distributed computing, the above design takes very long to run, so you may want to reduce both the number of Datasets and the number of Experiments by (temporarily) modifying the respective configuration files.  To see verbose output as the evaluation proceeds, try adding the parameter `--v==3`.  Once the evaluation is complete, the results will be recorded in a CSV file named `$DIR/results`.  You can then load this
-into colab and explore the results that were obtained.  For some example colabs, see the `analysis` directory.
+Even with the help of multi-processing/distributed computing, the above design takes very long to run, so you may want to reduce both the number of Datasets and the number of Experiments by (temporarily) modifying the respective configuration files.  To see verbose output as the evaluation proceeds, try adding the parameter `--v==3`.  Once the evaluation is complete, the results will be recorded in a CSV file named `$DIR/results` (or `gs://<bucket_name>/<subpath/to/output_dir/results.csv>` if you are using GCS bucket).  You can then load it into colab and explore the results that were obtained.  For some example colabs, see the `analysis` directory.
 
 ### Directory Structure
 

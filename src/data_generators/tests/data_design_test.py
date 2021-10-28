@@ -14,13 +14,7 @@
 """Tests for publisher_data_file.py."""
 
 from absl.testing import absltest
-from unittest.mock import patch
 from tempfile import TemporaryDirectory
-
-import cloudpathlib.local
-from wfa_planning_evaluation_framework.filesystem_wrappers import (
-    filesystem_cloudpath_wrapper,
-)
 
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
@@ -39,35 +33,6 @@ class DataDesignTest(absltest.TestCase):
         pdf21 = PublisherData([(1, 0.01), (2, 0.02), (2, 0.04), (3, 0.05)], "pdf21")
         pdf22 = PublisherData([(2, 0.03), (3, 0.06)], "pdf22")
         cls.data_set2 = DataSet([pdf21, pdf22], "ds2")
-
-    def tearDown(self):
-        cloudpathlib.local.localclient.clean_temp_dirs()
-        cloudpathlib.local.LocalGSClient.reset_default_storage_dir()
-
-    @patch.object(
-        filesystem_cloudpath_wrapper,
-        "CloudPath",
-        cloudpathlib.local.LocalGSPath,
-    )
-    def test_properties_with_cloud_path(self):
-        # Client setup
-        client = cloudpathlib.local.LocalGSClient.get_default_client()
-
-        file_gs_path = client.CloudPath("gs://DataDesignTest/dir1/dir2/dir3/dummy.txt")
-        file_gs_path.write_text("For creating the target directory.")
-        dir_gs_path = file_gs_path.parent
-
-        filesystem = filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper()
-
-        dd = DataDesign(str(dir_gs_path), filesystem)
-        self.assertEqual(dd.count, 0)
-        self.assertEqual(dd.names, [])
-        dd.add(self.data_set1)
-        self.assertEqual(dd.count, 1)
-        self.assertEqual(dd.names, ["ds1"])
-        dd.add(self.data_set2)
-        self.assertEqual(dd.count, 2)
-        self.assertEqual(dd.names, ["ds1", "ds2"])
 
     def test_properties(self):
         with TemporaryDirectory() as d:
@@ -91,30 +56,6 @@ class DataDesignTest(absltest.TestCase):
             self.assertEqual(ds1.reach_by_impressions([4, 2]).reach(), 4)
             ds2 = dd2.by_name("ds2")
             self.assertEqual(ds2.reach_by_impressions([4, 2]).reach(), 3)
-
-    @patch.object(
-        filesystem_cloudpath_wrapper,
-        "CloudPath",
-        cloudpathlib.local.LocalGSPath,
-    )
-    def test_lookup_with_cloud_path(self):
-        # Client setup
-        client = cloudpathlib.local.LocalGSClient.get_default_client()
-
-        file_gs_path = client.CloudPath("gs://DataDesignTest/dir1/dir2/dir3/dummy.txt")
-        file_gs_path.write_text("For creating the target directory.")
-        dir_gs_path = file_gs_path.parent
-
-        filesystem = filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper()
-
-        dd1 = DataDesign(str(dir_gs_path), filesystem)
-        dd1.add(self.data_set1)
-        dd1.add(self.data_set2)
-        dd2 = DataDesign(str(dir_gs_path), filesystem)
-        ds1 = dd2.by_name("ds1")
-        self.assertEqual(ds1.reach_by_impressions([4, 2]).reach(), 4)
-        ds2 = dd2.by_name("ds2")
-        self.assertEqual(ds2.reach_by_impressions([4, 2]).reach(), 3)
 
 
 if __name__ == "__main__":

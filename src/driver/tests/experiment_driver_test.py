@@ -47,7 +47,6 @@ from wfa_planning_evaluation_framework.filesystem_wrappers import (
 from wfa_planning_evaluation_framework.filesystem_wrappers import (
     filesystem_cloudpath_wrapper,
 )
-import wfa_planning_evaluation_framework.driver.tests.experimental_design_test as experimental_design_test
 
 
 class FakeExperimentalTrial(ExperimentalTrial):
@@ -58,6 +57,36 @@ class FakeExperimentalTrial(ExperimentalTrial):
                 "trial_descriptor": [str(self._trial_descriptor)],
             }
         )
+
+
+class FakeEvaluateTrialDoFn(beam.DoFn):
+    def process(self, trial, seed, filesystem):
+        import pandas as pd
+
+        yield pd.DataFrame({"col": [1]})
+
+
+def fake_open(
+    self,
+    path,
+    mode="r",
+    buffering=-1,
+    encoding=None,
+    errors=None,
+    newline=None,
+):
+    if path.startswith("gs://"):
+        path = cloudpathlib.local.LocalGSPath(path)
+    else:
+        path = pathlib.Path(path)
+
+    return path.open(
+        mode=mode,
+        buffering=buffering,
+        encoding=encoding,
+        errors=errors,
+        newline=newline,
+    )
 
 
 class ExperimentDriverTest(absltest.TestCase):
@@ -153,7 +182,7 @@ class ExperimentDriverTest(absltest.TestCase):
     @patch.object(
         experimental_design,
         "EvaluateTrialDoFn",
-        experimental_design_test.FakeEvaluateTrialDoFn,
+        FakeEvaluateTrialDoFn,
     )
     def test_experiment_driver_using_apache_beam_locally(self):
         with TemporaryDirectory() as d:
@@ -172,7 +201,7 @@ class ExperimentDriverTest(absltest.TestCase):
     @patch.object(
         experimental_design,
         "EvaluateTrialDoFn",
-        experimental_design_test.FakeEvaluateTrialDoFn,
+        FakeEvaluateTrialDoFn,
     )
     @patch.object(
         filesystem_cloudpath_wrapper,
@@ -187,7 +216,7 @@ class ExperimentDriverTest(absltest.TestCase):
     @patch.object(
         filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper,
         "open",
-        experimental_design_test.fake_open,
+        fake_open,
     )
     def test_experiment_driver_using_apache_beam_and_cloud_path(self):
         parent_dir_path = self.client.CloudPath("gs://ExperimentDriverTest/parent")

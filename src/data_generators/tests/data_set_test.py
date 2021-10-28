@@ -14,14 +14,7 @@
 """Tests for publisher_data_file.py."""
 
 from absl.testing import absltest
-from numpy.random import RandomState
 from tempfile import TemporaryDirectory
-from unittest.mock import patch
-
-import cloudpathlib.local
-from wfa_planning_evaluation_framework.filesystem_wrappers import (
-    filesystem_cloudpath_wrapper,
-)
 
 from wfa_planning_evaluation_framework.data_generators.fixed_price_generator import (
     FixedPriceGenerator,
@@ -42,10 +35,6 @@ class DataSetTest(absltest.TestCase):
         pdf2 = PublisherData([(2, 0.03), (4, 0.06)], "pdf2")
         data_set = DataSet([pdf1, pdf2], "test")
         cls.data_set = data_set
-
-    def tearDown(self):
-        cloudpathlib.local.localclient.clean_temp_dirs()
-        cloudpathlib.local.LocalGSClient.reset_default_storage_dir()
 
     def test_properties(self):
         self.assertEqual(self.data_set.publisher_count, 2)
@@ -88,29 +77,6 @@ class DataSetTest(absltest.TestCase):
             self.assertEqual(new_data_set.reach_by_impressions([4, 0]).reach(), 3)
             self.assertEqual(new_data_set.reach_by_impressions([0, 2]).reach(), 2)
             self.assertEqual(new_data_set.reach_by_impressions([4, 2]).reach(), 4)
-
-    @patch.object(
-        filesystem_cloudpath_wrapper,
-        "CloudPath",
-        cloudpathlib.local.LocalGSPath,
-    )
-    def test_read_and_write_data_set_with_cloud_path(self):
-        # Client setup
-        client = cloudpathlib.local.LocalGSClient.get_default_client()
-
-        file_gs_path = client.CloudPath("gs://DataSetTest/dir/dummy.txt")
-        dir_gs_path = file_gs_path.parent
-        file_gs_path.write_text("For creating the target directory.")
-
-        filesystem = filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper()
-        self.data_set.write_data_set(str(dir_gs_path), filesystem=filesystem)
-        data_set_path = dir_gs_path.joinpath("test")
-        new_data_set = DataSet.read_data_set(str(data_set_path), filesystem=filesystem)
-        self.assertEqual(new_data_set.publisher_count, 2)
-        self.assertEqual(new_data_set.name, "test")
-        self.assertEqual(new_data_set.reach_by_impressions([4, 0]).reach(), 3)
-        self.assertEqual(new_data_set.reach_by_impressions([0, 2]).reach(), 2)
-        self.assertEqual(new_data_set.reach_by_impressions([4, 2]).reach(), 4)
 
 
 if __name__ == "__main__":

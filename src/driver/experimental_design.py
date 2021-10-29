@@ -167,7 +167,11 @@ class ExperimentalDesign:
                 >> beam.ParDo(EvaluateTrialDoFn(), self._seed, self._filesystem)
                 | "Combine results" >> beam.CombineGlobally(CombineDataFrameFn())
                 | "Write combined result"
-                >> beam.Map(lambda df: df.to_csv(result_path, index=False))
+                >> beam.Map(
+                    lambda df: self._filesystem.write_text(
+                        result_path, df.to_csv(index=False)
+                    )
+                )
             )
 
     def load(

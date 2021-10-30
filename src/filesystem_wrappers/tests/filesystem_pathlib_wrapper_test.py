@@ -95,6 +95,12 @@ class FilesystemPathlibWrapperTest(absltest.TestCase):
             self.filesystem.unlink(tempfile_path)
             self.assertFalse(os.path.exists(tempfile_path))
 
+    def test_unlink_missing_file(self):
+        with tempfile.TemporaryDirectory() as d:
+            fake_file_path = os.path.join(d, "fake_file")
+            with self.assertRaises(FileNotFoundError):
+                self.filesystem.unlink(fake_file_path, missing_ok=False)
+
     def test_exists(self):
         with tempfile.TemporaryDirectory() as d:
             self.assertTrue(self.filesystem.exists(d))

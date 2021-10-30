@@ -108,6 +108,11 @@ class FilesystemCloudpathWrapperTest(parameterized.TestCase):
         self.filesystem.unlink(tempfile_path)
         self.assertFalse(self.client.CloudPath(tempfile_path).exists())
 
+    def test_unlink_missing_file(self):
+        fake_file_path = os.path.join(self.bucket_gs_path, "fake_file")
+        with self.assertRaises(FileNotFoundError):
+            self.filesystem.unlink(fake_file_path, missing_ok=False)
+
     def test_exists(self):
         for p in self.tempfile_paths:
             self.assertTrue(self.filesystem.exists(p))

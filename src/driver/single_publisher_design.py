@@ -41,9 +41,9 @@ from wfa_planning_evaluation_framework.driver.trial_descriptor import (
 
 MODELING_STRATEGIES = [
     ("goerg", {}),
-    ("gamma_poisson", {}),
-    ("gamma_poisson", {"extrapolation_multiplier": 2.0}),
-    ("gamma_poisson", {"extrapolation_multiplier": 3.0}),
+    # ("gamma_poisson", {}),
+    # ("gamma_poisson", {"extrapolation_multiplier": 2.0}),
+    # ("gamma_poisson", {"extrapolation_multiplier": 3.0}),
 ]
 
 CAMPAIGN_SPEND_FRACTIONS = list(np.arange(1, 20) * 0.05)
@@ -68,7 +68,7 @@ LEVELS = {
 }
 
 # Number of experimental trials that should be conducted per dataset
-NUM_TRIALS_PER_DATASET = 100
+NUM_TRIALS_PER_DATASET = 5
 
 
 def generate_experimental_design_config(seed: int = 1) -> Iterable[TrialDescriptor]:

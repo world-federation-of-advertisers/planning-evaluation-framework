@@ -59,34 +59,14 @@ class FakeExperimentalTrial(ExperimentalTrial):
         )
 
 
-class FakeEvaluateTrialDoFn(beam.DoFn):
-    def process(self, trial, seed, filesystem):
-        import pandas as pd
+def fake_evaluate_all_trials_using_apache_beam(self, pipeline_options, result_path):
+    if result_path.startswith("gs"):
+        client = cloudpathlib.local.LocalGSClient.get_default_client()
+        result_path = client.CloudPath(result_path)
 
-        yield pd.DataFrame({"col": [1]})
-
-
-def fake_open(
-    self,
-    path,
-    mode="r",
-    buffering=-1,
-    encoding=None,
-    errors=None,
-    newline=None,
-):
-    if path.startswith("gs://"):
-        path = cloudpathlib.local.LocalGSPath(path)
-    else:
-        path = pathlib.Path(path)
-
-    return path.open(
-        mode=mode,
-        buffering=buffering,
-        encoding=encoding,
-        errors=errors,
-        newline=newline,
-    )
+    num_trials = len(self._all_trials)
+    df = pd.DataFrame({"col": [i for i in range(num_trials)]})
+    df.to_csv(result_path, index=False)
 
 
 class ExperimentDriverTest(absltest.TestCase):
@@ -180,9 +160,9 @@ class ExperimentDriverTest(absltest.TestCase):
             self.assertEqual(result.shape[0], 2592)
 
     @patch.object(
-        experimental_design,
-        "EvaluateTrialDoFn",
-        FakeEvaluateTrialDoFn,
+        experimental_design.ExperimentalDesign,
+        "_evaluate_all_trials_using_apache_beam",
+        fake_evaluate_all_trials_using_apache_beam,
     )
     def test_experiment_driver_using_apache_beam_locally(self):
         with TemporaryDirectory() as d:
@@ -199,9 +179,9 @@ class ExperimentDriverTest(absltest.TestCase):
             self.assertEqual(result.shape[0], 2700)
 
     @patch.object(
-        experimental_design,
-        "EvaluateTrialDoFn",
-        FakeEvaluateTrialDoFn,
+        experimental_design.ExperimentalDesign,
+        "_evaluate_all_trials_using_apache_beam",
+        fake_evaluate_all_trials_using_apache_beam,
     )
     @patch.object(
         filesystem_cloudpath_wrapper,
@@ -212,11 +192,6 @@ class ExperimentDriverTest(absltest.TestCase):
         filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper,
         "set_default_client_to_gs_client",
         cloudpathlib.local.LocalGSClient.get_default_client,
-    )
-    @patch.object(
-        filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper,
-        "open",
-        fake_open,
     )
     def test_experiment_driver_using_apache_beam_and_cloud_path(self):
         parent_dir_path = self.client.CloudPath("gs://ExperimentDriverTest/parent")
@@ -273,21 +248,12 @@ class ExperimentDriverTest(absltest.TestCase):
             cores=num_workers,
         )
 
-        temp_location = None
-        if use_cloud_path:
-            intermediate_dir_cloud_path = self.client.CloudPath(intermediate_dir)
-            temp_location = self.client._cloud_path_to_local(
-                intermediate_dir_cloud_path
-            )
-        else:
-            temp_location = intermediate_dir
-
         pipeline_args = []
         pipeline_args.extend(
             [
                 "--runner=direct",
                 "--direct_running_mode=multi_processing",
-                f"--temp_location={temp_location}",
+                f"--temp_location={intermediate_dir}",
                 f"--direct_num_workers={num_workers}",
             ]
         )

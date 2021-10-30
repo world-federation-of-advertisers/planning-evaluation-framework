@@ -232,7 +232,7 @@ class ExperimentalTrial:
             filesystem.parent(trial_results_path), parents=True, exist_ok=True
         )
         filesystem.write_text(trial_results_path, result.to_csv(index=False))
-        filesystem.unlink(pending_path)
+        filesystem.unlink(pending_path, missing_ok=True)
 
         return result
 

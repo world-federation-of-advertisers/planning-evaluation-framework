@@ -116,12 +116,15 @@ class FilesystemCloudpathWrapper(filesystem_wrapper_base.FilesystemWrapperBase):
         # It's not possible to make empty directory on cloud storage
         pass
 
-    def unlink(self, path: str) -> None:
+    def unlink(self, path: str, missing_ok: bool = False) -> None:
         """
         Remove the file or link at the given path.
         If the path is a directory, use rmdir() instead.
         """
-        CloudPath(path).unlink()
+        if CloudPath(path).exists():
+            CloudPath(path).unlink()
+        elif not missing_ok:
+            raise FileNotFoundError
 
     def exists(self, path: str) -> bool:
         """

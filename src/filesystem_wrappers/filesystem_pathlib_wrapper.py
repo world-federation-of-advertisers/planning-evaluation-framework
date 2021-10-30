@@ -95,12 +95,12 @@ class FilesystemPathlibWrapper(filesystem_wrapper_base.FilesystemWrapperBase):
         """
         pathlib.Path(path).mkdir(mode=mode, parents=parents, exist_ok=exist_ok)
 
-    def unlink(self, path: str) -> None:
+    def unlink(self, path: str, missing_ok: bool = False) -> None:
         """
         Remove the file or link at the given path.
         If the path is a directory, use rmdir() instead.
         """
-        pathlib.Path(path).unlink()
+        pathlib.Path(path).unlink(missing_ok)
 
     def exists(self, path: str) -> bool:
         """

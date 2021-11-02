@@ -150,8 +150,14 @@ class ExperimentalTrial:
 
         if filesystem.is_file(trial_results_path):
             logging.vlog(2, "  --> Returning previously computed result")
-            with filesystem.open(trial_results_path) as file:
-                return pd.read_csv(file)
+            try:
+                with filesystem.open(trial_results_path) as file:
+                    return pd.read_csv(file)
+            except Exception as e:
+                filesystem.unlink(trial_results_path)
+                logging.vlog(
+                    2, f"  --> {e}. Failed reading existing result. Re-evaluate."
+                )
 
         # The pending directory contains one entry for each currently executing
         # experimental trial.  If a computation appears to hang, this can be

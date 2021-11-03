@@ -95,7 +95,7 @@ To utilize the support of distributed computing using GCP Dataflow, the followin
     gcloud auth application-default login
     ```
     Log in with your Google account that is granted with read/write permissions in the pop-up browser. Note that the permission is granted only for the current terminal session. If the session is closed, the same commands need to be run again.
-3. To use [`cardinality_estimation_evaluation_framework`](https://github.com/world-federation-of-advertisers/cardinality_estimation_evaluation_framework) in Dataflow mode, we need to create a tarball file of the package, so we can pass it to Dataflow for installation. To get the tarball, in your terminal session, `cd` to the directory that contains `setup.py` of the `cardinality_estimation_evaluation_framework` repo and run the command:
+3. To use [`cardinality_estimation_evaluation_framework`](https://github.com/world-federation-of-advertisers/cardinality_estimation_evaluation_framework) in Dataflow mode, we need to create a tarball file of the package, `wfa_cardinality_estimation_evaluation_framework-0.0.tar.gz`, so we can pass it to Dataflow for installation. To get the tarball, in your terminal session, `cd` to the directory that contains `setup.py` of the `cardinality_estimation_evaluation_framework` repo and run the command:
 
     ```
     python setup.py sdist

@@ -204,7 +204,7 @@ class ExperimentDriver:
 
 
 def create_arg_parser():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument(
         "--data_design_dir",
         dest="data_design_dir",

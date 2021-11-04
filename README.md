@@ -63,7 +63,7 @@ The results of an Evaluator run can then be analyzed in Colab. For some example
 colabs, see the `analyzers` directory.
 
 ### Get Started
-It is recommended to use a virtual environment with Python version 3.8+ for this project. If you already
+It is recommended to use a virtual environment with Python version 3.8 for this project. If you already
 have one, you can skip to the next step. The quickest way to set up a virtual
 environment is by running:
 
@@ -194,6 +194,8 @@ python3 driver/experiment_driver.py -- \
   --runner=direct \
   --direct_running_mode=multi_processing
 ```
+
+Note that if you're using a Python version not supported by Dataflow as listed [here](https://cloud.google.com/dataflow/docs/concepts/sdk-worker-dependencies#sdk-for-python), add `--experiment use_unsupported_python_version` in the command above.
 
 For running with the Dataflow runner, make sure the data is uploaded to your bucket in Google Cloud Storage, i.e. `gs://<bucket_name>/<subpath/to/data_design_dir>`, before running the command below:
 ```

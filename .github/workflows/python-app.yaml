@@ -1,0 +1,42 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Python application
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+
+    runs-on: macOS-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: "3.8"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install apache-beam[gcp]
+    - name: Add PYTHONPATH
+      run: |
+        if [ -n "$ZSH_VERSION" ]; then
+          echo "PYTHONPATH=$HOME/dir_which_contains_planning_evaluation_framework_repo:." >> ~/.zshrc_
+          echo "export PYTHONPATH" >> ~/.zshrc_
+        elif [ -n "$BASH_VERSION" ]; then
+          echo "PYTHONPATH=$HOME/dir_which_contains_planning_evaluation_framework_repo:." >> ~/.bash_profile
+          echo "export PYTHONPATH" >> ~/.bash_profile
+        fi
+    - name: Create a Symlink
+      run: |
+        ln -s src/ ../wfa_planning_evaluation_framework
+    - name: Test with unittest
+      run: |
+        find src/ | egrep ".*tests/.*.py" | xargs -n 1 python3

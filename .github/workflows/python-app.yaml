@@ -34,25 +34,30 @@ jobs:
         readlink $DIR/wfa_planning_evaluation_framework
     - name: Add PYTHONPATH
       run: |
-        if [ -n "$ZSH_VERSION" ]; then
-          echo "Use .zshrc"
-          SHELL_SCRIPT_PATH=$HOME/.zshrc
-        elif [ -n "$BASH_VERSION" ]; then
-          if [ -f $HOME/.bashrc ]; then
-            echo "Use .bashrc"
-            SHELL_SCRIPT_PATH=$HOME/.bashrc
-          elif [ -f $HOME/.bash_profile ]; then
-            echo "Use .bash_profile"
-            SHELL_SCRIPT_PATH=$HOME/.bash_profile
-          fi
-        else
-          echo "NOT BASH OR ZSH SHELL."
-        fi
+        # if [ -n "$ZSH_VERSION" ]; then
+        #   echo "Use .zshrc"
+        #   SHELL_SCRIPT_PATH=$HOME/.zshrc
+        # elif [ -n "$BASH_VERSION" ]; then
+        #   if [ -f $HOME/.bashrc ]; then
+        #     echo "Use .bashrc"
+        #     SHELL_SCRIPT_PATH=$HOME/.bashrc
+        #   elif [ -f $HOME/.bash_profile ]; then
+        #     echo "Use .bash_profile"
+        #     SHELL_SCRIPT_PATH=$HOME/.bash_profile
+        #   fi
+        # else
+        #   echo "NOT BASH OR ZSH SHELL."
+        # fi
+        # DIR=$PWD/..
+        # echo "PYTHONPATH=$DIR" >> SHELL_SCRIPT_PATH
+        # echo "export PYTHONPATH" >> SHELL_SCRIPT_PATH
+        # source SHELL_SCRIPT_PATH
+        # more $SHELL_SCRIPT_PATH
         DIR=$PWD/..
-        echo "PYTHONPATH=$DIR" >> SHELL_SCRIPT_PATH
-        echo "export PYTHONPATH" >> SHELL_SCRIPT_PATH
-        source SHELL_SCRIPT_PATH
-        more $SHELL_SCRIPT_PATH
+        echo "PYTHONPATH=$DIR" >> $GITHUB_ENV
+        echo "export PYTHONPATH" >> $GITHUB_ENV
+        echo "${{ env.PYTHONPATH }}"
+        
     - name: Test with unittest
       run: |
         find src/ | egrep ".*tests/.*.py" | xargs -n 1 python3

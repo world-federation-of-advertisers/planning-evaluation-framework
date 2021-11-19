@@ -30,9 +30,11 @@ jobs:
         if [ -n "$ZSH_VERSION" ]; then
           echo "PYTHONPATH=$HOME/dir_which_contains_planning_evaluation_framework_repo:." >> ~/.zshrc_
           echo "export PYTHONPATH" >> ~/.zshrc_
+          source ~/.zshrc_
         elif [ -n "$BASH_VERSION" ]; then
           echo "PYTHONPATH=$HOME/dir_which_contains_planning_evaluation_framework_repo:." >> ~/.bash_profile
           echo "export PYTHONPATH" >> ~/.bash_profile
+          source ~/.bash_profile
         fi
     - name: Create a Symlink
       run: |

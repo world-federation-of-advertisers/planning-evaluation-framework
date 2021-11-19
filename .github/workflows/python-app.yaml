@@ -55,7 +55,6 @@ jobs:
         # more $SHELL_SCRIPT_PATH
         DIR=$PWD/..
         echo "PYTHONPATH=$DIR" >> $GITHUB_ENV
-        echo "export PYTHONPATH" >> $GITHUB_ENV
         echo "${{ env.PYTHONPATH }}"
         
     - name: Test with unittest

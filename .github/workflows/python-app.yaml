@@ -31,19 +31,24 @@ jobs:
         echo $DIR
         ln -s src/ $DIR/wfa_planning_evaluation_framework
         ls $DIR
-        ls $DIR/wfa_planning_evaluation_framework
+        readlink $DIR/wfa_planning_evaluation_framework
     - name: Add PYTHONPATH
       run: |
-        DIR=$PWD/..
-        echo $DIR
-        ls $DIR
-        if [ -f $HOME/.zshrc ]; then
+        if [ -n "$ZSH_VERSION" ]; then
+          echo "Use .zshrc"
           SHELL_SCRIPT_PATH=$HOME/.zshrc
-        elif [ -f $HOME/.bashrc ]; then
-          SHELL_SCRIPT_PATH=$HOME/.bashrc
+        elif [ -n "$BASH_VERSION" ]; then
+          if [ -f $HOME/.bashrc ]; then
+            echo "Use .bashrc"
+            SHELL_SCRIPT_PATH=$HOME/.bashrc
+          elif [ -f $HOME/.bash_profile ]; then
+            echo "Use .bash_profile"
+            SHELL_SCRIPT_PATH=$HOME/.bash_profile
+          fi
         else
           echo "NOT BASH OR ZSH SHELL."
         fi
+        DIR=$PWD/..
         echo "PYTHONPATH=$DIR" >> SHELL_SCRIPT_PATH
         echo "export PYTHONPATH" >> SHELL_SCRIPT_PATH
         source SHELL_SCRIPT_PATH

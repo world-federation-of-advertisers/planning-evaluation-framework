@@ -31,15 +31,16 @@ jobs:
         echo $DIR
         ln -s src/ $DIR/wfa_planning_evaluation_framework
         ls $DIR
+        ls $DIR/wfa_planning_evaluation_framework
     - name: Add PYTHONPATH
       run: |
         DIR=$PWD/..
         echo $DIR
         ls $DIR
-        if [ -f ~/.zshrc ]; then
-          SHELL_SCRIPT_PATH=~/.zshrc
-        elif [ -f ~/.bash_profile ]; then
-          SHELL_SCRIPT_PATH=~/.bash_profile
+        if [ -f $HOME/.zshrc ]; then
+          SHELL_SCRIPT_PATH=$HOME/.zshrc
+        elif [ -f $HOME/.bashrc ]; then
+          SHELL_SCRIPT_PATH=$HOME/.bashrc
         else
           echo "NOT BASH OR ZSH SHELL."
         fi

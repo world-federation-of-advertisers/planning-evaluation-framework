@@ -28,17 +28,23 @@ jobs:
     - name: Add PYTHONPATH
       run: |
         DIR=$PWD/..
+        echo $DIR
         if [ -n "$ZSH_VERSION" ]; then
-          SHELL_SCRIPT_PATH=~/.zshrc_
+          SHELL_SCRIPT_PATH=~/.zshrc
         elif [ -n "$BASH_VERSION" ]; then
           SHELL_SCRIPT_PATH=~/.bash_profile
+        else
+          echo "NOT BASH OR ZSH SHELL."
         fi
+        echo $SHELL_SCRIPT_PATH
         echo "PYTHONPATH=$DIR" >> SHELL_SCRIPT_PATH
         echo "export PYTHONPATH" >> SHELL_SCRIPT_PATH
         source SHELL_SCRIPT_PATH
     - name: Create a Symlink
       run: |
-        ln -s src/ ../wfa_planning_evaluation_framework
+        DIR=$PWD/..
+        echo $DIR
+        ln -s src/ $DIR/wfa_planning_evaluation_framework
     - name: Test with unittest
       run: |
         find src/ | egrep ".*tests/.*.py" | xargs -n 1 python3

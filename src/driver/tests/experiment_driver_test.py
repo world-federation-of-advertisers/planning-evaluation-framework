@@ -125,7 +125,7 @@ class ExperimentDriverTest(absltest.TestCase):
                 data_design_dir, experimental_design, output_file, intermediate_dir, 1
             )
             result = experiment_driver.execute()
-            self.assertEqual(result.shape[0], 1)
+            self.assertEqual(result.shape[0], 2592)
 
 
 if __name__ == "__main__":

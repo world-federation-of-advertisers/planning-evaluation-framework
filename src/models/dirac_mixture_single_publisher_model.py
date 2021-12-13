@@ -19,7 +19,6 @@ https://drive.google.com/corp/drive/folders/1AzrHFAgMn6f_GMj9kpw_5yoOeXy3GjdH
 
 from absl import logging
 import numpy as np
-from numpy import exp as exp
 import cvxpy as cp
 from typing import List, Tuple
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
@@ -68,7 +67,7 @@ class MixedPoissonOptimizer:
             return np.array([1] + [0] * max_freq)
         vec_pi = np.zeros(max_freq + 1)
         for f in range(max_freq):
-            vec_pi[f] = exp(f * np.log(lbd) - lbd - self._log_factorials[f])
+            vec_pi[f] = np.exp(f * np.log(lbd) - lbd - self._log_factorials[f])
         vec_pi[max_freq] = 1 - sum(vec_pi)
         return vec_pi
 

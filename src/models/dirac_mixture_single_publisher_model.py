@@ -14,7 +14,7 @@
 """Dirac mixture single publisher model.
 
 The model and fitting algorithm are described in this companion doc:
-https://drive.google.com/corp/drive/folders/1AzrHFAgMn6f_GMj9kpw_5yoOeXy3GjdH
+https://drive.google.com/file/d/1P6GYeYXjtB-j8M_WQokJrIEWFlEjYrmy/view?resourcekey=0-iUFvPbzIU7AUy-myx3NxVw
 """
 
 from absl import logging
@@ -32,19 +32,32 @@ class MixedPoissonOptimizer:
         """Construct an optimizer for univarate mixed Poisson distribution.
 
         Please read the companion doc
-        https://drive.google.com/corp/drive/folders/1AzrHFAgMn6f_GMj9kpw_5yoOeXy3GjdH
+        https://drive.google.com/file/d/1P6GYeYXjtB-j8M_WQokJrIEWFlEjYrmy/view?resourcekey=0-iUFvPbzIU7AUy-myx3NxVw
         for notations and formulas.
 
         Args:
-            frequency_histogram:  An array v where v[f] = number of observations with frequency f, for 0 <= f <= F - 1,
-                and v[F] = number of observations with frequency >= F, for a max frequency F.
-                Note that a multiplier on v does not affect the result, which means that the input can also be the
-                relative frequency histogram.
+            frequency_histogram:  An array v where v[f] = number of observations with frequency
+                f, for 0 <= f <= F - 1, and v[F] = number of observations with frequency >= F,
+                for a max frequency F. Note that a multiplier on v does not affect the result,
+                which means that the input can also be the relative frequency histogram.
         """
         self.vec_A = frequency_histogram
         self.max_freq = len(frequency_histogram) - 1
         self._get_log_factorials()
-        self.fit()
+
+    def fit(self, method: str = "grid"):
+        """Fixed a mixed Poisson distribution.
+
+        Args:
+            method:  Method for fitting the mixed Poisson distribution.  Current options are
+                'grid' and 'adaptive'.
+        """
+        if method == "grid":
+            self.grid_fit()
+        elif method == "adaptive":
+            self.adaptive_fit()
+        else:
+            raise ValueError(f"method {method} is not yet supported.")
 
     def _get_log_factorials(self):
         """Save sum_{i=0}^f log(i!) for f from 0 to self.max_freq, as these quantities will be repeatly used."""
@@ -117,7 +130,7 @@ class MixedPoissonOptimizer:
         optimal_objective = cp.Problem(objective, constraints).solve()
         return (w.value, optimal_objective)
 
-    def _fit_one_initial_lbd(
+    def _adaptive_fit_one_initial_lbd(
         self, initial_lbd: float
     ) -> Tuple[np.ndarray, List, float]:
         """Fit the model starting from an initial component.
@@ -161,18 +174,27 @@ class MixedPoissonOptimizer:
                 break
         return (weights_trace[-1], lbds, objective_trace[-1])
 
-    def fit(self, grid_size: int = 30):
+    def adaptive_fit(self, grid_size: int = 30):
         """Fit the model from a grid of initial components.
 
         Args:
             grid_size: we will iterate the initial component through (i / grid_size) * max_freq for i = 0, ..., grid_size.
         """
         results = [
-            self._fit_one_initial_lbd(lbd)
+            self._adaptive_fit_one_initial_lbd(lbd)
             for lbd in np.linspace(0, self.max_freq, grid_size)
         ]
         objectives = [res[2] for res in results]
         self.weights, self.lbds = results[np.argmax(objectives)][:2]
+
+    def grid_fit(self, grid_size: int = 30):
+        """Fit the model simply by solving the optimal weights on an equally space grid of components.
+
+        Args:
+            grid_size:  choose these many components equally spaced in [0, max_freq], and solve the optimal weights.
+        """
+        self.lbds = [self.max_freq * x / (grid_size - 1) for x in range(grid_size)]
+        self.weights = self._solve_optimal_weights(self._mat_pi(self.lbds))[0]
 
     def predict(
         self, scaling_factor: float, customized_max_freq: int = None
@@ -197,6 +219,7 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
     def __init__(
         self,
         data: List[ReachPoint],
+        method: str = "grid",
         universe_size: int = None,
         universe_reach_ratio: float = 3,
     ):
@@ -208,6 +231,8 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
 
         Args:
             data:  A list consisting of the single ReachPoint to which the model is to be fit.
+            method:  Method for fitting the mixed Poisson distribution.  Current options are
+                'grid' and 'adaptive'.
             universe_size:  The universe size N so that a zero-included frequency histogram is
                 obtained using equation (1) in the companion doc.
             universe_reach_ratio:  If the previous argument is not specified, then obtain the
@@ -231,6 +256,7 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
         else:
             self.N = universe_size
         self._fit_computed = False
+        self.method = method
 
     def _fit(self):
         if self._fit_computed:
@@ -239,6 +265,7 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
             [self.N - self._reach_point.reach(1)] + self._reach_point._frequencies
         )
         self.mpo = MixedPoissonOptimizer(hist / sum(hist))
+        self.mpo.fit(self.method)
         self._fit_computed = True
 
     def by_impressions(

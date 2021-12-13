@@ -13,10 +13,6 @@
 # limitations under the License.
 """Tests for dirac_mixture_single_publisher_model.py."""
 
-from unittest.mock import MagicMock
-from unittest.mock import Mock
-from unittest.mock import patch
-from unittest.mock import DEFAULT
 from absl.testing import absltest
 from absl.testing import parameterized
 import numpy as np
@@ -35,14 +31,19 @@ frequency_histogram = np.array(
 mpo = MixedPoissonOptimizer(frequency_histogram)
 
 
-class MixedPoissonOptimizerTest(absltest.TestCase):
+class MixedPoissonOptimizerTest(parameterized.TestCase):
     def test_get_vec_pi(self):
         pmf = mpo._get_vec_pi(1.5)
         self.assertAlmostEqual(pmf[0], 0.223, 3)
         self.assertAlmostEqual(sum(pmf), 1, 3)
 
-    def test_fit_sanity(self):
+    @parameterized.parameters(
+        ["grid"],
+        ["adaptive"],
+    )
+    def test_fit_sanity(self, method):
         """Sanity checks on the fit."""
+        mpo.fit(method)
         # First check if the fitted parameters are subject to constraints.
         self.assertTrue(all(mpo.weights >= 0), msg="negative weight")
         self.assertAlmostEqual(sum(mpo.weights), 1, 3, msg="weights not summed up to 1")
@@ -61,27 +62,63 @@ class MixedPoissonOptimizerTest(absltest.TestCase):
                 msg=f"histogram not summed up to 1 when scaling {scaling_factor} X",
             )
 
-    def test_fit_accuracy(self):
+    @parameterized.parameters(
+        ["grid"],
+        ["adaptive"],
+    )
+    def test_fit_accuracy(self, method):
         """Roughly check (accuracy threshold = 10%) if the fitted histogram is close to the given histogram."""
+        mpo.fit(method)
         self.assertLess(max(abs(mpo.predict(1) - frequency_histogram)), 0.1)
 
 
 # Using Matthew's test case in kinflated_gamma_poisson_model_test.py.
 h_training = [7412, 4233, 2014, 842, 320, 112, 37, 11, 2]
 rp = ReachPoint([15000], h_training, [200.0])
-dmspm = DiracMixtureSinglePublisherModel([rp])
-dmspm._fit()
+dmspm_grid_r2 = DiracMixtureSinglePublisherModel(
+    data=[rp], method="grid", universe_reach_ratio=2
+)
+dmspm_grid_r2._fit()
+dmspm_grid_r4 = DiracMixtureSinglePublisherModel(
+    data=[rp], method="grid", universe_reach_ratio=4
+)
+dmspm_grid_r4._fit()
+dmspm_adaptive_r2 = DiracMixtureSinglePublisherModel(
+    data=[rp], method="adaptive", universe_reach_ratio=2
+)
+dmspm_adaptive_r2._fit()
+dmspm_adaptive_r4 = DiracMixtureSinglePublisherModel(
+    data=[rp], method="adaptive", universe_reach_ratio=4
+)
+dmspm_adaptive_r4._fit()
 
 
-class DiracMixtureSinglePublisherModelTest(absltest.TestCase):
+class DiracMixtureSinglePublisherModelTest(parameterized.TestCase):
     """Using Matthew's test case in kinflated_gamma_poisson_model_test.py."""
 
-    def test_fit(self):
+    @parameterized.parameters(
+        [dmspm_grid_r2],
+        [dmspm_grid_r4],
+        [dmspm_adaptive_r2],
+        [dmspm_adaptive_r4],
+    )
+    def test_fit(self, dmspm):
+        """Roughly test the goodness of fit.
+
+        Args:
+            dmspm:  Any fitted Dirac mixture single publisher model.
+        """
         input_relative_hist = dmspm.mpo.vec_A
         pred_relative_hist = dmspm.mpo.predict(1)
         self.assertLess(max(abs(input_relative_hist - pred_relative_hist)), 0.1)
 
-    def test_by_impressions(self):
+    @parameterized.parameters(
+        [dmspm_grid_r2],
+        [dmspm_grid_r4],
+        [dmspm_adaptive_r2],
+        [dmspm_adaptive_r4],
+    )
+    def test_by_impressions(self, dmspm):
         pred_rp = dmspm.by_impressions([10000], max_frequency=5)
         h_expected = np.array([6056, 2629, 925, 283, 78])
         h_actual = np.array([int(pred_rp.reach(i)) for i in range(1, 6)])
@@ -97,7 +134,13 @@ class DiracMixtureSinglePublisherModelTest(absltest.TestCase):
             # Dirac mixture model is slightly less accurate than k-inflated GP.  We will see through
             # comprehensive evaluation.
 
-    def test_by_spends(self):
+    @parameterized.parameters(
+        [dmspm_grid_r2],
+        [dmspm_grid_r4],
+        [dmspm_adaptive_r2],
+        [dmspm_adaptive_r4],
+    )
+    def test_by_spends(self, dmspm):
         pred_rp = dmspm.by_spend([133.33], max_frequency=5)
         h_expected = np.array([6056, 2629, 925, 283, 78])
         h_actual = np.array([int(pred_rp.reach(i)) for i in range(1, 6)])

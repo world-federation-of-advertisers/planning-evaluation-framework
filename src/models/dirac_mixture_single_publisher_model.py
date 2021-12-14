@@ -337,7 +337,9 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
         if self._fit_computed:
             return
         hist = np.array(
-            [self.N - self._reach_point.reach(1)] + self._reach_point._frequencies
+            [self.N - self._reach_point.reach(1)]
+            + self._reach_point._frequencies
+            + [self._reach_point._kplus_reaches[-1]]
         )
         self.mpo = MixedPoissonOptimizer(hist / sum(hist))
         self.mpo.fit(self.method)

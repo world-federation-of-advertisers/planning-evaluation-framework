@@ -98,22 +98,73 @@ class MixedPoissonOptimizer:
         # @ means matrix-vector or matrix-matrix multiplication in cvxpy
 
     def _gradient_towards_new_component(
-        self, lbd_star: float, vec_w: np.ndarray, mat_pi: cp.atoms.affine.hstack.Hstack
-    ) -> cp.atoms.affine.binary_operators.MulExpression:
-        """Gradient of log-likelihood towards an arbitrary new component.  Equatipon (6) in the companion doc."""
-        return self.vec_A @ (self._get_vec_pi(lbd_star) / (mat_pi @ vec_w) - 1)
-
-    def _solve_optimal_new_component(
         self,
-        vec_w: np.ndarray,
-        mat_pi: cp.atoms.affine.hstack.Hstack,
-        grid_size: int = 30,
+        new_pmf_vec: np.ndarray,
+        existing_weights: np.ndarray,
+        existing_mat_pi: cp.atoms.affine.hstack.Hstack,
+    ):
+        """Gradient of log-likelihood towards a new component.  Equatipon (6) in the companion doc.
+
+        Args:
+            new_pmf_vec:  pmf vector of any new component.
+            existing_mat_pi:  matrix of log-pmf vectors of all the existing components.
+            existing weights:  weight vector of all the existing compoents.
+
+        Returns:
+            Gradient when starting to proportionally shift weight from existing components to new component.
+        """
+        return self.vec_A @ (new_pmf_vec / (existing_mat_pi @ existing_weights) - 1)
+
+    def _gradient_towards_new_poisson(
+        self,
+        new_lbd: float,
+        existing_weights: np.ndarray,
+        existing_mat_pi: cp.atoms.affine.hstack.Hstack,
+    ) -> cp.atoms.affine.binary_operators.MulExpression:
+        """Gradient of log-likelihood towards a new, single Poisson component with mean new_lbd."""
+        return self._gradient_towards_new_component(
+            self._get_vec_pi(new_lbd), existing_weights, existing_mat_pi
+        )
+
+    def _solve_optimal_new_poisson(
+        self,
+        existing_weights: np.ndarray,
+        existing_mat_pi: cp.atoms.affine.hstack.Hstack,
+        grid_size_under_max_freq: int = 30,
+        max_scalar_on_max_freq: float = 10,
+        grid_size_beyond_max_freq: int = 10,
     ) -> Tuple[float, float]:
-        """Grid search of the new component that maximizes the gradient of log-likelihood."""
-        grid = np.linspace(0, self.max_freq, grid_size)
+        """Grid search of the new, single Poisson component that maximizes the gradient of log-likelihood.
+
+        Args:
+            new_pmf_vec:  pmf vector of any new component.
+            existing_mat_pi:  matrix of log-pmf vectors of all the existing components.
+            existing weights:  weight vector of all the existing compoents.
+            grid_size_under_max_freq:  we search these many Poisson lbds equally spaced in in [0, max_freq].
+            max_scalar_on_max_freq:  A scalar beta > 1 for which we also search lbd in
+                [max_freq, beta * max_freq].
+            grid_size_beyond_max_freq:  We search these many Poisson lbds in [max_freq, beta * max_freq].
+                Typically, we do a fine-grid search in [0, max_freq] and a coarse search beyond max_freq.
+
+        Returns:
+            Gradient when starting to proportionally shift weight from existing components to new component.
+        """
+        grid = [
+            self.max_freq * x / grid_size_under_max_freq
+            for x in range(grid_size_under_max_freq)
+        ] + [
+            self.max_freq
+            + self.max_freq
+            * (max_scalar_on_max_freq - 1)
+            * x
+            / grid_size_beyond_max_freq
+            for x in range(grid_size_beyond_max_freq)
+        ]
         vals = [
-            self._gradient_towards_new_component(lbd, vec_w, mat_pi).value
-            for lbd in grid
+            self._gradient_towards_new_poisson(
+                new_lbd, existing_weights, existing_mat_pi
+            ).value
+            for new_lbd in grid
         ]
         return grid[np.argmax(vals)], max(vals)
 
@@ -161,7 +212,7 @@ class MixedPoissonOptimizer:
                 # This is not a significant issues since the exception occurs very occasionally.
                 # And even if the exception occurs so that we exit the loop, the result obtained
                 # in the previous step is still useful.
-                res = self._solve_optimal_new_component(weights_trace[-1], mat_pi)
+                res = self._solve_optimal_new_poisson(weights_trace[-1], mat_pi)
                 lbds.append(res[0])
                 gradient_trace.append(res[1])
                 mat_pi = cp.hstack((mat_pi, self._mat_pi([res[0]])))
@@ -170,30 +221,54 @@ class MixedPoissonOptimizer:
                 weights_trace.append(res[0])
                 objective_trace.append(res[1])
             except:
-                logging.vlog(2, "numerical error in cvxpy")
+                logging.vlog(2, f"numerical error in cvxpy at step {step}")
                 break
         return (weights_trace[-1], lbds, objective_trace[-1])
 
-    def adaptive_fit(self, grid_size: int = 30):
+    def adaptive_fit(self, num_initial_lbd: int = 30):
         """Fit the model from a grid of initial components.
 
         Args:
-            grid_size: we will iterate the initial component through (i / grid_size) * max_freq for i = 0, ..., grid_size.
+            num_initial_lbd:  we fit the model from these many initial lbds and pick the best result.
         """
         results = [
             self._adaptive_fit_one_initial_lbd(lbd)
-            for lbd in np.linspace(0, self.max_freq, grid_size)
+            for lbd in np.linspace(0.1, self.max_freq, num_initial_lbd)
+            # For simplicity, initial lbd is chosen from a grid in (0, max_freq].
+            # The grid starts from 0.1 (instead of 0) to avoid divide-by-zero errors.
         ]
         objectives = [res[2] for res in results]
         self.weights, self.lbds = results[np.argmax(objectives)][:2]
 
-    def grid_fit(self, grid_size: int = 30):
-        """Fit the model simply by solving the optimal weights on an equally space grid of components.
+    def grid_fit(
+        self,
+        grid_size_under_max_freq: int = 30,
+        max_scalar_on_max_freq: float = 10,
+        grid_size_beyond_max_freq: int = 10,
+    ):
+        """Fit the model simply by solving the optimal weights on Poissons with a fixed grid of lbds.
 
         Args:
-            grid_size:  choose these many components equally spaced in [0, max_freq], and solve the optimal weights.
+            grid_size_under_max_freq:  we have these many Poisson lbds equally spaced in [0, max_freq].
+            max_scalar_on_max_freq:  A scalar beta > 1 for which we also have lbds in
+                [max_freq, beta * max_freq].
+            grid_size_beyond_max_freq:  We have these many Poisson lbds in [max_freq, beta * max_freq].
+                Typically, we have a fine-grid in [0, max_freq] and a coarse grid beyond max_freq.
+
+        Returns:
+            Gradient when starting to proportionally shift weight from existing components to new component.
         """
-        self.lbds = [self.max_freq * x / (grid_size - 1) for x in range(grid_size)]
+        self.lbds = [
+            self.max_freq * x / grid_size_under_max_freq
+            for x in range(grid_size_under_max_freq)
+        ] + [
+            self.max_freq
+            + self.max_freq
+            * (max_scalar_on_max_freq - 1)
+            * x
+            / grid_size_beyond_max_freq
+            for x in range(grid_size_beyond_max_freq)
+        ]
         self.weights = self._solve_optimal_weights(self._mat_pi(self.lbds))[0]
 
     def predict(

@@ -96,11 +96,23 @@ dmspm_adaptive_r4._fit()
 class DiracMixtureSinglePublisherModelTest(parameterized.TestCase):
     """Using Matthew's test case in kinflated_gamma_poisson_model_test.py."""
 
-    @parameterized.parameters(
-        [dmspm_grid_r2],
-        [dmspm_grid_r4],
-        [dmspm_adaptive_r2],
-        [dmspm_adaptive_r4],
+    @parameterized.named_parameters(
+        {
+            "testcase_name": "grid method, universe specified as 2x reach",
+            "dmspm": dmspm_grid_r2,
+        },
+        {
+            "testcase_name": "grid method, universe specified as 4x reach",
+            "dmspm": dmspm_grid_r4,
+        },
+        {
+            "testcase_name": "adaptive method, universe specified as 2x reach",
+            "dmspm": dmspm_adaptive_r2,
+        },
+        {
+            "testcase_name": "adaptive method, universe specified as 4x reach",
+            "dmspm": dmspm_adaptive_r4,
+        },
     )
     def test_fit(self, dmspm):
         """Roughly test the goodness of fit.
@@ -112,11 +124,23 @@ class DiracMixtureSinglePublisherModelTest(parameterized.TestCase):
         pred_relative_hist = dmspm.mpo.predict(1)
         self.assertLess(max(abs(input_relative_hist - pred_relative_hist)), 0.1)
 
-    @parameterized.parameters(
-        [dmspm_grid_r2],
-        [dmspm_grid_r4],
-        [dmspm_adaptive_r2],
-        [dmspm_adaptive_r4],
+    @parameterized.named_parameters(
+        {
+            "testcase_name": "grid method, universe specified as 2x reach",
+            "dmspm": dmspm_grid_r2,
+        },
+        {
+            "testcase_name": "grid method, universe specified as 4x reach",
+            "dmspm": dmspm_grid_r4,
+        },
+        {
+            "testcase_name": "adaptive method, universe specified as 2x reach",
+            "dmspm": dmspm_adaptive_r2,
+        },
+        {
+            "testcase_name": "adaptive method, universe specified as 4x reach",
+            "dmspm": dmspm_adaptive_r4,
+        },
     )
     def test_by_impressions(self, dmspm):
         pred_rp = dmspm.by_impressions([10000], max_frequency=5)
@@ -134,11 +158,23 @@ class DiracMixtureSinglePublisherModelTest(parameterized.TestCase):
             # Dirac mixture model is slightly less accurate than k-inflated GP.  We will see through
             # comprehensive evaluation.
 
-    @parameterized.parameters(
-        [dmspm_grid_r2],
-        [dmspm_grid_r4],
-        [dmspm_adaptive_r2],
-        [dmspm_adaptive_r4],
+    @parameterized.named_parameters(
+        {
+            "testcase_name": "grid method, universe specified as 2x reach",
+            "dmspm": dmspm_grid_r2,
+        },
+        {
+            "testcase_name": "grid method, universe specified as 4x reach",
+            "dmspm": dmspm_grid_r4,
+        },
+        {
+            "testcase_name": "adaptive method, universe specified as 2x reach",
+            "dmspm": dmspm_adaptive_r2,
+        },
+        {
+            "testcase_name": "adaptive method, universe specified as 4x reach",
+            "dmspm": dmspm_adaptive_r4,
+        },
     )
     def test_by_spends(self, dmspm):
         pred_rp = dmspm.by_spend([133.33], max_frequency=5)

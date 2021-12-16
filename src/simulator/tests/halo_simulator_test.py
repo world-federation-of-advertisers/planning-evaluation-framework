@@ -137,6 +137,18 @@ class HaloSimulatorTest(parameterized.TestCase):
     @patch(
         "wfa_planning_evaluation_framework.simulator.halo_simulator.StandardizedHistogramEstimator.estimate_cardinality"
     )
+    def test_simulated_reach_by_spend_reach_is_too_high(self, mock_estimate_cardinality):
+        mock_estimate_cardinality.return_value = [20, 1, -1, 0, -1]
+        reach_point = self.halo.simulated_reach_by_spend(
+            [0.06, 0.06], PrivacyBudget(1.0, 0.0), 0.5, 3
+        )
+        self.assertEqual(reach_point.reach(1), 5)
+        self.assertEqual(reach_point.reach(2), 0)
+        self.assertEqual(reach_point.reach(3), 0)
+
+    @patch(
+        "wfa_planning_evaluation_framework.simulator.halo_simulator.StandardizedHistogramEstimator.estimate_cardinality"
+    )
     def test_simulated_reach_by_spend_with_negative_noise(
         self, mock_estimate_cardinality
     ):

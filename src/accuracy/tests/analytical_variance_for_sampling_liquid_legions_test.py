@@ -98,10 +98,6 @@ class AnalyticalAccuracyEvaluatorTest(parameterized.TestCase):
         )
         est = np.array(estimator.estimate_cardinality(sketch))
         est[:-1] -= est[1:].copy()  # convert the kplus reaches to k-reach histogram.
-        # print(
-        #     (est / pi).astype("int64"),
-        #     np.array(n * np.array(relative_hist)).astype("int64"),
-        # )
         return est / pi
 
     @parameterized.parameters(

@@ -53,7 +53,21 @@ class MixedPoissonOptimizer:
                 'grid' and 'adaptive'.
         """
         if method == "grid":
-            self.grid_fit()
+            try:
+                self.grid_fit()
+            except:
+                logging.vlog(
+                    2,
+                    "Grid algorithm fails due to numerical errors. Using adaptive algorithm instead.",
+                )
+                self.adaptive_fit()
+            # cvxpy may run into numerical errors.  For example, it
+            # may find a problem non-convex when the problem is in fact convex without numerical
+            # errors.  The grid algorithm, as a one-step method, would fail in this case.
+            # The adapative algorithm, on the other hand, stops when running into numerical errors
+            # and makes the best use of the current results.  In addition, it iterates over multiple
+            # initial values, so is still working even if numerical errors occur at some runs.
+            # We switch to the adapative algorithm in case the grid algorithm fails.
         elif method == "adaptive":
             self.adaptive_fit()
         else:
@@ -341,6 +355,7 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
             + self._reach_point._frequencies
             + [self._reach_point._kplus_reaches[-1]]
         )
+        hist = np.maximum(0, hist)
         self.mpo = MixedPoissonOptimizer(hist / sum(hist))
         self.mpo.fit(self.method)
         self._fit_computed = True

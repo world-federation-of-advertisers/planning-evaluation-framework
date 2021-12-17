@@ -296,7 +296,7 @@ class ExperimentalTrial:
             column_name = f"relative_error_at_{int(r*100):03d}"
             results[column_name] = [relative_error]
 
-        for f in range(2, max_frequency):
+        for f in range(1, max_frequency):
             for r in SINGLE_PUBLISHER_FRACTIONS:
                 spend = halo.campaign_spends[0] * r
                 true_reach = halo.true_reach_by_spend([spend], f).reach(f)
@@ -327,7 +327,7 @@ class ExperimentalTrial:
         for r in SINGLE_PUBLISHER_FRACTIONS:
             column_name = f"relative_error_at_{int(r*100):03d}"
             results[column_name] = [np.NaN]
-        for f in range(2, max_frequency):
+        for f in range(1, max_frequency):
             for r in SINGLE_PUBLISHER_FRACTIONS:
                 column_name = f"freq_{f}_relative_error_at_{int(r*100):03d}"
                 results[column_name] = [np.NaN]

@@ -14,7 +14,6 @@
 """Tests for publisher_data_file.py."""
 
 from absl.testing import absltest
-from numpy.random import RandomState
 from tempfile import TemporaryDirectory
 
 from wfa_planning_evaluation_framework.data_generators.fixed_price_generator import (

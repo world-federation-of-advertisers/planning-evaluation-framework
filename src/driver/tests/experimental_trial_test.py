@@ -13,16 +13,14 @@
 # limitations under the License.
 """Tests for modeling_strategy_descriptor."""
 
+from typing import Dict, Iterable, List, Type
 from absl.testing import absltest
 from os.path import join
 from tempfile import TemporaryDirectory
-from typing import Dict
-from typing import Iterable
-from typing import List
-from typing import Type
 import math
 import numpy as np
 import pandas as pd
+
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
 )
@@ -233,7 +231,7 @@ class ExperimentalTrialTest(absltest.TestCase):
 
             actual = trial._make_independent_vars_dataframe()
 
-            expected_trial_name = "strategy,single_pub_model,multi_pub_model,spends=[0.03,0.05],decay_rate=13,sketch_size=1000000.0,epsilon=1.0,delta=0.01,replica_id=3,max_frequency=5,test_point_strategy=test_point_strategy"
+            expected_trial_name = "strategy,single_pub_model,multi_pub_model,spends=(0.03,0.05),decay_rate=13,sketch_size=1000000.0,epsilon=1.0,delta=0.01,replica_id=3,max_frequency=5,test_point_strategy=test_point_strategy"
 
             expected = pd.DataFrame(
                 {
@@ -279,9 +277,9 @@ class ExperimentalTrialTest(absltest.TestCase):
                 "edir",
                 "dataset",
                 "strategy,single_pub_model,multi_pub_model",
-                "spends=[0.03,0.05],decay_rate=13,sketch_size=1000000.0",
+                "spends=(0.03,0.05),decay_rate=13,sketch_size=1000000.0",
                 "epsilon=1.0,delta=0.01,replica_id=3,max_frequency=5",
-                "test_point_strategy=tps",
+                "test_point_strategy=tps.csv",
             )
             self.assertEqual(actual, expected)
 

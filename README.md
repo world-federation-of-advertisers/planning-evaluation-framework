@@ -62,9 +62,8 @@ Trial.
 The results of an Evaluator run can then be analyzed in Colab. For some example
 colabs, see the `analyzers` directory.
 
-### Quickstart
-
-It is recommended to use a virtual environment with Python version 3.8+ for this project. If you already
+### Get Started
+It is recommended to use a virtual environment with Python version 3.8 for this project. If you already
 have one, you can skip to the next step. The quickest way to set up a virtual
 environment is by running:
 
@@ -77,10 +76,35 @@ To install the dependencies, run:
 
 ```
 pip install -r requirements.txt
+pip install apache-beam[gcp]
 ```
 
-To execute the Planning Evaluation Framework, we have found it most convenient to
-modify PYTHONPATH and create a symbolic link to the source code, following these steps:
+Note that there is a dependency conflict between Apache Beam and Pathos. The current workaround is manually installing Apache Beam after installing the packages in `requirements.txt`, so the dependencies of Apache Beam can be satisfied.
+
+To utilize the support of distributed computing using GCP Dataflow, the following requirements have to be fulfilled beforehand:
+1. Make sure to have read/write permissions of the target Google Cloud Storage (GCS) bucket in your GCP project. Check out the [how-to guide in Google Cloud Storage](https://cloud.google.com/storage/docs/how-to) to learn more about GCS bucket.
+2. Install Cloud SDK by following the [instruction](https://cloud.google.com/sdk/docs/install). Before running the program with Dataflow, authenticate the terminal session with your google account by running the following commands in your terminal:
+
+    ```
+    gcloud auth login
+    ```
+
+    and
+
+    ```
+    gcloud auth application-default login
+    ```
+    Log in with your Google account that is granted with read/write permissions in the pop-up browser. Note that the permission is granted only for the current terminal session. If the session is closed, the same commands need to be run again.
+3. To use [`cardinality_estimation_evaluation_framework`](https://github.com/world-federation-of-advertisers/cardinality_estimation_evaluation_framework) in Dataflow mode, we need to create a tarball file of the package, `wfa_cardinality_estimation_evaluation_framework-0.0.tar.gz`, so we can pass it to Dataflow for installation. To get the tarball, in your terminal session, `cd` to the directory that contains `setup.py` of the `cardinality_estimation_evaluation_framework` repo and run the command:
+
+    ```
+    python setup.py sdist
+    ```
+
+    Please see more details in this [document](https://beam.apache.org/documentation/sdks/python-pipeline-dependencies/#local-or-nonpypi) about why a tarball is needed.
+
+
+To execute the Planning Evaluation Framework, we have found it most convenient to modify PYTHONPATH and create a symbolic link to the source code, following these steps:
 
 1. Add PYTHONPATH to _.bash_profile_ (or _.zshrc_ depending which shell you use) as following:
 
@@ -146,9 +170,8 @@ M3 model.
 The following command will evaluate the Experiments defined in `driver/single_publisher_design.py`
 against the Datasets that were created in the previous step:
 
-
 ```
-python3 driver/experiment_driver.py \
+python3 driver/experiment_driver.py -- \
   --data_design_dir=$DIR/data \
   --experimental_design=driver/single_publisher_design.py \
   --output_file=$DIR/results \
@@ -156,15 +179,39 @@ python3 driver/experiment_driver.py \
   --cores=0
 ```
 
-Setting `cores=0` enables multithreading on all available cores.  Even
-so, the above design takes very long to run, so you may want to reduce
-both the number of Datasets and the number of Experiments by
-(temporarily) modifying the respective configuration files.  To see
-verbose output as the evaluation proceeds, try adding the parameter
-`--v==3`.  Once the evaluation is complete, the results will be
-recorded in a CSV file named `$DIR/results`.  You can then load this
-into colab and explore the results that were obtained.  For some
-example colabs, see the `analysis` directory.
+Setting `cores=0` enables multithreading on all available cores.  
+
+In addition, you may use Apache Beam to evaluate the Experiments in two different modes -- direct runner and Dataflow runner. For the direct runner mode, use multi-processing with the execution command:
+
+```
+python3 driver/experiment_driver.py -- \
+  --data_design_dir=$DIR/data \
+  --experimental_design=driver/single_publisher_design.py \
+  --output_file=$DIR/results \
+  --intermediates_dir=$DIR/intermediates \
+  --cores=0 \
+  --use_apache_beam \
+  --runner=direct \
+  --direct_running_mode=multi_processing
+```
+
+For running with the Dataflow runner, make sure the data is uploaded to your bucket in Google Cloud Storage, i.e. `gs://<bucket_name>/<subpath/to/data_design_dir>`, before running the command below:
+```
+python3 experiment_driver.py -- \
+  --data_design_dir=gs://<bucket_name>/<subpath/to/data_design_dir> \
+  --experimental_design=driver/single_publisher_design.py \
+  --output_file=gs://<bucket_name>/<subpath/to/output_file> \
+  --intermediates_dir=gs://<bucket_name>/<subpath/to/intermediates_dir> \
+  --use_apache_beam \
+  --runner=DataflowRunner \
+  --region=<region> \
+  --project=<gcp_project_id> \
+  --staging_location=gs://<bucket_name>/<subpath/to/staging_dir> \
+  --setup_file=<path/to/setup.py> \
+  --extra_package=<path/to/wfa_cardinality_estimation_evaluation_framework-0.0.tar.gz>
+```
+
+Even with the help of multi-processing/distributed computing, the above design takes very long to run, so you may want to reduce both the number of Datasets and the number of Experiments by (temporarily) modifying the respective configuration files.  To see verbose output as the evaluation proceeds, try adding the parameter `--v==3`.  Once the evaluation is complete, the results will be recorded in a CSV file named `$DIR/results` (or `gs://<bucket_name>/<subpath/to/output_dir/results.csv>` if you are using GCS bucket).  You can then load it into colab and explore the results that were obtained.  For some example colabs, see the `analysis` directory.
 
 ### Directory Structure
 

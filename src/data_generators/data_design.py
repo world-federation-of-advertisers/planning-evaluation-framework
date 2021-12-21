@@ -21,30 +21,40 @@ DataSets within a DataDesign are loaded lazily.
 
 from os import listdir
 from os.path import exists, isdir, join
-from pathlib import Path
 from typing import List
-from weakref import WeakValueDictionary
+
+from wfa_planning_evaluation_framework.filesystem_wrappers import (
+    filesystem_wrapper_base,
+)
+from wfa_planning_evaluation_framework.filesystem_wrappers import (
+    filesystem_pathlib_wrapper,
+)
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
+
+
+FsWrapperBase = filesystem_wrapper_base.FilesystemWrapperBase
+FsPathlibWrapper = filesystem_pathlib_wrapper.FilesystemPathlibWrapper
 
 
 class DataDesign:
     """A collection of DataSets used for evaluating an ExperimentalDesign."""
 
-    def __init__(self, dirpath: str):
+    def __init__(self, dirpath: str, filesystem: FsWrapperBase = FsPathlibWrapper()):
         """Constructor
 
         Args:
           dirpath:  The directory on disk where the DataSets comprising this
             DataDesign will be stored.
+          filesystem:  The filesystem object that manages all file operations.
         """
         self._dirpath = dirpath
         self._data_set_names = set()
-        self._data_sets = WeakValueDictionary()
+        self._filesystem = filesystem
 
-        Path(dirpath).mkdir(parents=True, exist_ok=True)
-        for dir in sorted(listdir(dirpath)):
-            if isdir(join(dirpath, dir)):
-                self._data_set_names.add(dir)
+        self._filesystem.mkdir(dirpath, parents=True, exist_ok=True)
+        for p in sorted(self._filesystem.glob(dirpath, "*")):
+            if self._filesystem.is_dir(p):
+                self._data_set_names.add(self._filesystem.name(p))
 
     @property
     def count(self) -> int:
@@ -58,19 +68,16 @@ class DataDesign:
 
     def by_name(self, name: str) -> DataSet:
         """Returns the DataSet having the given name."""
-        if not name in self._data_sets:
-            dataset = DataSet.read_data_set(join(self._dirpath, name))
-            self._data_sets[name] = dataset
-        return self._data_sets[name]
+        return DataSet.read_data_set(join(self._dirpath, name), self._filesystem)
 
     def add(self, data_set: DataSet) -> None:
         """Adds a DataSet to this DataDesign."""
-        data_set_path = join(self._dirpath, data_set.name)
-        if exists(data_set_path):
+        data_set_path = self._filesystem.joinpath(self._dirpath, data_set.name)
+        if self._filesystem.exists(data_set_path):
             raise ValueError(
                 "This DataDesign already contains a DataSet with name {}".format(
                     data_set.name
                 )
             )
-        data_set.write_data_set(self._dirpath)
+        data_set.write_data_set(self._dirpath, filesystem=self._filesystem)
         self._data_set_names.add(data_set.name)

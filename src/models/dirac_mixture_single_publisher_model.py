@@ -61,13 +61,13 @@ class MixedPoissonOptimizer:
                     "Grid algorithm fails due to numerical errors. Using adaptive algorithm instead.",
                 )
                 self.adaptive_fit()
-            # cvxpy may run into numerical errors.  For example, it
+            # cvxpy might (with very small chance) run into numerical errors.  For example, it
             # may find a problem non-convex when the problem is in fact convex without numerical
             # errors.  The grid algorithm, as a one-step method, would fail in this case.
             # The adapative algorithm, on the other hand, stops when running into numerical errors
             # and makes the best use of the current results.  In addition, it iterates over multiple
-            # initial values, so is still working even if numerical errors occur at some runs.
-            # We switch to the adapative algorithm in case the grid algorithm fails.
+            # initial values, so still finds a reasonable solution even if numerical errors occur at
+            # some runs.  We switch to the adapative algorithm in case the grid algorithm fails.
         elif method == "adaptive":
             self.adaptive_fit()
         else:
@@ -207,8 +207,8 @@ class MixedPoissonOptimizer:
             A tuple (vec_w, vec_lbd, objective), where
             - vec_w and vec_lbd specify a fitted mixed Poisson model sum_j w_j Poisson(lbd_j)
             - objective indicates the log-likelihood of the final fit
-            Note that some intermediate other results like the trajectory of objective are
-            obtained but not returned. One can print them when doing detailed tests.
+            Note that some intermediate results like the trajectory of objective are also
+            obtained, but not returned. One can print them when doing detailed tests.
         """
         lbds = [initial_lbd]
         mat_pi = self._mat_pi(lbds)

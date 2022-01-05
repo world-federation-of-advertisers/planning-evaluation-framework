@@ -180,6 +180,7 @@ class ExperimentalTrial:
             self._trial_descriptor.modeling_strategy.instantiate_strategy()
         )
         single_publisher_dataframe = pd.DataFrame()
+        max_frequency = self._trial_descriptor.experiment_params.max_frequency
         try:
             reach_surface = modeling_strategy.fit(
                 halo, self._trial_descriptor.system_params, privacy_budget
@@ -205,7 +206,7 @@ class ExperimentalTrial:
             if self._analysis_type == SINGLE_PUB_ANALYSIS:
                 single_publisher_dataframe = (
                     self._compute_single_publisher_fractions_dataframe(
-                        halo, reach_surface
+                        halo, reach_surface, max_frequency
                     )
                 )
         except Exception as inst:
@@ -217,7 +218,7 @@ class ExperimentalTrial:
             metrics = aggregate_on_exception(inst)
             if self._analysis_type == SINGLE_PUB_ANALYSIS:
                 single_publisher_dataframe = (
-                    self._single_publisher_fractions_dataframe_on_exception()
+                    self._single_publisher_fractions_dataframe_on_exception(max_frequency)
                 )
 
         independent_vars = self._make_independent_vars_dataframe()
@@ -305,7 +306,7 @@ class ExperimentalTrial:
         return privacy_vars
 
     def _compute_single_publisher_fractions_dataframe(
-        self, halo, reach_surface
+        self, halo, reach_surface, max_frequency
     ) -> pd.DataFrame:
         results = {}
         for r in SINGLE_PUBLISHER_FRACTIONS:
@@ -319,6 +320,18 @@ class ExperimentalTrial:
             column_name = f"relative_error_at_{int(r*100):03d}"
             results[column_name] = [relative_error]
 
+        for f in range(1, max_frequency):
+            for r in SINGLE_PUBLISHER_FRACTIONS:
+                spend = halo.campaign_spends[0] * r
+                true_reach = halo.true_reach_by_spend([spend], f).reach(f)
+                fitted_reach = reach_surface.by_spend([spend], f).reach(f)
+                if true_reach:
+                    relative_error = np.abs((true_reach - fitted_reach) / true_reach)
+                else:
+                    relative_error = np.NaN
+                column_name = f"freq_{f}_relative_error_at_{int(r*100):03d}"
+                results[column_name] = [relative_error]
+
         # Also, record the maximum frequency in the actual data and the
         # data produced by Halo.
         training_point = reach_surface._data[0]
@@ -327,17 +340,21 @@ class ExperimentalTrial:
                 [(i + 1) for i, f in enumerate(training_point._kplus_reaches) if f != 0]
             )
         ]
-        data_point = halo.true_reach_by_spend(halo.campaign_spends)
+        data_point = halo.true_reach_by_spend(halo.campaign_spends, max_frequency)
         results["max_nonzero_frequency_from_data"] = [
             max([(i + 1) for i, f in enumerate(data_point._kplus_reaches) if f != 0])
         ]
         return pd.DataFrame(results)
 
-    def _single_publisher_fractions_dataframe_on_exception(self) -> pd.DataFrame:
+    def _single_publisher_fractions_dataframe_on_exception(self, max_frequency) -> pd.DataFrame:
         results = {}
         for r in SINGLE_PUBLISHER_FRACTIONS:
             column_name = f"relative_error_at_{int(r*100):03d}"
             results[column_name] = [np.NaN]
+        for f in range(1, max_frequency):
+            for r in SINGLE_PUBLISHER_FRACTIONS:
+                column_name = f"freq_{f}_relative_error_at_{int(r*100):03d}"
+                results[column_name] = [np.NaN]
         results["max_nonzero_frequency_from_halo"] = [np.NaN]
         results["max_nonzero_frequency_from_data"] = [np.NaN]
         return pd.DataFrame(results)

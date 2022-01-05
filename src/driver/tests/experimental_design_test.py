@@ -222,7 +222,7 @@ class ExperimentalDesignTest(absltest.TestCase):
             self.assertEqual(results.shape[0], 1)
             self.assertAlmostEqual(results["relative_error_at_100"][0], 0.0, delta=0.02)
             self.assertGreater(results["max_nonzero_frequency_from_halo"][0], 0)
-            self.assertEqual(results["max_nonzero_frequency_from_data"][0], 1)
+            self.assertEqual(results["max_nonzero_frequency_from_data"][0], 5)
 
     def _evaluate_with_apache_beam(
         self,

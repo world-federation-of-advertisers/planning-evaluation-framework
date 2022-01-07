@@ -66,7 +66,7 @@ class SystemParameters(NamedTuple):
         ll_str = "decay_rate={},sketch_size={}".format(
             self.liquid_legions.decay_rate, self.liquid_legions.sketch_size
         )
-        return "spends=[{}],{}".format(spend_str, ll_str)
+        return "spends=({}),{}".format(spend_str, ll_str)
 
     def update_from_dataset(self, dataset: DataSet) -> "SystemParameters":
         """Uses the dataset to fill in various context-specific items."""

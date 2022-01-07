@@ -31,7 +31,7 @@ from wfa_planning_evaluation_framework.data_generators.homogeneous_impression_ge
     HomogeneousImpressionGenerator,
 )
 
-PUBLISHER_SIZES = [1000 * 2 ** k for k in range(8)]
+PUBLISHER_SIZES = [10_000 * i for i in [1, 2, 3, 4, 5]]
 
 # We consider four basic data generating processes:
 #   Poisson, Exponential-Poisson, Gamma-Poisson and Zeta.
@@ -121,6 +121,7 @@ IMPRESSION_GENERATORS = [
     GeneratorParameters(
         "HeavyTailed", HeavyTailedImpressionGenerator, {"zeta_s": 2.1416}
     ),
+
     ## Mean 10
     # Shifted Poisson: Mean = 10, Var = 9
     GeneratorParameters(

@@ -17,15 +17,43 @@ Runs a collection of experiments against a collection of data sets,
 writing the output as a DataFrame in CSV format.
 
 Usage:
-
-  python3 experiment_driver.py \
+  Local machine without Apache Beam
+    python3 experiment_driver.py -- \
     --data_design_dir=<data_design_dir> \
     --experimental_design=<experimental_design> \
     --output_file=<output_file> \
     --intermediates_dir=<intermediates_dir> \
     --seed=<random_seed> \
     --cores=<number_of_cores> \
-    [--analysis_type=single_pub]]
+    [--analysis_type=single_pub]
+
+  DirectRuuner:
+    python3 experiment_driver.py -- \
+    --data_design_dir=<data_design_dir> \
+    --experimental_design=<experimental_design> \
+    --output_file=<output_file> \
+    --intermediates_dir=<intermediates_dir> \
+    --seed=<random_seed> \
+    --cores=<number_of_cores> \
+    [--analysis_type=single_pub]
+    --use_apache_beam \
+    --runner=direct \
+    --direct_running_mode=multi_processing
+
+  DataflowRunner:
+    python3 experiment_driver.py -- \
+    --data_design_dir=gs://<bucket_name>/<subpath/to/data_design_dir> \
+    --experimental_design=driver/single_publisher_design.py \
+    --output_file=gs://<bucket_name>/<subpath/to/output_file> \
+    --intermediates_dir=gs://<bucket_name>/<subpath/to/intermediates_dir> \
+    [--analysis_type=single_pub]
+    --use_apache_beam \
+    --runner=DataflowRunner \
+    --region=<region> \
+    --project=<gcp_project_id> \
+    --staging_location=gs://<bucket_name>/<subpath/to/staging_dir> \
+    --setup_file=<path/to/setup.py> \
+    --extra_package=<path/to/wfa_cardinality_estimation_evaluation_framework-0.0.tar.gz>
 
 where
 
@@ -65,16 +93,38 @@ where
   cores is an integer specifying the number of cores to be used for
     multithreaded processing.  If cores = 1 (default), then multithreading
     is not used.  If cores < 1, then all available cores are used.
+  use_apache_beam is the flag that indicates whether to use Apache Beam
+    for running the evaluation with either multi-processing or cloud
+    computing.
+  runner is the choice of the backend runner of Apache Beam. Currenly, we
+    only support "direct"/"DirectRunner" and "dataflow"/"DataflowRunner".
+  direct_running_mode is the running mode of DirectRunner. It can be one 
+    of ['in_memory', 'multi_threading', 'multi_processing'].
+  region is used in DataflowRunner mode when using Apache Beam and is the 
+    Google Compute Engine region to create the job. If not set, defaults  
+    to the default region in the current environment. The default region
+    is set via gcloud.
+  project is used in DataflowRunner mode when using Apache Beam and is the
+    project ID for your Google Cloud Project.
+  staging_location is used in DataflowRunner mode when using Apache Beam and 
+    is the Cloud Storage bucket path for staging your binary and any temporary 
+    files. Must be a valid Cloud Storage URL that begins with gs://.
+  setup_file is used in DataflowRunner mode when using Apache Beam and is the
+    path to the setup.py of the current program.
+  extra_package is used in DataflowRunner mode when using Apache Beam and is
+    the path to the tarbal file of wfa_cardinality_estimation_evaluation_framework.
 """
 
 from absl import app
-from absl import flags
+import argparse
 import importlib.util
 import math
 import numpy as np
 import pandas as pd
 import sys
 from typing import Iterable
+from apache_beam.options.pipeline_options import PipelineOptions
+
 from wfa_planning_evaluation_framework.data_generators.data_design import DataDesign
 from wfa_planning_evaluation_framework.driver.experimental_design import (
     ExperimentalDesign,
@@ -82,25 +132,20 @@ from wfa_planning_evaluation_framework.driver.experimental_design import (
 from wfa_planning_evaluation_framework.driver.trial_descriptor import (
     TrialDescriptor,
 )
+from wfa_planning_evaluation_framework.filesystem_wrappers import (
+    filesystem_wrapper_base,
+)
+from wfa_planning_evaluation_framework.filesystem_wrappers import (
+    filesystem_pathlib_wrapper,
+)
+from wfa_planning_evaluation_framework.filesystem_wrappers import (
+    filesystem_cloudpath_wrapper,
+)
 
 
-FLAGS = flags.FLAGS
-
-flags.DEFINE_string("data_design_dir", None, "Directory containing the data design")
-flags.DEFINE_string(
-    "experimental_design", None, "Name of python file containing experimental design."
-)
-flags.DEFINE_string(
-    "output_file", None, "Name of file where output DataFrame will be written."
-)
-flags.DEFINE_string(
-    "intermediates_dir", None, "Directory where intermediate results will be stored."
-)
-flags.DEFINE_integer("seed", 1, "Seed for the np.random.Generator.")
-flags.DEFINE_integer("cores", 1, "Number of cores to use for multithreading.")
-flags.DEFINE_string(
-    "analysis_type", "", "Specify single_pub if this is a single publisher analysis."
-)
+FsWrapperBase = filesystem_wrapper_base.FilesystemWrapperBase
+FsPathlibWrapper = filesystem_pathlib_wrapper.FilesystemPathlibWrapper
+FsCloudPathWrapper = filesystem_cloudpath_wrapper.FilesystemCloudpathWrapper
 
 
 class ExperimentDriver:
@@ -124,9 +169,14 @@ class ExperimentDriver:
         self._analysis_type = analysis_type
         self._cores = cores
 
-    def execute(self) -> pd.DataFrame:
+    def execute(
+        self,
+        use_apache_beam: bool = False,
+        pipeline_options: PipelineOptions = PipelineOptions(),
+        filesystem: FsWrapperBase = FsPathlibWrapper(),
+    ) -> pd.DataFrame:
         """Performs all experiments defined in an experimental design."""
-        data_design = DataDesign(self._data_design_dir)
+        data_design = DataDesign(self._data_design_dir, filesystem)
         experiments = list(self._fetch_experiment_list())
         experimental_design = ExperimentalDesign(
             self._intermediate_dir,
@@ -135,10 +185,16 @@ class ExperimentDriver:
             self._seed,
             self._cores,
             analysis_type=self._analysis_type,
+            filesystem=filesystem,
         )
         experimental_design.generate_trials()
-        result = experimental_design.load()
-        result.to_csv(self._output_file)
+
+        result = experimental_design.load(
+            use_apache_beam=use_apache_beam,
+            pipeline_options=pipeline_options,
+        )
+        filesystem.write_text(self._output_file, result.to_csv(index=False))
+
         return result
 
     def _fetch_experiment_list(self) -> Iterable[TrialDescriptor]:
@@ -152,17 +208,101 @@ class ExperimentDriver:
         return module.generate_experimental_design_config(seed=self._seed)
 
 
-def main(argv):
-    experiment_driver = ExperimentDriver(
-        FLAGS.data_design_dir,
-        FLAGS.experimental_design,
-        FLAGS.output_file,
-        FLAGS.intermediates_dir,
-        FLAGS.seed,
-        FLAGS.cores,
-        FLAGS.analysis_type,
+def create_arg_parser():
+    parser = argparse.ArgumentParser(allow_abbrev=False)
+    parser.add_argument(
+        "--data_design_dir",
+        dest="data_design_dir",
+        required=True,
+        help="Directory containing the data design.",
     )
-    experiment_driver.execute()
+    parser.add_argument(
+        "--experimental_design",
+        dest="experimental_design",
+        required=True,
+        help="Name of python file containing experimental design.",
+    )
+    parser.add_argument(
+        "--output_file",
+        dest="output_file",
+        required=True,
+        help="Name of file where output DataFrame will be written.",
+    )
+    parser.add_argument(
+        "--intermediates_dir",
+        dest="intermediates_dir",
+        required=True,
+        help="Directory where intermediate results will be stored.",
+    )
+    parser.add_argument(
+        "--seed",
+        dest="seed",
+        type=int,
+        default=1,
+        help="Seed for the np.random.Generator.",
+    )
+    parser.add_argument(
+        "--cores",
+        dest="cores",
+        type=int,
+        default=1,
+        help="Number of cores to use for multithreading.",
+    )
+    parser.add_argument(
+        "--analysis_type",
+        dest="analysis_type",
+        default="",
+        help="Specify single_pub if this is a single publisher analysis.",
+    )
+    parser.add_argument(
+        "--use_apache_beam",
+        dest="use_apache_beam",
+        action="store_true",
+        help="Use Apache Beam.",
+    )
+
+    return parser
+
+
+def main(argv):
+    parser = create_arg_parser()
+    known_args, pipeline_args = parser.parse_known_args(argv)
+
+    experiment_driver = ExperimentDriver(
+        known_args.data_design_dir,
+        known_args.experimental_design,
+        known_args.output_file,
+        known_args.intermediates_dir,
+        known_args.seed,
+        known_args.cores,
+        known_args.analysis_type,
+    )
+
+    pipeline_args.extend(
+        [
+            f"--temp_location={known_args.intermediates_dir}",
+            f"--direct_num_workers={known_args.cores}",
+        ]
+    )
+    pipeline_options = PipelineOptions(pipeline_args)
+
+    # Set up a filesystem object according to the runner mode
+    # Currently, we only support GCS for the data storage for the Dataflow runner.
+    filesystem = None
+    if pipeline_options.get_all_options()["runner"] in [
+        "dataflow",
+        "DataflowRunner",
+    ]:
+        filesystem = FsCloudPathWrapper()
+        filesystem.set_default_client_to_gs_client()
+    else:
+        filesystem = FsPathlibWrapper()
+
+    experiment_driver.execute(
+        known_args.use_apache_beam,
+        pipeline_options,
+        filesystem,
+    )
 
 
 if __name__ == "__main__":

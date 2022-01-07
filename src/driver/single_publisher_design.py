@@ -15,6 +15,7 @@
 
 from absl import app
 from absl import flags
+import itertools
 import numpy as np
 from pyDOE import lhs
 from typing import Iterable
@@ -43,17 +44,18 @@ MODELING_STRATEGIES = [
     ("goerg", {}),
     ("gamma_poisson", {}),
     ("gamma_poisson", {"extrapolation_multiplier": 2.0}),
-    ("gamma_poisson", {"extrapolation_multiplier": 3.0}),
+    ("kinflated_gamma_poisson", {}),
+    ("kinflated_gamma_poisson", {"extrapolation_multiplier": 2.0}),
 ]
 
-CAMPAIGN_SPEND_FRACTIONS = list(np.arange(1, 20) * 0.05)
-LIQUID_LEGIONS_DECAY_RATES = [10, 12, 15]
-LIQUID_LEGIONS_SKETCH_SIZES = [50_000, 100_000]
-PRIVACY_BUDGET_EPSILONS = [np.log(3), 0.1 * np.log(3)]
+CAMPAIGN_SPEND_FRACTIONS = list(np.arange(1, 10) * 0.1)
+LIQUID_LEGIONS_DECAY_RATES = [10]
+LIQUID_LEGIONS_SKETCH_SIZES = [100_000]
+PRIVACY_BUDGET_EPSILONS = [0.05, 0.10, 0.15, 0.20, 100.0]
 PRIVACY_BUDGET_DELTAS = [1e-9]
 REPLICA_IDS = [1]
 TEST_POINTS = [20]
-MAX_FREQUENCIES = [5, 10, 20]
+MAX_FREQUENCIES = [10]
 
 LEVELS = {
     "modeling_strategy": MODELING_STRATEGIES,
@@ -67,21 +69,12 @@ LEVELS = {
     "max_frequency": MAX_FREQUENCIES,
 }
 
-# Number of experimental trials that should be conducted per dataset
-NUM_TRIALS_PER_DATASET = 100
-
-
 def generate_experimental_design_config(seed: int = 1) -> Iterable[TrialDescriptor]:
     """Generates a list of TrialDescriptors for a single publisher model."""
-    keys = LEVELS.keys()
-    levels = [len(LEVELS[k]) for k in keys]
-    np.random.seed(seed)
-    for sample in lhs(
-        n=len(levels), samples=NUM_TRIALS_PER_DATASET, criterion="maximin"
-    ):
-        design_parameters = {}
-        for key, level in zip(keys, sample):
-            design_parameters[key] = LEVELS[key][int(level * len(LEVELS[key]))]
+    keys = list(LEVELS.keys())
+    levels = [LEVELS[k] for k in keys]
+    for sample in itertools.product(*levels):
+        design_parameters = dict(zip(keys, sample))
         mstrategy = ModelingStrategyDescriptor(
             "single_publisher",
             {},

@@ -13,15 +13,25 @@
 # limitations under the License.
 """Tests for ExperimentalDesign."""
 
+from typing import Dict, Iterable, List, Type
 from absl.testing import absltest
 from os.path import join
 from tempfile import TemporaryDirectory
-from typing import Dict
-from typing import Iterable
-from typing import List
-from typing import Type
 import numpy as np
 import pandas as pd
+import logging
+
+import apache_beam as beam
+from apache_beam.options.pipeline_options import PipelineOptions
+from apache_beam.testing.test_pipeline import TestPipeline
+from apache_beam.testing.util import assert_that, equal_to
+
+from wfa_planning_evaluation_framework.data_generators.heterogeneous_impression_generator import (
+    HeterogeneousImpressionGenerator,
+)
+from wfa_planning_evaluation_framework.data_generators.fixed_price_generator import (
+    FixedPriceGenerator,
+)
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
 )
@@ -58,6 +68,8 @@ from wfa_planning_evaluation_framework.driver.experiment import (
 )
 from wfa_planning_evaluation_framework.driver.experimental_design import (
     ExperimentalDesign,
+    CombineDataFrameFn,
+    EvaluateTrialDoFn,
 )
 from wfa_planning_evaluation_framework.driver.experimental_trial import (
     ExperimentalTrial,
@@ -117,6 +129,14 @@ class FakeTestPointGenerator(TestPointGenerator):
 
     def test_points(self) -> Iterable[List[float]]:
         return [[1.0]]
+
+
+class FakeExperimentalTrial:
+    def __init__(self, base):
+        self._base = base
+
+    def evaluate(self, seed: int, filesystem):
+        return self._base * seed
 
 
 class ExperimentalDesignTest(absltest.TestCase):
@@ -189,6 +209,105 @@ class ExperimentalDesignTest(absltest.TestCase):
 
             results = exp.load()
             self.assertEqual(results.shape[0], 8)
+
+    def test_evaluate_with_apache_beam_locally(self):
+        with TemporaryDirectory() as d:
+            data_design_dir = join(d, "data_design")
+            experiment_dir = join(d, "experiments")
+
+            results = self._evaluate_with_apache_beam(data_design_dir, experiment_dir)
+            # We don't check each column in the resulting dataframe, because these have
+            # been checked by the preceding unit tests.  However, we make a few strategic
+            # probes.
+            self.assertEqual(results.shape[0], 1)
+            self.assertAlmostEqual(results["relative_error_at_100"][0], 0.0, delta=0.02)
+            self.assertGreater(results["max_nonzero_frequency_from_halo"][0], 0)
+            self.assertEqual(results["max_nonzero_frequency_from_data"][0], 5)
+
+    def _evaluate_with_apache_beam(
+        self,
+        data_design_dir,
+        experiment_dir,
+    ):
+        num_workers = 2
+        data1 = HeterogeneousImpressionGenerator(
+            1000, gamma_shape=1.0, gamma_scale=3.0
+        )()
+        pdf1 = PublisherData(FixedPriceGenerator(0.1)(data1))
+        data_set = DataSet([pdf1], "dataset")
+        data_design = DataDesign(data_design_dir)
+        data_design.add(data_set)
+
+        msd = ModelingStrategyDescriptor(
+            "single_publisher", {}, "goerg", {}, "pairwise_union", {}
+        )
+        sparams = SystemParameters(
+            [0.5],
+            LiquidLegionsParameters(13, 1e6, 1),
+            np.random.default_rng(),
+        )
+        eparams = ExperimentParameters(
+            PrivacyBudget(1.0, 0.01), 3, 5, "grid", {"grid_size": 5}
+        )
+        trial_descriptors = [TrialDescriptor(msd, sparams, eparams)]
+
+        exp = ExperimentalDesign(
+            experiment_dir,
+            data_design,
+            trial_descriptors,
+            seed=1,
+            cores=num_workers,
+            analysis_type="single_pub",
+        )
+        exp.generate_trials()
+
+        pipeline_args = []
+        pipeline_args.extend(
+            [
+                "--runner=direct",
+                "--direct_running_mode=multi_processing",
+                f"--temp_location={experiment_dir}",
+                f"--direct_num_workers={num_workers}",
+            ]
+        )
+        pipeline_options = PipelineOptions(pipeline_args)
+        logging.disable(logging.CRITICAL)
+        results = exp.load(use_apache_beam=True, pipeline_options=pipeline_options)
+        logging.disable(logging.NOTSET)
+        return results
+
+    def test_evaluate_trial_do_fn(self):
+        num_trials = 10
+        seed = 1
+        expected = list(range(num_trials))
+
+        logging.disable(logging.CRITICAL)
+        with TestPipeline() as p:
+            output = (
+                p
+                | beam.Create([FakeExperimentalTrial(i) for i in range(num_trials)])
+                | beam.ParDo(EvaluateTrialDoFn(), seed, None)
+            )
+            assert_that(output, equal_to(expected))
+        logging.disable(logging.NOTSET)
+
+    def test_combine_dataFrame_fn(self):
+        num_dfs = 10
+        key = "attr"
+        val = 1
+        dfs = [pd.DataFrame([{key: val}]) for _ in range(num_dfs)]
+        expected = pd.concat(dfs).to_csv()
+
+        logging.disable(logging.CRITICAL)
+        with TestPipeline() as p:
+            output = (
+                p
+                | beam.Create(dfs)
+                | beam.CombineGlobally(CombineDataFrameFn())
+                | beam.Map(lambda df: df.to_csv())
+            )
+            assert_that(output, equal_to([expected]))
+        logging.disable(logging.NOTSET)
 
     def test_remove_duplicates(self):
         with TemporaryDirectory() as d:

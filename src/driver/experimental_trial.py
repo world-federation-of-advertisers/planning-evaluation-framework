@@ -23,7 +23,6 @@ import hashlib
 import numpy as np
 import pandas as pd
 from os.path import isfile, join
-from pathlib import Path
 import traceback
 from typing import List
 from typing import NamedTuple
@@ -57,6 +56,15 @@ from wfa_planning_evaluation_framework.driver.test_point_aggregator import (
     aggregate,
     aggregate_on_exception,
 )
+from wfa_planning_evaluation_framework.filesystem_wrappers import (
+    filesystem_wrapper_base,
+)
+from wfa_planning_evaluation_framework.filesystem_wrappers import (
+    filesystem_pathlib_wrapper,
+)
+
+FsWrapperBase = filesystem_wrapper_base.FilesystemWrapperBase
+FsPathlibWrapper = filesystem_pathlib_wrapper.FilesystemPathlibWrapper
 
 # The output dataframe will contain the estimation error for each of the
 # following relative spend fractions.  In other words, if r is one of the
@@ -105,7 +113,9 @@ class ExperimentalTrial:
         self._trial_descriptor = trial_descriptor
         self._analysis_type = analysis_type
 
-    def evaluate(self, seed: int) -> pd.DataFrame:
+    def evaluate(
+        self, seed: int, filesystem: FsWrapperBase = FsPathlibWrapper()
+    ) -> pd.DataFrame:
         """Executes a trial.
 
         1. Check if the results for the trial have already been computed.
@@ -121,6 +131,7 @@ class ExperimentalTrial:
         Args:
           seed:  A seed value that is used to initialize the random
             number generator.
+          filesystem:  The filesystem object that manages all file operations.
 
         Returns:
           A single row DataFrame containing the results of the evaluation
@@ -133,39 +144,50 @@ class ExperimentalTrial:
         np.random.seed(seed)
 
         trial_results_path = self._compute_trial_results_path()
-        if isfile(trial_results_path):
+
+        if trial_results_path.startswith("gs://"):
+            filesystem.set_default_client_to_gs_client()
+
+        if filesystem.is_file(trial_results_path):
             logging.vlog(2, "  --> Returning previously computed result")
-            return pd.read_csv(trial_results_path)
+            try:
+                with filesystem.open(trial_results_path) as file:
+                    return pd.read_csv(file)
+            except Exception as e:
+                filesystem.unlink(trial_results_path)
+                logging.vlog(
+                    2, f"  --> {e}. Failed reading existing result. Re-evaluate."
+                )
 
         # The pending directory contains one entry for each currently executing
         # experimental trial.  If a computation appears to hang, this can be
         # used to check which evaluations are still pending.
-        experiment_dir_parent = Path(self._experiment_dir).parent
-        pending_path = Path(
-            f"{experiment_dir_parent}/pending/{hashlib.md5(trial_results_path.encode()).hexdigest()}"
-        )
-        Path(pending_path).parent.absolute().mkdir(parents=True, exist_ok=True)
-        Path(pending_path).write_text(
-            f"{datetime.now()}\n{self._data_set_name}\n{self._trial_descriptor}\n\n"
+        experiment_dir_parent = filesystem.parent(self._experiment_dir)
+        pending_path = f"{experiment_dir_parent}/pending/{hashlib.md5(trial_results_path.encode()).hexdigest()}"
+        filesystem.mkdir(filesystem.parent(pending_path), parents=True, exist_ok=True)
+        filesystem.write_text(
+            pending_path,
+            f"{datetime.now()}\n{self._data_set_name}\n{self._trial_descriptor}\n\n",
         )
 
-        self._dataset = self._data_design.by_name(self._data_set_name)
-        self._privacy_tracker = PrivacyTracker()
+        dataset = self._data_design.by_name(self._data_set_name)
+        privacy_tracker = PrivacyTracker()
         halo = HaloSimulator(
-            self._dataset, self._trial_descriptor.system_params, self._privacy_tracker
+            dataset, self._trial_descriptor.system_params, privacy_tracker
         )
         privacy_budget = self._trial_descriptor.experiment_params.privacy_budget
         modeling_strategy = (
             self._trial_descriptor.modeling_strategy.instantiate_strategy()
         )
         single_publisher_dataframe = pd.DataFrame()
+        max_frequency = self._trial_descriptor.experiment_params.max_frequency
         try:
             reach_surface = modeling_strategy.fit(
                 halo, self._trial_descriptor.system_params, privacy_budget
             )
             test_points = list(
                 self._trial_descriptor.experiment_params.generate_test_points(
-                    self._dataset, rng
+                    dataset, rng
                 )
             )
             true_reach = [
@@ -184,7 +206,7 @@ class ExperimentalTrial:
             if self._analysis_type == SINGLE_PUB_ANALYSIS:
                 single_publisher_dataframe = (
                     self._compute_single_publisher_fractions_dataframe(
-                        halo, reach_surface
+                        halo, reach_surface, max_frequency
                     )
                 )
         except Exception as inst:
@@ -196,12 +218,12 @@ class ExperimentalTrial:
             metrics = aggregate_on_exception(inst)
             if self._analysis_type == SINGLE_PUB_ANALYSIS:
                 single_publisher_dataframe = (
-                    self._single_publisher_fractions_dataframe_on_exception()
+                    self._single_publisher_fractions_dataframe_on_exception(max_frequency)
                 )
 
         independent_vars = self._make_independent_vars_dataframe()
         privacy_tracking_vars = self._make_privacy_tracking_vars_dataframe(
-            self._privacy_tracker
+            privacy_tracker
         )
         result = pd.concat(
             [
@@ -212,16 +234,19 @@ class ExperimentalTrial:
             ],
             axis=1,
         )
-        Path(trial_results_path).parent.absolute().mkdir(parents=True, exist_ok=True)
-        result.to_csv(trial_results_path)
-
-        Path(pending_path).unlink()
+        filesystem.mkdir(
+            filesystem.parent(trial_results_path), parents=True, exist_ok=True
+        )
+        filesystem.write_text(trial_results_path, result.to_csv(index=False))
+        filesystem.unlink(pending_path, missing_ok=True)
 
         return result
 
     def _compute_trial_results_path(self) -> str:
         """Returns path of file where the results of this trial are stored."""
-        return f"{self._experiment_dir}/{self._data_set_name}/{self._trial_descriptor}"
+        return (
+            f"{self._experiment_dir}/{self._data_set_name}/{self._trial_descriptor}.csv"
+        )
 
     def _make_independent_vars_dataframe(self) -> pd.DataFrame:
         """Returns a 1-row DataFrame of independent variables for this trial."""
@@ -281,7 +306,7 @@ class ExperimentalTrial:
         return privacy_vars
 
     def _compute_single_publisher_fractions_dataframe(
-        self, halo, reach_surface
+        self, halo, reach_surface, max_frequency
     ) -> pd.DataFrame:
         results = {}
         for r in SINGLE_PUBLISHER_FRACTIONS:
@@ -295,6 +320,18 @@ class ExperimentalTrial:
             column_name = f"relative_error_at_{int(r*100):03d}"
             results[column_name] = [relative_error]
 
+        for f in range(1, max_frequency):
+            for r in SINGLE_PUBLISHER_FRACTIONS:
+                spend = halo.campaign_spends[0] * r
+                true_reach = halo.true_reach_by_spend([spend], f).reach(f)
+                fitted_reach = reach_surface.by_spend([spend], f).reach(f)
+                if true_reach:
+                    relative_error = np.abs((true_reach - fitted_reach) / true_reach)
+                else:
+                    relative_error = np.NaN
+                column_name = f"freq_{f}_relative_error_at_{int(r*100):03d}"
+                results[column_name] = [relative_error]
+
         # Also, record the maximum frequency in the actual data and the
         # data produced by Halo.
         training_point = reach_surface._data[0]
@@ -303,17 +340,21 @@ class ExperimentalTrial:
                 [(i + 1) for i, f in enumerate(training_point._kplus_reaches) if f != 0]
             )
         ]
-        data_point = halo.true_reach_by_spend(halo.campaign_spends)
+        data_point = halo.true_reach_by_spend(halo.campaign_spends, max_frequency)
         results["max_nonzero_frequency_from_data"] = [
             max([(i + 1) for i, f in enumerate(data_point._kplus_reaches) if f != 0])
         ]
         return pd.DataFrame(results)
 
-    def _single_publisher_fractions_dataframe_on_exception(self) -> pd.DataFrame:
+    def _single_publisher_fractions_dataframe_on_exception(self, max_frequency) -> pd.DataFrame:
         results = {}
         for r in SINGLE_PUBLISHER_FRACTIONS:
             column_name = f"relative_error_at_{int(r*100):03d}"
             results[column_name] = [np.NaN]
+        for f in range(1, max_frequency):
+            for r in SINGLE_PUBLISHER_FRACTIONS:
+                column_name = f"freq_{f}_relative_error_at_{int(r*100):03d}"
+                results[column_name] = [np.NaN]
         results["max_nonzero_frequency_from_halo"] = [np.NaN]
         results["max_nonzero_frequency_from_data"] = [np.NaN]
         return pd.DataFrame(results)

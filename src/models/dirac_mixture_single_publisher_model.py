@@ -20,6 +20,7 @@ https://drive.google.com/file/d/1P6GYeYXjtB-j8M_WQokJrIEWFlEjYrmy/view?resourcek
 from absl import logging
 import numpy as np
 import cvxpy as cp
+from scipy import stats
 from typing import List, Tuple
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
@@ -28,8 +29,15 @@ from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 class MixedPoissonOptimizer:
     """Fit an univaraite mixed Poisson distribution on a frequency histogram."""
 
-    def __init__(self, frequency_histogram: np.ndarray):
-        """Construct an optimizer for univarate mixed Poisson distribution.
+    def __init__(
+        self,
+        frequency_histogram: np.ndarray,
+        grid_size_under_max_freq: int = 200,
+        max_scalar_on_max_freq: float = 3,
+        grid_size_beyond_max_freq: int = 10,
+        num_initial_lbds: int = 30,
+    ):
+        """Construct an optimizer for univiarate mixed Poisson distribution.
 
         Please read the companion doc
         https://drive.google.com/file/d/1P6GYeYXjtB-j8M_WQokJrIEWFlEjYrmy/view?resourcekey=0-iUFvPbzIU7AUy-myx3NxVw
@@ -40,17 +48,43 @@ class MixedPoissonOptimizer:
                 f, for 0 <= f <= F - 1, and v[F] = number of observations with frequency >= F,
                 for a max frequency F. Note that a multiplier on v does not affect the result,
                 which means that the input can also be the relative frequency histogram.
+            grid_size_under_max_freq:  A key tuning paramter that affects the model performance.
+                Empirically, the larger the better.  In either grid method or (each step of)
+                adaptive method, we search these many Poisson locations equally spaced in in
+                [0, max_freq].
+            max_scalar_on_max_freq:  A secondary tuning paramter.  It is a scalar beta > 1 for
+                which we search Poisson locations not only under max_freq, but also in
+                [max_freq, beta * max_freq].  Empirically, this parameter affects
+                the model performance only in extreme cases when the buckets near the maximum
+                frequency have the majority of counts (in other words, when the maximum
+                frequency is not chosen appropriately).
+            grid_size_beyond_max_freq:  A secondary tuning paramter. We have these many Poisson
+                locations equally spaced in [max_freq, beta * max_freq], where beta refers to
+                the above max_scalar_on_max_freq.
+            num_initial_lbds:  A secondary tuning parameter.  Number of initial points in the
+                adaptive method.
         """
         self.vec_A = frequency_histogram
         self.max_freq = len(frequency_histogram) - 1
-        self._get_log_factorials()
+        self.grid = [
+            self.max_freq * x / grid_size_under_max_freq
+            for x in range(grid_size_under_max_freq)
+        ] + [
+            self.max_freq
+            + self.max_freq
+            * (max_scalar_on_max_freq - 1)
+            * x
+            / grid_size_beyond_max_freq
+            for x in range(grid_size_beyond_max_freq)
+        ]
+        self.num_initial_lbds = num_initial_lbds
 
     def fit(self, method: str = "grid"):
-        """Fixed a mixed Poisson distribution.
+        """Fits a mixed Poisson distribution.
 
         Args:
-            method:  Method for fitting the mixed Poisson distribution.  Current options are
-                'grid' and 'adaptive'.
+            method:  Method for fitting the mixed Poisson distribution.  Currently support two
+                options: 'grid' and 'adaptive'.
         """
         if method == "grid":
             try:
@@ -61,6 +95,7 @@ class MixedPoissonOptimizer:
                     "Grid algorithm fails due to numerical errors. Using adaptive algorithm instead.",
                 )
                 self.adaptive_fit()
+            # We use the state-of-art convex optimization package cvxpy to optimize the weights.
             # cvxpy might (with very small chance) run into numerical errors.  For example, it
             # may find a problem non-convex when the problem is in fact convex without numerical
             # errors.  The grid algorithm, as a one-step method, would fail in this case.
@@ -73,30 +108,40 @@ class MixedPoissonOptimizer:
         else:
             raise ValueError(f"method {method} is not yet supported.")
 
-    def _get_log_factorials(self):
-        """Save sum_{i=0}^f log(i!) for f from 0 to self.max_freq, as these quantities will be repeatly used."""
-        self._log_factorials = [0]
-        for f in range(1, self.max_freq):
-            self._log_factorials.append(self._log_factorials[f - 1] + np.log(f))
+    def grid_fit(self):
+        """Fit the model simply by solving the optimal weights on Poissons with a fixed grid of locations."""
+        self.lbds = self.grid.copy()
+        self.weights = self._solve_optimal_weights(self._mat_pi(self.lbds))[0]
 
     def _get_vec_pi(self, lbd: float, customized_max_freq: int = None) -> np.ndarray:
         """Get the probability mass function (pmf) vector for each Poisson component.
 
+        Note that in our use case, the last element of this vector is not exactly a pmf.  It is
+        1 minus the cdf at (max_freq - 1).
+
         Args:
             lbd:  A float >= 0 indicating the Poisson mean.
-            customized_max_freq:  If specified, it will be used as the upper bound of the pmf vector.
+            customized_max_freq:  We compute pmf from 0 up to a certain max_freq.  If this argument
+                is specified, set it as the max_freq for pmf.  Otherwise, use self.max_freq, i.e.,
+                the maximum frequency of the campaign's histogram.
+                This argument is ONLY specified in the prediction stage. It is never specified in
+                the fitting stage.
+                So, it does not matter if customized_max_freq is greater or smaller than
+                self.max_freq.
 
         Returns:
-            pmf vector from 0 to F for Poisson(lbd).  Equations (2) and (3) in the companion doc.
+            pmf vector from 0 to a certain max_freq for Poisson(lbd).  Equations (2) and (3) in the
+            companion doc.
         """
-        max_freq = self.max_freq if customized_max_freq is None else customized_max_freq
-        if lbd < 1e-4:
-            return np.array([1] + [0] * max_freq)
-        vec_pi = np.zeros(max_freq + 1)
-        for f in range(max_freq):
-            vec_pi[f] = np.exp(f * np.log(lbd) - lbd - self._log_factorials[f])
-        vec_pi[max_freq] = 1 - sum(vec_pi)
-        return vec_pi
+        max_freq = int(
+            self.max_freq if customized_max_freq is None else customized_max_freq
+        )
+        return np.concatenate(
+            (
+                stats.poisson.pmf(range(max_freq), lbd),
+                [1 - stats.poisson.cdf(max_freq - 1, lbd)],
+            )
+        )
 
     def _mat_pi(
         self, lbds: List, customized_max_freq: int = None
@@ -144,9 +189,6 @@ class MixedPoissonOptimizer:
         self,
         existing_weights: np.ndarray,
         existing_mat_pi: cp.atoms.affine.hstack.Hstack,
-        grid_size_under_max_freq: int = 30,
-        max_scalar_on_max_freq: float = 10,
-        grid_size_beyond_max_freq: int = 10,
     ) -> Tuple[float, float]:
         """Grid search of the new, single Poisson component that maximizes the gradient of log-likelihood.
 
@@ -154,33 +196,17 @@ class MixedPoissonOptimizer:
             new_pmf_vec:  pmf vector of any new component.
             existing_mat_pi:  matrix of log-pmf vectors of all the existing components.
             existing weights:  weight vector of all the existing compoents.
-            grid_size_under_max_freq:  we search these many Poisson lbds equally spaced in in [0, max_freq].
-            max_scalar_on_max_freq:  A scalar beta > 1 for which we also search lbd in
-                [max_freq, beta * max_freq].
-            grid_size_beyond_max_freq:  We search these many Poisson lbds in [max_freq, beta * max_freq].
-                Typically, we do a fine-grid search in [0, max_freq] and a coarse search beyond max_freq.
 
         Returns:
             Gradient when starting to proportionally shift weight from existing components to new component.
         """
-        grid = [
-            self.max_freq * x / grid_size_under_max_freq
-            for x in range(grid_size_under_max_freq)
-        ] + [
-            self.max_freq
-            + self.max_freq
-            * (max_scalar_on_max_freq - 1)
-            * x
-            / grid_size_beyond_max_freq
-            for x in range(grid_size_beyond_max_freq)
-        ]
         vals = [
             self._gradient_towards_new_poisson(
                 new_lbd, existing_weights, existing_mat_pi
             ).value
-            for new_lbd in grid
+            for new_lbd in self.grid
         ]
-        return grid[np.argmax(vals)], max(vals)
+        return self.grid[np.argmax(vals)], max(vals)
 
     def _solve_optimal_weights(
         self, mat_pi: cp.atoms.affine.hstack.Hstack
@@ -239,51 +265,16 @@ class MixedPoissonOptimizer:
                 break
         return (weights_trace[-1], lbds, objective_trace[-1])
 
-    def adaptive_fit(self, num_initial_lbd: int = 30):
-        """Fit the model from a grid of initial components.
-
-        Args:
-            num_initial_lbd:  we fit the model from these many initial lbds and pick the best result.
-        """
+    def adaptive_fit(self):
+        """Fit the model from a grid of initial components."""
         results = [
             self._adaptive_fit_one_initial_lbd(lbd)
-            for lbd in np.linspace(0.1, self.max_freq, num_initial_lbd)
+            for lbd in np.linspace(0.1, self.max_freq, self.num_initial_lbds)
             # For simplicity, initial lbd is chosen from a grid in (0, max_freq].
             # The grid starts from 0.1 (instead of 0) to avoid divide-by-zero errors.
         ]
         objectives = [res[2] for res in results]
         self.weights, self.lbds = results[np.argmax(objectives)][:2]
-
-    def grid_fit(
-        self,
-        grid_size_under_max_freq: int = 30,
-        max_scalar_on_max_freq: float = 10,
-        grid_size_beyond_max_freq: int = 10,
-    ):
-        """Fit the model simply by solving the optimal weights on Poissons with a fixed grid of lbds.
-
-        Args:
-            grid_size_under_max_freq:  we have these many Poisson lbds equally spaced in [0, max_freq].
-            max_scalar_on_max_freq:  A scalar beta > 1 for which we also have lbds in
-                [max_freq, beta * max_freq].
-            grid_size_beyond_max_freq:  We have these many Poisson lbds in [max_freq, beta * max_freq].
-                Typically, we have a fine-grid in [0, max_freq] and a coarse grid beyond max_freq.
-
-        Returns:
-            Gradient when starting to proportionally shift weight from existing components to new component.
-        """
-        self.lbds = [
-            self.max_freq * x / grid_size_under_max_freq
-            for x in range(grid_size_under_max_freq)
-        ] + [
-            self.max_freq
-            + self.max_freq
-            * (max_scalar_on_max_freq - 1)
-            * x
-            / grid_size_beyond_max_freq
-            for x in range(grid_size_beyond_max_freq)
-        ]
-        self.weights = self._solve_optimal_weights(self._mat_pi(self.lbds))[0]
 
     def predict(
         self, scaling_factor: float, customized_max_freq: int = None
@@ -311,6 +302,10 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
         method: str = "grid",
         universe_size: int = None,
         universe_reach_ratio: float = 3,
+        grid_size_under_max_freq: int = 200,
+        max_scalar_on_max_freq: float = 3,
+        grid_size_beyond_max_freq: int = 10,
+        num_initial_lbds: int = 30,
     ):
         """Constructs a Dirac mixture sinle publisher model.
 
@@ -326,6 +321,18 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
                 obtained using equation (1) in the companion doc.
             universe_reach_ratio:  If the previous argument is not specified, then obtain the
                 universe size as universe_reach_ratio * <1+ reach at the training point>.
+            grid_size_under_max_freq:  A tuning parameter in the mixed Poisson optimizer.
+                Empirically, the larger the better.  In either grid method or (each step of)
+                adaptive method, we search these many Poisson locations equally spaced in in
+                [0, max_freq].
+            max_scalar_on_max_freq:  A tuning parameter in the mixed Poisson optimizer. A scalar
+                beta > 1 for which we search Poisson locations not only under max_freq, but
+                also in [max_freq, beta * max_freq].
+            grid_size_beyond_max_freq:  A tuning parameter in the mixed Poisson optimizer. We
+                have these many Poisson locations equally spaced in [max_freq, beta * max_freq],
+                where beta refers to the above max_scalar_on_max_freq.
+            num_initial_lbds:  A tuning parameter in the mixed Poisson optimizer.  Number of
+                initial points in the adaptive method.
         """
         if len(data) != 1:
             raise ValueError("Exactly one ReachPoint must be specified")
@@ -346,6 +353,12 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
             self.N = universe_size
         self._fit_computed = False
         self.method = method
+        self.mixed_poisson_tuning_parameters = (
+            grid_size_under_max_freq,
+            max_scalar_on_max_freq,
+            grid_size_beyond_max_freq,
+            num_initial_lbds,
+        )
 
     def _fit(self):
         if self._fit_computed:
@@ -355,8 +368,31 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
             + self._reach_point._frequencies
             + [self._reach_point._kplus_reaches[-1]]
         )
-        hist = np.maximum(0, hist)
-        self.mpo = MixedPoissonOptimizer(hist / sum(hist))
+
+        def _debiased_clip(noised_hist):
+            """Force the observed histogram to be non-negative, without introducing much noise.
+
+            The observed, noised histogram may have negative counts.  We can round these negative
+            values to zero, but it introduces positive biases, especially inflating the 1+ reach.
+            This function mitigates such positive biases.
+            """
+            cum_bias = 0
+            for i in range(len(noised_hist) - 1, -1, -1):
+                if noised_hist[i] < 0:
+                    cum_bias -= noised_hist[i]
+                    noised_hist[i] = 0
+                elif cum_bias > 0:
+                    pay_back = min(cum_bias, noised_hist[i])
+                    # amount to reduce from this count so as to compensate the bias
+                    # accumlated from previous buckets
+                    noised_hist[i] -= pay_back
+                    cum_bias -= pay_back
+            return noised_hist
+
+        hist = _debiased_clip(hist)
+        self.mpo = MixedPoissonOptimizer(
+            hist / sum(hist), *self.mixed_poisson_tuning_parameters
+        )
         self.mpo.fit(self.method)
         self._fit_computed = True
 

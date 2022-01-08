@@ -27,7 +27,7 @@ from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 
 
 class MixedPoissonOptimizer:
-    """Fit an univaraite mixed Poisson distribution on a frequency histogram."""
+    """Fit an univariate mixed Poisson distribution on a frequency histogram."""
 
     def __init__(
         self,
@@ -37,7 +37,7 @@ class MixedPoissonOptimizer:
         grid_size_beyond_max_freq: int = 10,
         num_initial_lbds: int = 30,
     ):
-        """Construct an optimizer for univiarate mixed Poisson distribution.
+        """Construct an optimizer for univariate mixed Poisson distribution.
 
         Please read the companion doc
         https://drive.google.com/file/d/1P6GYeYXjtB-j8M_WQokJrIEWFlEjYrmy/view?resourcekey=0-iUFvPbzIU7AUy-myx3NxVw
@@ -342,6 +342,7 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
             raise ValueError(
                 "Cannot have a model with fewer impressions than reached people"
             )
+        self._data = data
         self._reach_point = data[0]
         if data[0].spends:
             self._cpi = data[0].spends[0] / data[0].impressions[0]

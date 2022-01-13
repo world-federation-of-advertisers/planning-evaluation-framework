@@ -39,7 +39,7 @@ class MixedPoissonOptimizerTest(parameterized.TestCase):
 
     @parameterized.parameters(
         ["grid"],
-        ["adaptive"],
+        # ["adaptive"],
     )
     def test_fit_sanity(self, method):
         """Sanity checks on the fit."""
@@ -64,7 +64,7 @@ class MixedPoissonOptimizerTest(parameterized.TestCase):
 
     @parameterized.parameters(
         ["grid"],
-        ["adaptive"],
+        # ["adaptive"],
     )
     def test_fit_accuracy(self, method):
         """Roughly check (accuracy threshold = 10%) if the fitted histogram is close to the given histogram."""
@@ -83,14 +83,14 @@ dmspm_grid_r4 = DiracMixtureSinglePublisherModel(
     data=[rp], method="grid", universe_reach_ratio=4
 )
 dmspm_grid_r4._fit()
-dmspm_adaptive_r2 = DiracMixtureSinglePublisherModel(
-    data=[rp], method="adaptive", universe_reach_ratio=2
-)
-dmspm_adaptive_r2._fit()
-dmspm_adaptive_r4 = DiracMixtureSinglePublisherModel(
-    data=[rp], method="adaptive", universe_reach_ratio=4
-)
-dmspm_adaptive_r4._fit()
+# dmspm_adaptive_r2 = DiracMixtureSinglePublisherModel(
+#     data=[rp], method="adaptive", universe_reach_ratio=2
+# )
+# dmspm_adaptive_r2._fit()
+# dmspm_adaptive_r4 = DiracMixtureSinglePublisherModel(
+#     data=[rp], method="adaptive", universe_reach_ratio=4
+# )
+# dmspm_adaptive_r4._fit()
 
 
 class DiracMixtureSinglePublisherModelTest(parameterized.TestCase):
@@ -105,14 +105,14 @@ class DiracMixtureSinglePublisherModelTest(parameterized.TestCase):
             "testcase_name": "grid method, universe specified as 4x reach",
             "dmspm": dmspm_grid_r4,
         },
-        {
-            "testcase_name": "adaptive method, universe specified as 2x reach",
-            "dmspm": dmspm_adaptive_r2,
-        },
-        {
-            "testcase_name": "adaptive method, universe specified as 4x reach",
-            "dmspm": dmspm_adaptive_r4,
-        },
+        # {
+        #     "testcase_name": "adaptive method, universe specified as 2x reach",
+        #     "dmspm": dmspm_adaptive_r2,
+        # },
+        # {
+        #     "testcase_name": "adaptive method, universe specified as 4x reach",
+        #     "dmspm": dmspm_adaptive_r4,
+        # },
     )
     def test_fit(self, dmspm):
         """Roughly test the goodness of fit.
@@ -133,14 +133,14 @@ class DiracMixtureSinglePublisherModelTest(parameterized.TestCase):
             "testcase_name": "grid method, universe specified as 4x reach",
             "dmspm": dmspm_grid_r4,
         },
-        {
-            "testcase_name": "adaptive method, universe specified as 2x reach",
-            "dmspm": dmspm_adaptive_r2,
-        },
-        {
-            "testcase_name": "adaptive method, universe specified as 4x reach",
-            "dmspm": dmspm_adaptive_r4,
-        },
+        # {
+        #     "testcase_name": "adaptive method, universe specified as 2x reach",
+        #     "dmspm": dmspm_adaptive_r2,
+        # },
+        # {
+        #     "testcase_name": "adaptive method, universe specified as 4x reach",
+        #     "dmspm": dmspm_adaptive_r4,
+        # },
     )
     def test_by_impressions(self, dmspm):
         pred_rp = dmspm.by_impressions([10000], max_frequency=5)
@@ -167,14 +167,14 @@ class DiracMixtureSinglePublisherModelTest(parameterized.TestCase):
             "testcase_name": "grid method, universe specified as 4x reach",
             "dmspm": dmspm_grid_r4,
         },
-        {
-            "testcase_name": "adaptive method, universe specified as 2x reach",
-            "dmspm": dmspm_adaptive_r2,
-        },
-        {
-            "testcase_name": "adaptive method, universe specified as 4x reach",
-            "dmspm": dmspm_adaptive_r4,
-        },
+        # {
+        #     "testcase_name": "adaptive method, universe specified as 2x reach",
+        #     "dmspm": dmspm_adaptive_r2,
+        # },
+        # {
+        #     "testcase_name": "adaptive method, universe specified as 4x reach",
+        #     "dmspm": dmspm_adaptive_r4,
+        # },
     )
     def test_by_spends(self, dmspm):
         pred_rp = dmspm.by_spend([133.33], max_frequency=5)

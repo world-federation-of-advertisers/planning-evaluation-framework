@@ -66,18 +66,23 @@ class MixedPoissonOptimizer:
         """
         self.vec_A = frequency_histogram
         self.max_freq = len(frequency_histogram) - 1
+        self.quantile_099 = self.quantile_of_pmf(self.vec_A, 0.99) + 1
+        self.upper_limit = max(self.max_freq, self.quantile_099 * max_scalar_on_max_freq)
         self.grid = [
-            self.max_freq * x / grid_size_under_max_freq
+            self.quantile_099 * x / grid_size_under_max_freq
             for x in range(grid_size_under_max_freq)
         ] + [
-            self.max_freq
-            + self.max_freq
-            * (max_scalar_on_max_freq - 1)
+            self.quantile_099
+            + (self.upper_limit - self.quantile_099)
             * x
             / grid_size_beyond_max_freq
             for x in range(grid_size_beyond_max_freq)
         ]
         self.num_initial_lbds = num_initial_lbds
+    
+    @classmethod
+    def quantile_of_pmf(cls, pmf, quantile):
+        return np.where(np.cumsum(pmf) > quantile)[0][0]
 
     def fit(self, method: str = "grid"):
         """Fits a mixed Poisson distribution.
@@ -302,7 +307,7 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
         method: str = "grid",
         universe_size: int = None,
         universe_reach_ratio: float = 3,
-        grid_size_under_max_freq: int = 200,
+        grid_size_under_max_freq: int = 100,
         max_scalar_on_max_freq: float = 3,
         grid_size_beyond_max_freq: int = 10,
         num_initial_lbds: int = 30,
@@ -354,22 +359,17 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
             self.N = universe_size
         self._fit_computed = False
         self.method = method
-        self.mixed_poisson_tuning_parameters = (
+        self.mixed_poisson_tuning_parameters = [
             grid_size_under_max_freq,
             max_scalar_on_max_freq,
             grid_size_beyond_max_freq,
             num_initial_lbds,
-        )
+        ]
 
     def _fit(self):
         if self._fit_computed:
             return
-        hist = np.array(
-            [self.N - self._reach_point.reach(1)]
-            + self._reach_point._frequencies
-            + [self._reach_point._kplus_reaches[-1]]
-        )
-
+        
         def _debiased_clip(noised_hist):
             """Force the observed histogram to be non-negative, without introducing much noise.
 
@@ -390,11 +390,30 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
                     cum_bias -= pay_back
             return noised_hist
 
-        hist = _debiased_clip(hist)
-        self.mpo = MixedPoissonOptimizer(
-            hist / sum(hist), *self.mixed_poisson_tuning_parameters
-        )
-        self.mpo.fit(self.method)
+        while True:
+            hist = np.array(
+                [self.N - self._reach_point.reach(1)]
+                + self._reach_point._frequencies
+                + [self._reach_point._kplus_reaches[-1]]
+            )
+            hist = _debiased_clip(hist)
+            try:
+                self.mpo = MixedPoissonOptimizer(
+                    hist / sum(hist), *self.mixed_poisson_tuning_parameters
+                )
+                self.mpo.fit(self.method)
+            except:
+                self.mixed_poisson_tuning_parameters[0] = int(self.mixed_poisson_tuning_parameters[0] / 2)
+                self.mixed_poisson_tuning_parameters[2] = int(self.mixed_poisson_tuning_parameters[2] / 2)
+                self.mpo = MixedPoissonOptimizer(
+                    hist / sum(hist), *self.mixed_poisson_tuning_parameters
+                )
+                self.mpo.fit(self.method)
+            if self.mpo.weights[0] > 0.1:
+                break
+            else:
+                self.N *= 2
+                continue
         self._fit_computed = True
 
     def by_impressions(

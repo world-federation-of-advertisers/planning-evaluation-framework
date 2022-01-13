@@ -41,11 +41,12 @@ from wfa_planning_evaluation_framework.driver.trial_descriptor import (
 )
 
 MODELING_STRATEGIES = [
-    ("goerg", {}),
-    ("gamma_poisson", {}),
-    ("gamma_poisson", {"extrapolation_multiplier": 2.0}),
-    ("kinflated_gamma_poisson", {}),
-    ("kinflated_gamma_poisson", {"extrapolation_multiplier": 2.0}),
+    # ("goerg", {}),
+    # ("gamma_poisson", {}),
+    # ("gamma_poisson", {"extrapolation_multiplier": 2.0}),
+    # ("kinflated_gamma_poisson", {}),
+    # ("kinflated_gamma_poisson", {"extrapolation_multiplier": 2.0}),
+    ("dirac_mixture", {})
 ]
 
 CAMPAIGN_SPEND_FRACTIONS = list(np.arange(1, 10) * 0.1)

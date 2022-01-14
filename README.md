@@ -43,7 +43,7 @@ to be spent for this impression to be shown.
 A Data Design can be synthetic, or it can represent actual publisher data.
 Synthetic data designs can be generated using the program
 `data_generators/synthetic_data_generator.py`. Alternatively, if you have other
-data available in your organization, you can construct your own data design. 
+data available in your organization, you can construct your own data design.
 
 An Experimental Design specifies the modeling strategies that will be
 evaluated and the parameters that will be used for evaluation. An
@@ -52,7 +52,7 @@ is subdivided into Experiments, which are further broken down into
 Trials. An Experiment consists of a collection of modeling strategies
 and model parameters that are run against a single Dataset. A Trial
 consists of simulating the outcome of one modeling strategy using one
-Dataset and one set of parameter values. 
+Dataset and one set of parameter values.
 
 Once a Data Design and an Experimental Design have been specified, the Evaluator
 can be used to run simulations of the experimental design versus the data
@@ -116,7 +116,7 @@ export PYTHONPATH
 Then run `source path_to/.bash_profile` or `source path_to/.zshrc_` in the terminal.
 
 2. Create a Symlink named `wfa_planning_evaluation_framework` at the directory which contains your planning-evaluation-framework repo with command:
-    
+
 ```
 ln -s path_to/planning-evaluation-framework/src/ dir_which_contains_planning_evaluation_framework_repo/wfa_planning_evaluation_framework
 ```
@@ -142,7 +142,7 @@ that can be used to generate synthetic data sets:
 * `m3_data_design.py`: The data design that is used for validating the M3 model.
 
 In this example, we will generate data for the single publisher models and then analyze the
-performance of these models.  The next command invokes the synthetic data generator.  
+performance of these models.  The next command invokes the synthetic data generator.
 
 
 ```
@@ -179,7 +179,7 @@ python3 driver/experiment_driver.py -- \
   --cores=0
 ```
 
-Setting `cores=0` enables multithreading on all available cores.  
+Setting `cores=0` enables multithreading on all available cores.
 
 In addition, you may use Apache Beam to evaluate the Experiments in two different modes -- direct runner and Dataflow runner. For the direct runner mode, use multi-processing with the execution command:
 
@@ -241,10 +241,9 @@ black file1.py file2.py ...
 
 #### Steps for merging a pull request
 
-1. `git checkout main` and `git pull` to get the latest changes. 
-2. `git checkout target_branch`. Make sure it is the latest. 
-3. `git rebase main`. Resolve conflicts if there is any. 
+1. `git checkout main` and `git pull` to get the latest changes.
+2. `git checkout target_branch`. Make sure it is the latest.
+3. `git rebase main`. Resolve conflicts if there is any.
 4. Run all unit tests with command `find . | egrep ".*tests/.*.py" | xargs -n 1 python3`
-5. If everything is okay, `git push -f` to push your rebased branch to the server. 
+5. If everything is okay, `git push -f` to push your rebased branch to the server.
 6. Go to the [web interface](https://github.com/world-federation-of-advertisers/planning-evaluation-framework) and click `merge pull request`.
-

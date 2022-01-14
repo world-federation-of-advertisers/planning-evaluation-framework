@@ -51,7 +51,7 @@ class KInflatedGammaPoissonDistribution:
     """
 
     def __init__(self, alpha: float, beta: float, a: List[float]):
-        """k-Inflated Gamma-Poisson with parameters alpha, beta, a. """
+        """k-Inflated Gamma-Poisson with parameters alpha, beta, a."""
         if sum(a) > 1.0:
             # In theory, it should be an error to create a distribution where
             # the values of sum to a value > 1, but in practice the easiest
@@ -305,7 +305,7 @@ class KInflatedGammaPoissonModel(ReachCurve):
         obj = np.sum((hbar - h) ** 2 / (hbar + 1e-6))
 
         if np.isnan(obj):
-            logging.vlog(2, f"alpha {alpha} beta {beta} N {N} Imax {Imax}")
+            logging.vlog(2, f"alpha {dist._alpha} beta {dist._beta} N {N} Imax {Imax}")
             logging.vlog(2, f"h    {h}")
             logging.vlog(2, f"hbar {hbar}")
             raise RuntimeError("Invalid value of objective function")

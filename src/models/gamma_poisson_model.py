@@ -163,9 +163,23 @@ class GammaPoissonModel(ReachCurve):
           alpha: Alpha parameter of the Gamma-Poisson distribution.
           beta: Beta parameter of the Gamma-Poisson distribution.
         Returns:
-          f(n | alpha, beta), where f is the Gamma-Poisson distribution.
+          log f(n | alpha, beta), where f is the Gamma-Poisson distribution.
         """
         return scipy.stats.nbinom.logpmf(n - 1, alpha, 1.0 / (1.0 + beta))
+
+    def _binom_logpmf(self, k, n, p):
+        """
+        Args:
+          k: (C, ) ndarray. Numbers of impressions that were seen by the user.
+          n: (M, ) ndarray. Values at which the distribution is to be evaluated.
+          p: float. The probability of one success in the binomial distribution
+        Returns:
+          (C, M) ndarray of log of the probability mass function of binomial
+            distribution.
+        """
+        k = k.reshape((-1, 1))
+        n = n.reshape((1, -1))
+        return scipy.stats.binom.logpmf(k, n, p)
 
     def _knreach(self, k, n, I, Imax, alpha, beta):
         """Probability that a random user has n impressions of which k are shown.
@@ -177,19 +191,19 @@ class GammaPoissonModel(ReachCurve):
         where C(n, k) is the binomial coefficient n!/[k!(n-k)!].
 
         Args:
-          k:  Scalar number of impressions that were seen by the user.
-          n:  Available inventory for the user.
-            This can be either a scalar or a numpy array.
+          k:  (C, ) ndarray. Numbers of impressions that were seen by the user.
+          n:  (M, ) ndarray. Available inventory for the user.
           I:  Total number of impressions shown to all users.
           Imax: Total size of impression inventory.
           alpha: Parameter of Gamma-Poisson distribution.
           beta: Parameter of Gamma-Poisson distribution.
         Returns:
-          Probability that a randomly chosen user will have an inventory
-          of n impressions, of which k are shown.
+          (C, M) ndarray. Probability that a randomly chosen user will have an
+          inventory of n impressions, of which k are shown.
         """
-        kprob = scipy.stats.binom.logpmf(k, n, I / Imax)
-        return np.exp(kprob + self._logpmf(n, alpha, beta))
+        kprob = self._binom_logpmf(k, n, I / Imax)  # shape: (C, M)
+        gp_logpmf = self._logpmf(n, alpha, beta)  # shape: (M, )
+        return np.exp(kprob + gp_logpmf)
 
     def _kreach(self, k, I, Imax, alpha, beta):
         """Probability that a random user receives k impressions.
@@ -201,30 +215,22 @@ class GammaPoissonModel(ReachCurve):
         impressions, of which k are shown.
 
         Args:
-          k:  np.array specifying number of impressions that were seen by the user.
+          k:  (C, ) ndarray specifying number of impressions that were seen
+            by the user.
           I:  Total number of impressions shown to all users.
           Imax: Total size of impression inventory.
           alpha: Parameter of Gamma-Poisson distribution.
           beta: Parameter of Gamma-Poisson distribution.
         Returns:
-          For each k, probability that a randomly chosen user will have an inventory
-          of n impressions, of which k are shown.
+          (C, ) ndarray. For each k, probability that a randomly chosen user
+          will have an inventory of n impressions, of which k are shown.
         """
-        return np.array(
-            [
-                np.sum(
-                    self._knreach(
-                        kv,
-                        np.arange(kv, MAXIMUM_COMPUTATIONAL_FREQUENCY + 1),
-                        I,
-                        Imax,
-                        alpha,
-                        beta,
-                    )
-                )
-                for kv in k
-            ]
-        )
+        k = np.asarray(k)
+        mat = self._knreach(
+            k, np.arange(MAXIMUM_COMPUTATIONAL_FREQUENCY + 1), I, Imax, alpha, beta
+        )  # shape: C x MAXIMUM_COMPUTATIONAL_FREQUENCY
+        upper_triangular = np.triu(mat)
+        return np.sum(upper_triangular, axis=-1)
 
     def _expected_impressions(self, N, alpha, beta):
         """Estimates the expected size of impression inventory for N users.

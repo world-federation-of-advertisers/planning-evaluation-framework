@@ -218,7 +218,9 @@ class ExperimentalTrial:
             metrics = aggregate_on_exception(inst)
             if self._analysis_type == SINGLE_PUB_ANALYSIS:
                 single_publisher_dataframe = (
-                    self._single_publisher_fractions_dataframe_on_exception(max_frequency)
+                    self._single_publisher_fractions_dataframe_on_exception(
+                        max_frequency
+                    )
                 )
 
         independent_vars = self._make_independent_vars_dataframe()
@@ -338,15 +340,21 @@ class ExperimentalTrial:
         results["max_nonzero_frequency_from_halo"] = [
             max(
                 [(i + 1) for i, f in enumerate(training_point._kplus_reaches) if f != 0]
+                + [0]
             )
         ]
         data_point = halo.true_reach_by_spend(halo.campaign_spends, max_frequency)
         results["max_nonzero_frequency_from_data"] = [
-            max([(i + 1) for i, f in enumerate(data_point._kplus_reaches) if f != 0])
+            max(
+                [(i + 1) for i, f in enumerate(data_point._kplus_reaches) if f != 0]
+                + [0]
+            )
         ]
         return pd.DataFrame(results)
 
-    def _single_publisher_fractions_dataframe_on_exception(self, max_frequency) -> pd.DataFrame:
+    def _single_publisher_fractions_dataframe_on_exception(
+        self, max_frequency
+    ) -> pd.DataFrame:
         results = {}
         for r in SINGLE_PUBLISHER_FRACTIONS:
             column_name = f"relative_error_at_{int(r*100):03d}"

@@ -127,15 +127,15 @@ class KInflatedGammaPoissonDistribution:
         where C(n, k) is the binomial coefficient n!/[k!(n-k)!].
 
         Args:
-          k:  Number of impressions that were seen by the user.
-          n:  Inventory size for the user.
-            This can be either a scalar or a numpy array.
-          p:  Probability that a given impression will be chosen.
+          k:  (C, ) ndarray. Numbers of impressions that were seen by the user.
+          n:  (M, ) ndarray. Inventory size for the user.
+          p:  float. Probability that a given impression will be chosen.
         Returns:
-          Probability that a randomly chosen user will have an inventory
-          of n impressions, of which k are shown.
+          (C, M) ndarray. Probability that a randomly chosen user will have an
+          inventory of n impressions, of which k are shown.
         """
-        return scipy.stats.binom.pmf(k, n, p) * self.pmf(n)
+        kprob = scipy.stats.binom.pmf(k.reshape(-1, 1), n.reshape(1, -1), p)
+        return kprob * self.pmf(n)
 
     def kreach(self, k: Iterable[float], p: float) -> npt.ArrayLike:
         """Probability that a random user receives k impressions.
@@ -147,15 +147,16 @@ class KInflatedGammaPoissonDistribution:
         impressions, of which k are shown.
 
         Args:
-          k:  np.array specifying number of impressions that were seen by the user.
+          k:  (C, ) ndarray specifying number of impressions that were seen by the user.
           p:  float, probability that a given impression will be chosen.
         Returns:
-          For each k, probability that a randomly chosen user will have an inventory
-          of n impressions, of which k are shown.
+          (C, ) ndarray.For each k, probability that a randomly chosen user
+          will have an inventory of n impressions, of which k are shown.
         """
-        return np.array(
-            [np.sum([self.knreach(kv, np.arange(kv, len(self._pmf)), p)]) for kv in k]
-        )
+        k = np.asarray(k)
+        mat = self.knreach(k, np.arange(len(self._pmf)), p)  # shape:CxM
+        upper_triangular = np.triu(mat)
+        return np.sum(upper_triangular, axis=-1)
 
     def kplusreach(self, k: int, p: float) -> npt.ArrayLike:
         """Probability that a random user receives k or more impressions.

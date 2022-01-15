@@ -167,20 +167,6 @@ class GammaPoissonModel(ReachCurve):
         """
         return scipy.stats.nbinom.logpmf(n - 1, alpha, 1.0 / (1.0 + beta))
 
-    def _binom_logpmf(self, k, n, p):
-        """
-        Args:
-          k: (C, ) ndarray. Numbers of impressions that were seen by the user.
-          n: (M, ) ndarray. Values at which the distribution is to be evaluated.
-          p: float. The probability of one success in the binomial distribution
-        Returns:
-          (C, M) ndarray of log of the probability mass function of binomial
-            distribution.
-        """
-        k = k.reshape((-1, 1))
-        n = n.reshape((1, -1))
-        return scipy.stats.binom.logpmf(k, n, p)
-
     def _knreach(self, k, n, I, Imax, alpha, beta):
         """Probability that a random user has n impressions of which k are shown.
 
@@ -201,8 +187,11 @@ class GammaPoissonModel(ReachCurve):
           (C, M) ndarray. Probability that a randomly chosen user will have an
           inventory of n impressions, of which k are shown.
         """
-        kprob = self._binom_logpmf(k, n, I / Imax)  # shape: (C, M)
+        kprob = scipy.stats.binom.logpmf(
+            k.reshape((-1, 1)), n.reshape((1, -1)), I / Imax
+        )  # shape: (C, M)
         gp_logpmf = self._logpmf(n, alpha, beta)  # shape: (M, )
+
         return np.exp(kprob + gp_logpmf)
 
     def _kreach(self, k, I, Imax, alpha, beta):

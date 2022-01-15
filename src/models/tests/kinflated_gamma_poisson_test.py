@@ -90,14 +90,22 @@ class KInflatedGammaPoissonModelTest(absltest.TestCase):
 
     def test_knreach_no_inflation(self):
         dist = KInflatedGammaPoissonDistribution(1.0, 1.0, [])
-        self.assertAlmostEqual(dist.knreach(1, 1, 0.5), 0.25)
-        self.assertAlmostEqual(dist.knreach(2, 1, 0.5), 0)
-        self.assertAlmostEqual(dist.knreach(1, 1, 0.5), 1.0 / 4.0)
-        self.assertAlmostEqual(dist.knreach(1, np.array([1]), 0.5)[0], 1 / 4)
-        self.assertAlmostEqual(dist.knreach(1, np.array([1, 2]), 0.5)[0], 1 / 4)
-        self.assertAlmostEqual(dist.knreach(1, np.array([1, 2]), 0.5)[1], 1 / 8)
+        self.assertAlmostEqual(dist.knreach(np.array([2]), np.array([1]), 0.5)[0, 0], 0)
         self.assertAlmostEqual(
-            dist.knreach(1, 3, 1 / 3), 3 * (1 / 3) * (2 / 3) ** 2 * (1 / 8)
+            dist.knreach(np.array([1]), np.array([1]), 0.5)[0, 0], 1.0 / 4.0
+        )
+        self.assertAlmostEqual(
+            dist.knreach(np.array([1]), np.array([1]), 0.5)[0, 0], 1 / 4
+        )
+        self.assertAlmostEqual(
+            dist.knreach(np.array([1]), np.array([1, 2]), 0.5)[0, 0], 1 / 4
+        )
+        self.assertAlmostEqual(
+            dist.knreach(np.array([1]), np.array([1, 2]), 0.5)[0, 1], 1 / 8
+        )
+        self.assertAlmostEqual(
+            dist.knreach(np.array([1]), np.array([3]), 1 / 3)[0, 0],
+            3 * (1 / 3) * (2 / 3) ** 2 * (1 / 8),
         )
 
     def test_kreach_no_inflation(self):

@@ -215,7 +215,7 @@ class ExperimentalTrial:
                 logging.vlog(1, f"Trial   {self._trial_descriptor}")
             logging.vlog(1, f"Modeling failure: {inst}")
             logging.vlog(2, traceback.format_exc())
-            metrics = aggregate_on_exception(inst)
+            metrics = aggregate_on_exception(traceback.format_exc())
             if self._analysis_type == SINGLE_PUB_ANALYSIS:
                 single_publisher_dataframe = (
                     self._single_publisher_fractions_dataframe_on_exception(
@@ -239,7 +239,9 @@ class ExperimentalTrial:
         filesystem.mkdir(
             filesystem.parent(trial_results_path), parents=True, exist_ok=True
         )
-        filesystem.write_text(trial_results_path, result.to_csv(na_rep="NaN", index=False))
+        filesystem.write_text(
+            trial_results_path, result.to_csv(na_rep="NaN", index=False)
+        )
         filesystem.unlink(pending_path, missing_ok=True)
 
         return result

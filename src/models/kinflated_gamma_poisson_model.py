@@ -134,7 +134,8 @@ class KInflatedGammaPoissonDistribution:
           (C, M) ndarray. Probability that a randomly chosen user will have an
           inventory of n impressions, of which k are shown.
         """
-        kprob = scipy.stats.binom.pmf(k.reshape(-1, 1), n.reshape(1, -1), p)
+        binom_dist = scipy.stats._discrete_distns.binom_gen(name="binom_dist")
+        kprob = binom_dist.pmf(k.reshape(-1, 1), n.reshape(1, -1), p)
         return kprob * self.pmf(n)
 
     def kreach(self, k: Iterable[float], p: float) -> npt.ArrayLike:

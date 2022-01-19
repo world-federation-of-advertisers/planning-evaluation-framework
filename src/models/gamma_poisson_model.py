@@ -187,7 +187,8 @@ class GammaPoissonModel(ReachCurve):
           (C, M) ndarray. Probability that a randomly chosen user will have an
           inventory of n impressions, of which k are shown.
         """
-        kprob = scipy.stats.binom.logpmf(
+        binom_dist = scipy.stats._discrete_distns.binom_gen(name="binom_dist")
+        kprob = binom_dist.logpmf(
             k.reshape((-1, 1)), n.reshape((1, -1)), I / Imax
         )  # shape: (C, M)
         gp_logpmf = self._logpmf(n, alpha, beta)  # shape: (M, )

@@ -355,9 +355,9 @@ class ExperimentalTrialTest(absltest.TestCase):
             self.assertEqual(result["replica_id"][0], 3)
             self.assertEqual(result["privacy_budget_epsilon"][0], 1.0)
             self.assertEqual(result["model_succeeded"][0], 0)
-            self.assertEqual(
-                result["model_exception"][0],
-                "Cannot fit Goerg model when impressions <= reach.",
+            self.assertTrue(
+                "Cannot fit Goerg model when impressions <= reach."
+                in result["model_exception"][0]
             )
 
     def test_evaluate_singe_publisher_model_with_exception(self):

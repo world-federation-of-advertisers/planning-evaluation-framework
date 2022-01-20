@@ -319,7 +319,7 @@ class ExperimentalTrialTest(absltest.TestCase):
             self.assertEqual(result["privacy_budget_epsilon"][0], 1.0)
             self.assertEqual(result["npoints"][0], 1)
             self.assertEqual(result["model_succeeded"][0], 1)
-            self.assertEqual(result["model_exception"][0], "")
+            self.assertEqual(result["model_exception"][0], "None")
 
     def test_evaluate_when_there_is_a_modeling_exception(self):
         with TemporaryDirectory() as d:
@@ -356,8 +356,8 @@ class ExperimentalTrialTest(absltest.TestCase):
             self.assertEqual(result["privacy_budget_epsilon"][0], 1.0)
             self.assertEqual(result["model_succeeded"][0], 0)
             self.assertIn(
-                "Cannot fit Goerg model when impressions <= reach.", 
-                result["model_exception"][0]
+                "Cannot fit Goerg model when impressions <= reach.",
+                result["model_exception"][0],
             )
 
     def test_evaluate_singe_publisher_model_with_exception(self):

@@ -149,6 +149,8 @@ class GammaPoissonModel(ReachCurve):
         else:
             self._cpi = None
 
+        self.binom_dist = scipy.stats._discrete_distns.binom_gen(name="binom_dist")
+
     def _logpmf(self, n, alpha, beta):
         """Log of the PMF of the shifted Gamma-Poisson distribution.
 
@@ -187,8 +189,7 @@ class GammaPoissonModel(ReachCurve):
           (C, M) ndarray. Probability that a randomly chosen user will have an
           inventory of n impressions, of which k are shown.
         """
-        binom_dist = scipy.stats._discrete_distns.binom_gen(name="binom_dist")
-        kprob = binom_dist.logpmf(
+        kprob = self.binom_dist.logpmf(
             k.reshape((-1, 1)), n.reshape((1, -1)), I / Imax
         )  # shape: (C, M)
         gp_logpmf = self._logpmf(n, alpha, beta)  # shape: (M, )

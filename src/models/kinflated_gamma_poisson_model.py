@@ -80,6 +80,8 @@ class KInflatedGammaPoissonDistribution:
         # Force the series to sum to 1.
         self._pmf[-1] = 1.0 - np.sum(self._pmf[:-1])
 
+        self.binom_dist = scipy.stats._discrete_distns.binom_gen(name="binom_dist")
+
     def _gamma_poisson_pmf(
         self, n: Union[int, Iterable[int]], alpha: float, beta: float
     ) -> Union[float, npt.ArrayLike]:
@@ -134,8 +136,7 @@ class KInflatedGammaPoissonDistribution:
           (C, M) ndarray. Probability that a randomly chosen user will have an
           inventory of n impressions, of which k are shown.
         """
-        binom_dist = scipy.stats._discrete_distns.binom_gen(name="binom_dist")
-        kprob = binom_dist.pmf(k.reshape(-1, 1), n.reshape(1, -1), p)
+        kprob = self.binom_dist.pmf(k.reshape(-1, 1), n.reshape(1, -1), p)
         return kprob * self.pmf(n)
 
     def kreach(self, k: Iterable[float], p: float) -> npt.ArrayLike:

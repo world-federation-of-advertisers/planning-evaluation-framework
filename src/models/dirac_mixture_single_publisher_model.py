@@ -1,4 +1,4 @@
-# Copyright 2021 The Private Cardinality Estimation Framework Authors
+# Copyright 2022 The Private Cardinality Estimation Framework Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,14 +22,16 @@ from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 
 
 class UnivariateMixedPoissonOptimizer:
-    """Fit an univariate mixed Poisson distribution on a frequency histogram.
+    """Fit a univariate mixed Poisson distribution on a frequency histogram.
 
     A mixed Poisson distribution has probablity mass function (pmf)
     f(x) = sum_{j=1}^J w_j pi(x | lambda_j), x = 0, 1, 2, ...
     where any
     pi(x | lambda) = lambda^x * exp(-lambda) / x!
-    is the pmf of Poisson distribution.  Each lambda_j is called a component.
-    w_j is called the weight of component lambda_j.
+    is the pmf of the Poisson distribution, and w_j are subject to the
+    constraints that all w_j >= 0 and sum_{j=1}^J w_j = 1.
+    Each lambda_j is called a component. w_j is called the weight of component
+    lambda_j.
 
     At this moment, the fitting algorithm consists of a grid search of components
     and a convex optimization on the weights of different components.
@@ -62,8 +64,8 @@ class UnivariateMixedPoissonOptimizer:
     def validate_frequency_histogram(cls, frequency_histogram: np.ndarray):
         """Check if a frequency histogram is valid.
 
-        A valid frequency histogram has all elements being non-negative, and
-        sums up to be positive.
+        A valid frequency histogram has all elements being non-negative, sums up
+        to be positive, and has length at least 2.
         """
         if len(frequency_histogram) < 2:
             raise ValueError(
@@ -145,8 +147,8 @@ class UnivariateMixedPoissonOptimizer:
             - sum_i observed_arr[i] * log(fitted_arr[i]) for 1d arrays,
             - sum_{i, j} observed_arr[i, j] * log(fitted_arr[i, j]) for 2d arrays.
         """
-        fitted_arr = fitted_arr + 1e-200
         # Small shift to avoid log-zero numerical error.
+        fitted_arr = fitted_arr + 1e-200
         return -cp.sum(cp.multiply(observed_arr, cp.log(fitted_arr)))
 
     @classmethod
@@ -173,7 +175,16 @@ class UnivariateMixedPoissonOptimizer:
             objective=cp.Minimize(distance(observed_arr, pred)),
             constraints=[ws >= 0, cp.sum(ws) == 1],
         )
-        problem.solve()
+        # Sometime, cvxpy raises "SolverError: Solver 'ECOS' failed. Try another solver."
+        # According to https://github.com/davidhallac/NetworkLasso/issues/1,
+        # it is worth trying another solver named SCS.
+        # TODO (P2): For production needs, search convex optimization packages in
+        # Java and try to test the robustness of its solver(s).
+        try:
+            problem.solve()
+        except cp.SolverError:
+            problem.solve(solver=cp.SCS)
+        return ws.value
         return ws.value
 
     def fit(self):

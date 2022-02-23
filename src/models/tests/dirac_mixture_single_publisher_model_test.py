@@ -1,4 +1,4 @@
-# Copyright 2021 The Private Cardinality Estimation Framework Authors
+# Copyright 2022 The Private Cardinality Estimation Framework Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -68,8 +68,7 @@ class UnivariateMixedPoissonOptimizerTest(absltest.TestCase):
         expected = np.array([0.5, 0.5])
         self.assertSequenceAlmostEqual(res, expected, places=2)
 
-    def test_fit(self):
-        # zero reach
+    def test_fit_zero_reach(self):
         optimizer = self.cls(frequency_histogram=np.array([5, 0, 0, 0]), ncomponents=3)
         optimizer.fit()
         expected_ws = np.array([1, 0, 0])
@@ -87,7 +86,7 @@ class UnivariateMixedPoissonOptimizerTest(absltest.TestCase):
             msg="Unexpected_components for zero reach",
         )
 
-        # non-zero reach
+    def test_fit_non_zero_reach(self):
         optimizer = self.cls(frequency_histogram=np.array([3, 2, 2, 1]), ncomponents=4)
         optimizer.fit()
         expected_ws = np.array([0.133, 0.535, 0.332, 0])
@@ -105,21 +104,19 @@ class UnivariateMixedPoissonOptimizerTest(absltest.TestCase):
             msg="Unexpected_components for non-zero reach",
         )
 
-    def test_predict(self):
+    def test_predict_zero_scaling_factor(self):
         optimizer = self.cls(frequency_histogram=np.array([3, 2, 1]), ncomponents=2)
         # Set arbitray parameters for testing
         optimizer.fitted = True
         optimizer.components = np.array([0, 1])
         optimizer.ws = np.array([0.3, 0.7])
-
-        # Zero scaling_factor
         res = optimizer.predict(scaling_factor=0)
         expected = np.array([1, 0, 0])
         self.assertSequenceAlmostEqual(
             res,
             expected,
             places=2,
-            msg="Unexpected for zero scaling, no customized_max_freq",
+            msg="Unexpected when customized_max_freq is not specified",
         )
         ## Test customized_max_freq
         res = optimizer.predict(scaling_factor=0, customized_max_freq=1)
@@ -128,7 +125,7 @@ class UnivariateMixedPoissonOptimizerTest(absltest.TestCase):
             res,
             expected,
             places=2,
-            msg="Unexpected for zero scaling, smaller customized_max_freq",
+            msg="Unexpected for smaller customized_max_freq",
         )
         res = optimizer.predict(scaling_factor=0, customized_max_freq=6)
         expected = np.array([1, 0, 0, 0, 0, 0, 0])
@@ -136,22 +133,26 @@ class UnivariateMixedPoissonOptimizerTest(absltest.TestCase):
             res,
             expected,
             places=2,
-            msg="Unexpected for zero scaling, larger customized_max_freq",
+            msg="Unexpected for larger customized_max_freq",
         )
 
-        # Moderate scaling factor
-        res = optimizer.predict(scaling_factor=0.5)
-        expected = np.array([0.725, 0.212, 0.063])
-        self.assertSequenceAlmostEqual(
-            res, expected, places=2, msg="Unexpected for moderate scaling"
-        )
-
-        # Infinite scaling_factor
+    def test_predict_infinite_scaling_factor(self):
+        optimizer = self.cls(frequency_histogram=np.array([3, 2, 1]), ncomponents=2)
+        optimizer.fitted = True
+        optimizer.components = np.array([0, 1])
+        optimizer.ws = np.array([0.3, 0.7])
         res = optimizer.predict(scaling_factor=10000)
         expected = np.array([0.3, 0, 0.7])
-        self.assertSequenceAlmostEqual(
-            res, expected, places=2, msg="Unexpected for infinite scaling"
-        )
+        self.assertSequenceAlmostEqual(res, expected, places=2)
+
+    def test_predict_practical_scaling_factor(self):
+        optimizer = self.cls(frequency_histogram=np.array([3, 2, 1]), ncomponents=2)
+        optimizer.fitted = True
+        optimizer.components = np.array([0, 1])
+        optimizer.ws = np.array([0.3, 0.7])
+        res = optimizer.predict(scaling_factor=0.5)
+        expected = np.array([0.725, 0.212, 0.063])
+        self.assertSequenceAlmostEqual(res, expected, places=2)
 
 
 if __name__ == "__main__":

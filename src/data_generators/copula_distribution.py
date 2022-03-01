@@ -71,8 +71,8 @@ class IndependentCopulaDistribution(CopulaDistribution):
     def convolution(cls, pmfs: List) -> np.ndarray:
         """Convolute a list of pmfs sequentially.
 
-        Binary-tree convolution can reduce the complexity, but does not quite
-        necessary for <=50 publishers.
+        A possible future work is the binary-tree convolution, which can
+        reduce the complexity in case we have, say, > 50 pubs.
 
         Args:
             pmfs: A list of pmf vectors.

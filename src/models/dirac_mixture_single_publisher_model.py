@@ -60,8 +60,8 @@ class UnivariateMixedPoissonOptimizer:
         self.components = self.weighted_grid_sampling(ncomponents, self.observed_pmf)
         self.fitted = False
 
-    @classmethod
-    def validate_frequency_histogram(cls, frequency_histogram: np.ndarray):
+    @staticmethod
+    def validate_frequency_histogram(frequency_histogram: np.ndarray):
         """Check if a frequency histogram is valid.
 
         A valid frequency histogram has all elements being non-negative, sums up
@@ -76,8 +76,8 @@ class UnivariateMixedPoissonOptimizer:
         if sum(frequency_histogram) <= 0:
             raise ValueError("Histogram cannot be zeros.")
 
-    @classmethod
-    def weighted_grid_sampling(cls, ncomponents: int, pmf: np.ndarray) -> np.ndarray:
+    @staticmethod
+    def weighted_grid_sampling(ncomponents: int, pmf: np.ndarray) -> np.ndarray:
         """Sampling grid according to a pmf.
 
         For each frequency level, sample n_f points equally spaced in
@@ -110,10 +110,8 @@ class UnivariateMixedPoissonOptimizer:
             )
         return components
 
-    @classmethod
-    def truncated_poisson_pmf_vec(
-        cls, poisson_mean: float, max_freq: int
-    ) -> np.ndarray:
+    @staticmethod
+    def truncated_poisson_pmf_vec(poisson_mean: float, max_freq: int) -> np.ndarray:
         """pmf vector of a Poisson distribution truncated at a max frequency.
 
         Args:
@@ -130,8 +128,8 @@ class UnivariateMixedPoissonOptimizer:
         v[-1] = 1 - stats.poisson.cdf(max_freq - 1, poisson_mean)
         return v
 
-    @classmethod
-    def cross_entropy(cls, observed_arr: np.ndarray, fitted_arr: np.ndarray) -> float:
+    @staticmethod
+    def cross_entropy(observed_arr: np.ndarray, fitted_arr: np.ndarray) -> float:
         """The cross entropy distance between observed and fitted arrays.
 
         Minimizing cross entropy is equivalent to maximizing likelihood.
@@ -151,9 +149,9 @@ class UnivariateMixedPoissonOptimizer:
         fitted_arr = fitted_arr + 1e-200
         return -cp.sum(cp.multiply(observed_arr, cp.log(fitted_arr)))
 
-    @classmethod
+    @staticmethod
     def solve_optimal_weights(
-        cls, observed_arr: np.ndarray, component_arrs: List, distance: Callable
+        observed_arr: np.ndarray, component_arrs: List, distance: Callable
     ) -> np.ndarray:
         """Convex optimization of weights on different components.
 
@@ -175,16 +173,17 @@ class UnivariateMixedPoissonOptimizer:
             objective=cp.Minimize(distance(observed_arr, pred)),
             constraints=[ws >= 0, cp.sum(ws) == 1],
         )
-        # Sometime, cvxpy raises "SolverError: Solver 'ECOS' failed. Try another solver."
-        # According to https://github.com/davidhallac/NetworkLasso/issues/1,
-        # it is worth trying another solver named SCS.
-        # TODO (P2): For production needs, search convex optimization packages in
-        # Java and try to test the robustness of its solver(s).
+        # cvxpy is an interface of multiple convex optimization solver packages.
+        # Among them, the open source packages are ECOS
+        # (https://github.com/embotech/ecos/wiki), SCS
+        # (https://www.cvxgrp.org/scs/api/index.html) and OSQP, where ECOS and
+        # SCS are able to handle our problem. So, we try ECOS first and then SCS.
+        # Note: ECOS is available in C.  SCS available in C/C++.  But they are
+        # both unavailable in Java.
         try:
-            problem.solve()
+            problem.solve()  # The default solver is ECOS
         except cp.SolverError:
             problem.solve(solver=cp.SCS)
-        return ws.value
         return ws.value
 
     def fit(self):

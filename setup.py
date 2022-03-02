@@ -40,7 +40,7 @@ REQUIRED = [
     "scipy==1.6.2",
     "lxml==4.5.2",
     "cvxopt==1.2.6",
-    "cvxpy==1.1.12",
+    "cvxpy>=1.1.18",
     "dp-accounting==0.0.1",
     "pandas>=1.2.5",
     "typing-extensions==3.10.0.2",

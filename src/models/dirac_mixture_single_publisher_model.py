@@ -384,13 +384,13 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
         """Returns the estimated reach as a function of impressions.
 
         Args:
-          impressions: list of ints of length 1, specifying the hypothetical number
-            of impressions that are shown.
-          max_frequency: int, specifies the number of frequencies for which reach
-            will be reported.
+            impressions: list of ints of length 1, specifying the hypothetical number
+                of impressions that are shown.
+            max_frequency: int, specifies the number of frequencies for which reach
+                will be reported.
 
         Returns:
-          A ReachPoint specifying the estimated reach for this number of e.
+            A ReachPoint specifying the estimated reach for this number of e.
         """
         if len(impressions) != 1:
             raise ValueError("Impressions vector must have a length of 1.")
@@ -417,11 +417,12 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
         """Returns the estimated reach as a function of spend assuming constant CPM.
 
         Args:
-          spend: list of floats of length 1, specifying the hypothetical spend.
-          max_frequency: int, specifies the number of frequencies for which reach
-            will be reported.
+            spend: list of floats of length 1, specifying the hypothetical spend.
+            max_frequency: int, specifies the number of frequencies for which reach
+                will be reported.
+                
         Returns:
-          A ReachPoint specifying the estimated reach for this number of impressions.
+            A ReachPoint specifying the estimated reach for this number of impressions.
         """
         if len(spends) != 1:
             raise ValueError("Spend vector must have a length of 1.")

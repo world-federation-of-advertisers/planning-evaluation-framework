@@ -243,3 +243,194 @@ class UnivariateMixedPoissonOptimizer:
             for c in self.components
         ]
         return sum([w * pmf for w, pmf in zip(self.ws, scaled_component_pmfs)])
+
+
+class DiracMixtureSinglePublisherModel(ReachCurve):
+    def __init__(
+        self,
+        data: List[ReachPoint],
+        universe_reach_ratio: float = 3,
+        ncomponents: int = 200,
+    ):
+        """Constructs a Dirac mixture single publisher model.
+
+        Args:
+            data:  A list consisting of the single ReachPoint to which the model
+                is to be fit.
+            universe_reach_ratio:  We start with the universe size that is this
+                much times the 1+ reach for fitting the model.  By "start with"
+                it means the universe size may be modified if the specified
+                universe size does not give a good fit.  See the comments in the
+                _fit method for details.
+            ncomponents:  Number of components in the Poisson mixture.  Based on
+                our experience, 100 components are enough, and more components
+                are also fine (they will not introduce overfitting).
+        """
+        if len(data) != 1:
+            raise ValueError("Exactly one ReachPoint must be specified")
+        if data[0].impressions[0] < 0.001:
+            raise ValueError("Attempt to create model with 0 impressions")
+        if data[0].impressions[0] < data[0].reach(1):
+            raise ValueError(
+                "Cannot have a model with fewer impressions than reached people"
+            )
+        self._data = data
+        self._reach_point = data[0]
+        if data[0].spends:
+            self._cpi = data[0].spends[0] / data[0].impressions[0]
+        else:
+            self._cpi = None
+        self.N = data[0].reach(1) * universe_reach_ratio
+        self.ncomponents = ncomponents
+        self._fit_computed = False
+
+    @staticmethod
+    def debiased_clip(noised_histogram: np.ndarray) -> np.ndarray:
+        """Clip a histogram to be non-negative without introducing much bias.
+
+        The observed, noised histogram may have negative counts.  We can
+        round these negative values to zero, but it introduces positive
+        biases.  In particular, the 1+ reach is inflated.
+
+        This method mitigates such positive biases.  The algorithm is as
+        follows.  Iterating from the maximum frequency to one,
+        (1) whenever we round a negative count to zero, we record the bias
+        that is introduced
+        (2) when seeing a positive count in the next frequency levels, we try
+        to substract this positive count by the bias.
+        In this way, we can (almost) guarantee that no bias is introduced at
+        least in the 1+ reach.
+
+        Args:
+            noised_histogram:  A noised frequency histogram of which some
+                elements can be negative.
+
+        Returns:
+            A non-negative histogram of which the cumsums are as close to
+            those of the given histogram as possiblle.
+        """
+        cumulative_bias = 0
+        for i in range(len(noised_histogram) - 1, -1, -1):
+            if noised_histogram[i] < 0:
+                cumulative_bias += 0 - noised_histogram[i]
+                noised_histogram[i] = 0
+            elif cumulative_bias > 0:
+                pay_back = min(cumulative_bias, noised_histogram[i])
+                noised_histogram[i] -= pay_back
+                cumulative_bias -= pay_back
+        return noised_histogram
+
+    @staticmethod
+    def obtain_zero_included_histogram(
+        universe_size: int, rp: ReachPoint
+    ) -> np.ndarray:
+        """Obtain a zero-included frequency histogram from a ReachPoint.
+
+        Args:
+            universe_size:  Any specified universe size.
+            rp:  Any ReachPoint.
+
+        Returns:
+            A vector v where v[f] is the reach at frequency f, for 0 <= f <=
+            F - 1, and v[F] =  the reach with frequency >= F, where F is the
+            maximum frequency of the given ReachPoint.
+        """
+        reach = rp.reach(1)
+        if reach <= 0:
+            return np.array([1.0, 0.0])  # 100% non-reach, 0 reach
+        return np.array(
+            [universe_size - reach] + rp._frequencies + [rp._kplus_reaches[-1]]
+        )
+
+    def _fit(self):
+        """Fit the model."""
+        if self._fit_computed:
+            return
+        while True:
+            hist = self.obtain_zero_included_histogram(self.N, self._reach_point)
+            hist = self.debiased_clip(hist)
+            while self.ncomponents > 0:
+                self.optimizer = UnivariateMixedPoissonOptimizer(
+                    frequency_histogram=hist, ncomponents=self.ncomponents
+                )
+                try:
+                    self.optimizer.fit()
+                    break
+                except:
+                    # There is a tiny chance of exception when cvxpy mistakenly
+                    # thinks the problem is non-convex due to numerical errors.
+                    # If this occurs, it is likely that we have a large number
+                    # of components.  In this case, try reducing the number of
+                    # components.
+                    self.ncomponents = int(self.ncomponents / 2)
+                    continue
+            if self.optimizer.ws[0] > 0.1:
+                # The first weight is that of the zero component.
+                # We want the zero component to have significantly positive
+                # weight so there's always room for non-reach.
+                break
+            else:
+                # If the weight of the zero component is not significant, then
+                # the universe size is restricting the model and can introduce
+                # a poor fit.  It this case, we double the universe size and
+                # fit again.
+                self.N *= 2
+                continue
+        self._fit_computed = True
+
+    def by_impressions(
+        self, impressions: List[int], max_frequency: int = 1
+    ) -> ReachPoint:
+        """Returns the estimated reach as a function of impressions.
+
+        Args:
+          impressions: list of ints of length 1, specifying the hypothetical number
+            of impressions that are shown.
+          max_frequency: int, specifies the number of frequencies for which reach
+            will be reported.
+
+        Returns:
+          A ReachPoint specifying the estimated reach for this number of e.
+        """
+        if len(impressions) != 1:
+            raise ValueError("Impressions vector must have a length of 1.")
+
+        self._fit()
+        predicted_relative_freq_hist = self.optimizer.predict(
+            scaling_factor=impressions[0] / self._reach_point.impressions[0],
+            customized_max_freq=max_frequency,
+        )
+        # a relative histogram including zero, capped at the maximum frequency of trainineg point
+        relative_kplus_reaches_from_zero = np.cumsum(
+            predicted_relative_freq_hist[::-1]
+        )[::-1]
+        kplus_reaches = (
+            (self.N * relative_kplus_reaches_from_zero[1:]).round(0).astype("int32")
+        )
+
+        if self._cpi:
+            return ReachPoint(impressions, kplus_reaches, [impressions[0] * self._cpi])
+        else:
+            return ReachPoint(impressions, kplus_reaches)
+
+    def by_spend(self, spends: List[int], max_frequency: int = 1) -> ReachPoint:
+        """Returns the estimated reach as a function of spend assuming constant CPM.
+
+        Args:
+          spend: list of floats of length 1, specifying the hypothetical spend.
+          max_frequency: int, specifies the number of frequencies for which reach
+            will be reported.
+        Returns:
+          A ReachPoint specifying the estimated reach for this number of impressions.
+        """
+        if len(spends) != 1:
+            raise ValueError("Spend vector must have a length of 1.")
+        return self.by_impressions(
+            [self.impressions_for_spend(spends[0])], max_frequency
+        )
+
+    def impressions_for_spend(self, spend: float) -> int:
+        """Returns the number of impressions under a spend."""
+        if not self._cpi:
+            raise ValueError("Impression cost is not known for this ReachPoint.")
+        return spend / self._cpi

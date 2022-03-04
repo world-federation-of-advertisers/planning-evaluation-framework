@@ -33,11 +33,25 @@ class UnivariateMixedPoissonOptimizerTest(absltest.TestCase):
         with self.assertRaises(ValueError):
             self.cls.validate_frequency_histogram(np.array([0, 0, 0]))
 
-    def test_weighted_grid_sampling(self):
-        pmf = np.array([0.2, 0.3, 0.5])
-        ncomponents = 8
-        res = self.cls.weighted_grid_sampling(ncomponents, pmf)
-        expected = np.array([0, 1, 1.5, 2, 2.25, 2.5, 2.75, 3])
+    def test_in_bound_purely_weighted_grid(self):
+        pmf = np.array([0.3, 0, 0.4, 0.2, 0.1])
+        ncomponents = 10
+        res = self.cls.in_bound_purely_weighted_grid(ncomponents, pmf)
+        expected = np.array([0, 0.333, 0.667, 2, 2.25, 2.5, 2.75, 3, 3.5, 4])
+        self.assertSequenceAlmostEqual(res, expected, places=2)
+
+    def test_in_bound_uniform_grid(self):
+        pmf = np.array([0.3, 0, 0.4, 0.2, 0.1])
+        ncomponents = 10
+        res = self.cls.in_bound_uniform_grid(ncomponents, pmf)
+        expected = np.array([0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5])
+        self.assertSequenceAlmostEqual(res, expected, places=2)
+
+    def test_in_bound_grid(self):
+        pmf = np.array([0.3, 0, 0.4, 0.2, 0.1])
+        ncomponents = 10
+        res = self.cls.in_bound_grid(ncomponents, pmf, 0.5)
+        expected = np.array([0, 0.5, 1, 2, 2.333, 2.667, 3, 3.5, 4, 4.5])
         self.assertSequenceAlmostEqual(res, expected, places=2)
 
     def test_truncated_poisson_pmf_vec(self):
@@ -56,6 +70,24 @@ class UnivariateMixedPoissonOptimizerTest(absltest.TestCase):
         fitted = np.array([[1, 3, 2, 0]])
         res = self.cls.cross_entropy(observed, fitted).value
         expected = -(2 * np.log(1) + 3 * np.log(3) + 1 * np.log(2) + 0)
+        self.assertAlmostEqual(res, expected, places=2, msg="Unexpected for 1d array")
+
+    def test_relative_entropy(self):
+        observed = np.array([[2, 3], [1, 4]])
+        fitted = np.array([[1, 3], [2, 4]])
+        res = self.cls.relative_entropy(observed, fitted).value
+        expected = (
+            2 * np.log(2 / 1)
+            + 3 * np.log(3 / 3)
+            + 1 * np.log(1 / 2)
+            + 4 * np.log(4 / 4)
+        )
+        self.assertAlmostEqual(res, expected, places=2, msg="Unexpected for 2d array")
+        # Further test the case with zero
+        observed = np.array([[2, 3, 1, 0]])
+        fitted = np.array([[1, 3, 2, 0]])
+        res = self.cls.relative_entropy(observed, fitted).value
+        expected = 2 * np.log(2 / 1) + 3 * np.log(3 / 3) + 1 * np.log(1 / 2)
         self.assertAlmostEqual(res, expected, places=2, msg="Unexpected for 1d array")
 
     def test_solve_optimal_weights(self):
@@ -89,8 +121,8 @@ class UnivariateMixedPoissonOptimizerTest(absltest.TestCase):
     def test_fit_non_zero_reach(self):
         optimizer = self.cls(frequency_histogram=np.array([3, 2, 2, 1]), ncomponents=4)
         optimizer.fit()
-        expected_ws = np.array([0.133, 0.535, 0.332, 0])
-        expected_components = np.array([0, 1, 2, 4])
+        expected_ws = np.array([0.133, 0, 0.535, 0.332])
+        expected_components = np.array([0, 0.5, 1, 2])
         self.assertSequenceAlmostEqual(
             optimizer.ws,
             expected_ws,

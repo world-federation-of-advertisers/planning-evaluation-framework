@@ -253,7 +253,7 @@ class UnivariateMixedPoissonOptimizer:
         # Note: ECOS is available in C.  SCS available in C/C++.  But they are
         # both unavailable in Java.
         try:
-            problem.solve()  # The default solver is ECOS
+            problem.solve(solver=cp.ECOS)
         except cp.SolverError:
             problem.solve(solver=cp.SCS)
         return ws.value

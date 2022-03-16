@@ -57,7 +57,9 @@ class UnivariateMixedPoissonOptimizer:
         self.observed_pmf = frequency_histogram / sum(frequency_histogram)
         # Work with standardized histogram, i.e., pmf to avoid potential overflow.
         self.max_freq = len(frequency_histogram) - 1
-        self.components = self.weighted_grid_sampling(ncomponents, self.observed_pmf)
+        self.components = self.in_bound_purely_weighted_grid(
+            ncomponents, self.observed_pmf
+        )
         self.fitted = False
 
     @staticmethod
@@ -77,38 +79,87 @@ class UnivariateMixedPoissonOptimizer:
             raise ValueError("Histogram cannot be zeros.")
 
     @staticmethod
-    def weighted_grid_sampling(ncomponents: int, pmf: np.ndarray) -> np.ndarray:
-        """Sampling grid according to a pmf.
+    def in_bound_grid(
+        ncomponents: int, pmf: np.ndarray, dilusion: float = 0
+    ) -> np.ndarray:
+        """Samples components from [0, max_freq] weighted by the observed pmf to an extent.
 
-        For each frequency level, sample n_f points equally spaced in
-        [f, f + 1], where n_f (before rounding) is proportional to pmf[f].
+        Main idea: A Poisson distribution has high pmf around its mean parameter.
+        So, if we observe a high pmf at a frequency level, we tend to draw more
+        Poisson components around it.
+
+        For example, if we observe a pmf of [0.5, 0.3, 0, 0.2] and want to draw
+        10 components, we may draw 5 components in [0, 1), 3 components in [1, 2),
+        0 components in [2, 3), and 2 components in [3, 4).  The components are
+        equally spaced within each interval of length 1.  We call it "purely
+        weighted" method of choosing components.  See the
+        `in_bound_purely_weighted_grid` method below.
+
+        The purely weighted method efficiently captures the areas that are most
+        likely to have components, but ignores the areas where the components
+        are unfortunately unobserved due to randomness/noise.  In the above toy
+        example, we do not sampling components between [2, 3), while there may
+        actually be one.  As such, our sampling weights can be chosen between
+        the observed pmf and the uniform pmf, in other words, we "dilute" the
+        sampling weights to cover unobserved areas.  See the explanation of the
+        `dilusion` argument below.
+
+        Note that this method is "in-bound": we do not draw any components beyond
+        max_freq.  So, it does not have a great fit in outlier cases where the
+        true average frequency is close to or even higher than the observable
+        max_freq.  We are thinking about methods to cover the beyond-bound
+        components and will submit another PR.
 
         Args:
             ncomponents: Number of components to sample.
             pmf: A vector of probabilities that sum up to be 1.
+            dilusion:  The sampling weights are chosen as (1 - dilusion) *
+                observed_pmf + dilusion * uniform_pmf.  No significant impact of
+                this parameter has been seen in initial simulations, but it is
+                worth further investigation.
 
         Returns:
             All components in the model.
         """
+        if dilusion > 0:
+            water = np.array([dilusion / len(pmf)] * len(pmf))
+            pmf = pmf * (1 - dilusion) + water
         n_left = ncomponents
         components = np.array([])
-        for f in range(len(pmf)):
-            n = int(ncomponents * pmf[f])
+        f = 0
+        while n_left > 0 and f < len(pmf):
+            n = int(round(ncomponents * pmf[f]))
             components = np.concatenate(
                 (components, np.linspace(f, f + 1, n, endpoint=False))
             )
             n_left -= n
+            f += 1
         if n_left > 0:
-            # Due to rounding, there can remain a certain number of components.
-            # Sample these remaining components in the next interval,
-            # that is, [F + 1, F + 2], where F is the maximum frequency.
             components = np.concatenate(
                 (
                     components,
-                    np.linspace(len(pmf), len(pmf) + 1, n_left, endpoint=False),
+                    np.linspace(f, f + 1, n_left, endpoint=False),
                 )
             )
         return components
+
+    @classmethod
+    def in_bound_purely_weighted_grid(
+        cls, ncomponents: int, pmf: np.ndarray
+    ) -> np.ndarray:
+        """Samples components from [0, max_freq] purely weighted by the observed pmf.
+
+        See the docstrings of the `in_bound_grid` method for more details.
+        """
+        return cls.in_bound_grid(ncomponents, pmf, dilusion=0)
+
+    @classmethod
+    def in_bound_uniform_grid(cls, ncomponents: int, pmf: np.ndarray) -> np.ndarray:
+        """Samples components uniformly from [0, max_freq].
+
+        See the docstrings of the `in_bound_grid` method for more details.
+        """
+        return cls.in_bound_grid(ncomponents, pmf, dilusion=1)
 
     @staticmethod
     def truncated_poisson_pmf_vec(poisson_mean: float, max_freq: int) -> np.ndarray:
@@ -125,14 +176,14 @@ class UnivariateMixedPoissonOptimizer:
             = 1 - Poisson_cdf(max_freq - 1).
         """
         v = stats.poisson.pmf(range(max_freq + 1), poisson_mean)
-        v[-1] = 1 - stats.poisson.cdf(max_freq - 1, poisson_mean)
+        v[-1] = stats.poisson.sf(max_freq - 1, poisson_mean)
         return v
 
     @staticmethod
     def cross_entropy(observed_arr: np.ndarray, fitted_arr: np.ndarray) -> float:
-        """The cross entropy distance between observed and fitted arrays.
+        """The cross entropy distance of fitted_arr relative to observed_arr.
 
-        Minimizing cross entropy is equivalent to maximizing likelihood.
+        Minimizing cross entropy is equivalent to maximizing the likelihood.
 
         Args:
             observed_arr: A 1d array of the observed pmf. Or 2d array of the
@@ -144,10 +195,31 @@ class UnivariateMixedPoissonOptimizer:
              pmf(s), that is,
             - sum_i observed_arr[i] * log(fitted_arr[i]) for 1d arrays,
             - sum_{i, j} observed_arr[i, j] * log(fitted_arr[i, j]) for 2d arrays.
+            If the input fitted_arr is a cvxpy expression, then the return is
+            also a cvxpy expression -- use .value to extract its value.
         """
         # Small shift to avoid log-zero numerical error.
         fitted_arr = fitted_arr + 1e-200
         return -cp.sum(cp.multiply(observed_arr, cp.log(fitted_arr)))
+
+    @staticmethod
+    def relative_entropy(observed_arr: np.ndarray, fitted_arr: np.ndarray) -> float:
+        """The relative entropy distance from fitted_arr relative to observed_arr.
+
+        Args:
+            observed_arr: A 1d array of the observed pmf. Or 2d array of the
+                observed pmfs on different directions.
+            fitted_arr: Any other array of pmf(s) that has the same dimension
+                as observed_arr.
+        Returns:
+            - sum_i observed_arr[i] * log(fitted_arr[i] / observed_arr[i])
+                for 1d arrays,
+            - sum_{i, j} observed_arr[i, j] * log(fitted_arr[i, j] / observed_arr[i, j])
+                for 2d arrays.
+            If the input fitted_arr is a cvxpy expression, then the return is
+            also a cvxpy expression -- use .value to extract its value.
+        """
+        return cp.sum(cp.rel_entr(observed_arr, fitted_arr))
 
     @staticmethod
     def solve_optimal_weights(
@@ -181,7 +253,7 @@ class UnivariateMixedPoissonOptimizer:
         # Note: ECOS is available in C.  SCS available in C/C++.  But they are
         # both unavailable in Java.
         try:
-            problem.solve()  # The default solver is ECOS
+            problem.solve(solver=cp.ECOS)
         except cp.SolverError:
             problem.solve(solver=cp.SCS)
         return ws.value

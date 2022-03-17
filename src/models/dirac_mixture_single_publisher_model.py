@@ -321,7 +321,6 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
     def __init__(
         self,
         data: List[ReachPoint],
-        universe_reach_ratio: float = 3,
         ncomponents: int = 200,
     ):
         """Constructs a Dirac mixture single publisher model.
@@ -329,11 +328,6 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
         Args:
             data:  A list consisting of the single ReachPoint to which the model
                 is to be fit.
-            universe_reach_ratio:  We start with the universe size that is this
-                much times the 1+ reach for fitting the model.  By "start with"
-                it means the universe size may be modified if the specified
-                universe size does not give a good fit.  See the comments in the
-                _fit method for details.
             ncomponents:  Number of components in the Poisson mixture.  Based on
                 our experience, 100 components are enough, and more components
                 are also fine (they will not introduce overfitting).
@@ -352,7 +346,9 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
             self._cpi = data[0].spends[0] / data[0].impressions[0]
         else:
             self._cpi = None
-        self.N = data[0].reach(1) * universe_reach_ratio
+        if self._reach_point.universe_size is None:
+            raise ValueError('Dirac mixture model only works when the universe size is given')
+        self.N = self._reach_point.universe_size
         self.ncomponents = ncomponents
         self._fit_computed = False
 
@@ -392,26 +388,15 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
                 cumulative_bias -= pay_back
         return noised_histogram
 
-    @staticmethod
-    def obtain_zero_included_histogram(
-        universe_size: int, rp: ReachPoint
-    ) -> np.ndarray:
+    def obtain_zero_included_histogram(self):
         """Obtain a zero-included frequency histogram from a ReachPoint.
 
-        Args:
-            universe_size:  Any specified universe size.
-            rp:  Any ReachPoint.
-
-        Returns:
-            A vector v where v[f] is the reach at frequency f, for 0 <= f <=
-            F - 1, and v[F] =  the reach with frequency >= F, where F is the
-            maximum frequency of the given ReachPoint.
+        Translate self._reach_point to a vector v where v[f] is the reach at
+        frequency f, for 0 <= f <= F - 1, and v[F] =  the reach with frequency
+        >= F, where F is the maximum frequency of the given ReachPoint.
         """
-        reach = rp.reach(1)
-        if reach <= 0:
-            return np.array([1.0, 0.0])  # 100% non-reach, 0 reach
-        return np.array(
-            [universe_size - reach] + rp._frequencies + [rp._kplus_reaches[-1]]
+        self.hist = np.array(
+            [self.N - self._reach_point.reach(1)] + self._reach_point._frequencies + [self._reach_point._kplus_reaches[-1]]
         )
 
     def _fit(self):

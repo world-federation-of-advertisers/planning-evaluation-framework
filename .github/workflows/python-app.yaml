@@ -15,7 +15,8 @@ jobs:
     runs-on: macOS-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - name: Check out revision
+      uses: actions/checkout@v2
 
     - name: Set up Python 3.8
       uses: actions/setup-python@v2

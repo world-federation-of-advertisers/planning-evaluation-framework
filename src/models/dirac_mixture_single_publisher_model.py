@@ -13,6 +13,7 @@
 # limitations under the License.
 """Dirac mixture single publisher model."""
 
+from absl import logging
 import numpy as np
 import cvxpy as cp
 from scipy import stats
@@ -414,12 +415,13 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
             try:
                 self.optimizer.fit()
                 break
-            except:
+            except Exception as inst:
                 # There is a tiny chance of exception when cvxpy mistakenly
                 # thinks the problem is non-convex due to numerical errors.
                 # If this occurs, it is likely that we have a large number
                 # of components.  In this case, try reducing the number of
                 # components.
+                logging.vlog(1, f"Optimizer failure: {inst}")
                 self.ncomponents = int(self.ncomponents / 2)
                 continue
         self._fit_computed = True

@@ -172,7 +172,7 @@ class DataSet:
             for id, freq in self._data[i].user_counts_by_impressions(imp).items():
                 counts[id] += freq
         kplus_reaches = self._counts_to_histogram(counts, max_frequency)
-        return ReachPoint(impressions, kplus_reaches, spends)
+        return ReachPoint(impressions, kplus_reaches, spends, self.universe_size)
 
     def _counts_to_histogram(
         self, counts: Dict[int, int], max_frequency: int
@@ -218,7 +218,7 @@ class DataSet:
             for id, freq in user_counts.items():
                 counts[id] += freq
         kplus_reaches = self._counts_to_histogram(counts, max_frequency)
-        return ReachPoint(impressions, kplus_reaches, spends)
+        return ReachPoint(impressions, kplus_reaches, spends, self.universe_size)
 
     def write_data_set(
         self,

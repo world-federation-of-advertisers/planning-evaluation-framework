@@ -115,6 +115,7 @@ class HaloSimulatorTest(parameterized.TestCase):
         self.assertEqual(reach_point.reach(1), 2)
         self.assertEqual(reach_point.reach(2), 2)
         self.assertEqual(reach_point.reach(3), 0)
+        self.assertEqual(reach_point.universe_size, 8)
 
     def test_simulated_reach_by_spend_no_privacy(self):
         reach_point = self.halo.simulated_reach_by_spend(
@@ -123,6 +124,7 @@ class HaloSimulatorTest(parameterized.TestCase):
         self.assertEqual(reach_point.reach(1), 2)
         self.assertEqual(reach_point.reach(2), 1)
         self.assertEqual(reach_point.reach(3), 0)
+        self.assertEqual(reach_point.universe_size, 8)
 
     @patch(
         "wfa_planning_evaluation_framework.simulator.halo_simulator.LaplaceMechanism"
@@ -137,7 +139,9 @@ class HaloSimulatorTest(parameterized.TestCase):
     @patch(
         "wfa_planning_evaluation_framework.simulator.halo_simulator.StandardizedHistogramEstimator.estimate_cardinality"
     )
-    def test_simulated_reach_by_spend_reach_is_too_high(self, mock_estimate_cardinality):
+    def test_simulated_reach_by_spend_reach_is_too_high(
+        self, mock_estimate_cardinality
+    ):
         mock_estimate_cardinality.return_value = [20, 1, -1, 0, -1]
         reach_point = self.halo.simulated_reach_by_spend(
             [0.06, 0.06], PrivacyBudget(1.0, 0.0), 0.5, 3
@@ -225,7 +229,7 @@ class HaloSimulatorTest(parameterized.TestCase):
             "budget": PrivacyBudget(0.2, 0.4),
             "privacy_budget_split": 0.5,
             "fixed_noise": -10.0,
-            "expected_reach_points": [ReachPoint([0, 0, 3], [0], [0, 0, 0.05])],
+            "expected_reach_points": [ReachPoint([0, 0, 3], [0], [0, 0, 0.05], 8)],
         },
         {
             # true cardinality = 3, sample_size = 1, std = 1, fixed_noise = 1
@@ -239,7 +243,7 @@ class HaloSimulatorTest(parameterized.TestCase):
             "budget": PrivacyBudget(0.2, 0.4),
             "privacy_budget_split": 0.5,
             "fixed_noise": 1.0,
-            "expected_reach_points": [ReachPoint([0, 0, 3], [5], [0, 0, 0.05])],
+            "expected_reach_points": [ReachPoint([0, 0, 3], [5], [0, 0, 0.05], 8)],
         },
         {
             # true cardinality = 3, sample_size = 1, std = 1, fixed_noise = 2
@@ -254,9 +258,9 @@ class HaloSimulatorTest(parameterized.TestCase):
             "privacy_budget_split": 0.3,
             "fixed_noise": 2.0,
             "expected_reach_points": [
-                ReachPoint([0, 1, 0], [24 / 7], [0, 0.04, 0]),
-                ReachPoint([0, 0, 3], [30 / 7], [0, 0, 0.05]),
-                ReachPoint([0, 1, 3], [42 / 7], [0, 0.04, 0.05]),
+                ReachPoint([0, 1, 0], [24 / 7], [0, 0.04, 0], 8),
+                ReachPoint([0, 0, 3], [30 / 7], [0, 0, 0.05], 8),
+                ReachPoint([0, 1, 3], [42 / 7], [0, 0.04, 0.05], 8),
             ],
         },
         {
@@ -272,9 +276,9 @@ class HaloSimulatorTest(parameterized.TestCase):
             "privacy_budget_split": 0.3,
             "fixed_noise": 2.0,
             "expected_reach_points": [
-                ReachPoint([0, 0, 0], [24 / 7], [0, 0.02, 0]),
-                ReachPoint([0, 0, 3], [30 / 7], [0, 0, 0.05]),
-                ReachPoint([0, 0, 3], [42 / 7], [0, 0.02, 0.05]),
+                ReachPoint([0, 0, 0], [24 / 7], [0, 0.02, 0], 8),
+                ReachPoint([0, 0, 3], [30 / 7], [0, 0, 0.05], 8),
+                ReachPoint([0, 0, 3], [42 / 7], [0, 0.02, 0.05], 8),
             ],
         },
     )
@@ -332,6 +336,11 @@ class HaloSimulatorTest(parameterized.TestCase):
                 r_pt.spends,
                 expected_r_pt.spends,
                 msg=f"The spends of No.{i + 1} reach point is not correct",
+            )
+            self.assertEqual(
+                r_pt.universe_size,
+                expected_r_pt.universe_size,
+                msg=f"The universe size of No.{i + 1} reach point is not correct",
             )
 
         # Examine privacy tracker
@@ -584,10 +593,12 @@ class HaloSimulatorTest(parameterized.TestCase):
 
         self.assertEqual(noised_regions, expected_regions)
         self.assertEqual(
-            halo.privacy_tracker.privacy_consumption.epsilon, budget.epsilon * privacy_budget_split
+            halo.privacy_tracker.privacy_consumption.epsilon,
+            budget.epsilon * privacy_budget_split,
         )
         self.assertEqual(
-            halo.privacy_tracker.privacy_consumption.delta, budget.delta * privacy_budget_split
+            halo.privacy_tracker.privacy_consumption.delta,
+            budget.delta * privacy_budget_split,
         )
         self.assertEqual(len(halo.privacy_tracker._noising_events), 1)
         self.assertEqual(
@@ -665,10 +676,12 @@ class HaloSimulatorTest(parameterized.TestCase):
         self.assertEqual(scaled_regions, expected)
 
         self.assertEqual(
-            halo.privacy_tracker.privacy_consumption.epsilon, budget.epsilon * privacy_budget_split
+            halo.privacy_tracker.privacy_consumption.epsilon,
+            budget.epsilon * privacy_budget_split,
         )
         self.assertEqual(
-            halo.privacy_tracker.privacy_consumption.delta, budget.delta * privacy_budget_split
+            halo.privacy_tracker.privacy_consumption.delta,
+            budget.delta * privacy_budget_split,
         )
         self.assertEqual(len(halo.privacy_tracker._noising_events), 1)
         self.assertEqual(
@@ -713,9 +726,9 @@ class HaloSimulatorTest(parameterized.TestCase):
             "spends": [0.005, 0.01],
             "regions": {},
             "expected": [
-                ReachPoint([0, 0], [0], [0.005, 0]),
-                ReachPoint([0, 0], [0], [0, 0.01]),
-                ReachPoint([0, 0], [0], [0.005, 0.01]),
+                ReachPoint([0, 0], [0], [0.005, 0], 8),
+                ReachPoint([0, 0], [0], [0, 0.01], 8),
+                ReachPoint([0, 0], [0], [0.005, 0.01], 8),
             ],
         },
         {
@@ -731,9 +744,9 @@ class HaloSimulatorTest(parameterized.TestCase):
             "spends": [0.04, 0.02],
             "regions": {1: 2},
             "expected": [
-                ReachPoint([3, 0], [2], [0.04, 0]),
-                ReachPoint([0, 0], [0], [0, 0.02]),
-                ReachPoint([3, 0], [2], [0.04, 0.02]),
+                ReachPoint([3, 0], [2], [0.04, 0], 8),
+                ReachPoint([0, 0], [0], [0, 0.02], 8),
+                ReachPoint([3, 0], [2], [0.04, 0.02], 8),
             ],
         },
         {
@@ -742,9 +755,9 @@ class HaloSimulatorTest(parameterized.TestCase):
             "spends": [0.04, 0.04],
             "regions": {1: 1, 2: 0, 3: 1},
             "expected": [
-                ReachPoint([3, 0], [2], [0.04, 0]),
-                ReachPoint([0, 1], [1], [0, 0.04]),
-                ReachPoint([3, 1], [2], [0.04, 0.04]),
+                ReachPoint([3, 0], [2], [0.04, 0], 8),
+                ReachPoint([0, 1], [1], [0, 0.04], 8),
+                ReachPoint([3, 1], [2], [0.04, 0.04], 8),
             ],
         },
     )
@@ -786,6 +799,11 @@ class HaloSimulatorTest(parameterized.TestCase):
                 r_pt.spends,
                 expected_r_pt.spends,
                 msg=f"The spends of No.{i + 1} reach point is not correct",
+            )
+            self.assertEqual(
+                r_pt.universe_size,
+                expected_r_pt.universe_size,
+                msg=f"The universe size of No.{i + 1} reach point is not correct",
             )
 
     def test_privacy_tracker(self):

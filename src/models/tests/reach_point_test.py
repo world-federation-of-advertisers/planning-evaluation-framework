@@ -24,6 +24,12 @@ class ReachPointTest(absltest.TestCase):
         self.assertEqual(point.impressions[0], 200)
         self.assertEqual(point.impressions[1], 300)
 
+    def test_universe_size(self):
+        point = ReachPoint(
+            impressions=[200, 300], kplus_reaches=[150, 100], universe_size=400
+        )
+        self.assertEqual(point.universe_size, 400)
+
     def test_reach(self):
         point = ReachPoint([200, 300], [100, 50])
         self.assertEqual(point.reach(1), 100)

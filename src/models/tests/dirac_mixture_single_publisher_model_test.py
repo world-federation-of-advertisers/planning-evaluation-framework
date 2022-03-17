@@ -200,23 +200,25 @@ class DiracMixtureSinglePublisherModelTest(parameterized.TestCase):
         self.assertSequenceAlmostEqual(res, expected, places=2)
 
     def test_obtain_zero_included_histogram(self):
-        rp = ReachPoint(impressions=[10], kplus_reaches=[5, 3, 2])
-        res = self.cls.obtain_zero_included_histogram(universe_size=8, rp=rp)
-        expected = np.array([3, 2, 1, 2])
+        rp = ReachPoint(impressions=[10], kplus_reaches=[5, 3, 2], universe_size=10)
+        res = self.cls([rp]).hist
+        expected = np.array([5, 2, 1, 2])
         self.assertSequenceAlmostEqual(res, expected)
 
     def test_fit_with_zero_reach(self):
-        rp = ReachPoint(impressions=[10], kplus_reaches=[0])
+        rp = ReachPoint(impressions=[10], kplus_reaches=[0], universe_size=10)
         model = self.cls(data=[rp], ncomponents=2)
         model._fit()
         expected = np.array([1, 0])
         self.assertSequenceAlmostEqual(model.optimizer.ws, expected, places=2)
 
     def test_fit_with_non_zero_reach(self):
-        rp = ReachPoint(impressions=[10], kplus_reaches=[3], spends=[1.0])
+        rp = ReachPoint(
+            impressions=[10], kplus_reaches=[3], spends=[1.0], universe_size=10
+        )
         model = self.cls(data=[rp], ncomponents=2)
         model._fit()
-        expected = np.array([0.614, 0.386])
+        expected = np.array([0.525, 0.475])
         self.assertSequenceAlmostEqual(model.optimizer.ws, expected, places=2)
 
     @parameterized.named_parameters(
@@ -225,7 +227,7 @@ class DiracMixtureSinglePublisherModelTest(parameterized.TestCase):
         {"testcase_name": "double_impressions", "impressions": 20, "expected": 4},
     )
     def test_by_impressions(self, impressions: int, expected: int):
-        rp = ReachPoint(impressions=[10], kplus_reaches=[3])
+        rp = ReachPoint(impressions=[10], kplus_reaches=[3], universe_size=10)
         model = self.cls(data=[rp], ncomponents=5)
         res = model.by_impressions(impressions=[impressions])
         self.assertEqual(
@@ -234,10 +236,10 @@ class DiracMixtureSinglePublisherModelTest(parameterized.TestCase):
         )
 
     def test_by_impressions_with_infinite_impressions(self):
-        rp = ReachPoint(impressions=[10], kplus_reaches=[3])
+        rp = ReachPoint(impressions=[10], kplus_reaches=[3], universe_size=10)
         model = self.cls(data=[rp], ncomponents=5)
         res = model.by_impressions(impressions=[10000])
-        expected = round(model.N * (1 - model.optimizer.ws[0]), 0)
+        expected = round(rp.universe_size * (1 - model.optimizer.ws[0]), 0)
         self.assertEqual(
             res._kplus_reaches[0],
             expected,
@@ -249,7 +251,9 @@ class DiracMixtureSinglePublisherModelTest(parameterized.TestCase):
         {"testcase_name": "double_spend", "spend": 2.0, "expected": 4},
     )
     def test_by_spend(self, spend: float, expected: int):
-        rp = ReachPoint(impressions=[10], kplus_reaches=[3], spends=[1.0])
+        rp = ReachPoint(
+            impressions=[10], kplus_reaches=[3], spends=[1.0], universe_size=10
+        )
         model = self.cls(data=[rp], ncomponents=5)
         res = model.by_spend(spends=[spend])
         self.assertEqual(
@@ -258,10 +262,12 @@ class DiracMixtureSinglePublisherModelTest(parameterized.TestCase):
         )
 
     def test_by_spend_with_infinite_spend(self):
-        rp = ReachPoint(impressions=[10], kplus_reaches=[3], spends=[1.0])
+        rp = ReachPoint(
+            impressions=[10], kplus_reaches=[3], spends=[1.0], universe_size=10
+        )
         model = self.cls(data=[rp], ncomponents=5)
         res = model.by_spend(spends=[10000.0])
-        expected = round(model.N * (1 - model.optimizer.ws[0]), 0)
+        expected = round(rp.universe_size * (1 - model.optimizer.ws[0]), 0)
         self.assertEqual(
             res._kplus_reaches[0],
             expected,

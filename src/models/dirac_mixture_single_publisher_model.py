@@ -347,8 +347,10 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
         else:
             self._cpi = None
         if self._reach_point.universe_size is None:
-            raise ValueError('Dirac mixture model only works when the universe size is given')
-        self.N = self._reach_point.universe_size
+            raise ValueError(
+                "Dirac mixture model only works when the universe size is given"
+            )
+        self.hist = self.obtain_zero_included_histogram()
         self.ncomponents = ncomponents
         self._fit_computed = False
 
@@ -392,46 +394,33 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
         """Obtain a zero-included frequency histogram from a ReachPoint.
 
         Translate self._reach_point to a vector v where v[f] is the reach at
-        frequency f, for 0 <= f <= F - 1, and v[F] =  the reach with frequency
+        frequency f, for 0 <= f <= F - 1, and v[F] = the reach with frequency
         >= F, where F is the maximum frequency of the given ReachPoint.
         """
-        self.hist = np.array(
-            [self.N - self._reach_point.reach(1)] + self._reach_point._frequencies + [self._reach_point._kplus_reaches[-1]]
+        return np.array(
+            [self._reach_point.universe_size - self._reach_point.reach(1)]
+            + self._reach_point._frequencies
+            + [self._reach_point._kplus_reaches[-1]]
         )
 
     def _fit(self):
         """Fit the model."""
         if self._fit_computed:
             return
-        while True:
-            hist = self.obtain_zero_included_histogram(self.N, self._reach_point)
-            hist = self.debiased_clip(hist)
-            while self.ncomponents > 0:
-                self.optimizer = UnivariateMixedPoissonOptimizer(
-                    frequency_histogram=hist, ncomponents=self.ncomponents
-                )
-                try:
-                    self.optimizer.fit()
-                    break
-                except:
-                    # There is a tiny chance of exception when cvxpy mistakenly
-                    # thinks the problem is non-convex due to numerical errors.
-                    # If this occurs, it is likely that we have a large number
-                    # of components.  In this case, try reducing the number of
-                    # components.
-                    self.ncomponents = int(self.ncomponents / 2)
-                    continue
-            if self.optimizer.ws[0] > 0.1:
-                # The first weight is that of the zero component.
-                # We want the zero component to have significantly positive
-                # weight so there's always room for non-reach.
+        while self.ncomponents > 0:
+            self.optimizer = UnivariateMixedPoissonOptimizer(
+                frequency_histogram=self.hist, ncomponents=self.ncomponents
+            )
+            try:
+                self.optimizer.fit()
                 break
-            else:
-                # If the weight of the zero component is not significant, then
-                # the universe size is restricting the model and can introduce
-                # a poor fit.  It this case, we double the universe size and
-                # fit again.
-                self.N *= 2
+            except:
+                # There is a tiny chance of exception when cvxpy mistakenly
+                # thinks the problem is non-convex due to numerical errors.
+                # If this occurs, it is likely that we have a large number
+                # of components.  In this case, try reducing the number of
+                # components.
+                self.ncomponents = int(self.ncomponents / 2)
                 continue
         self._fit_computed = True
 
@@ -447,7 +436,7 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
                 will be reported.
 
         Returns:
-            A ReachPoint specifying the estimated reach for this number of e.
+            A ReachPoint specifying the estimated reach for this number of impressions.
         """
         if len(impressions) != 1:
             raise ValueError("Impressions vector must have a length of 1.")
@@ -457,12 +446,15 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
             scaling_factor=impressions[0] / self._reach_point.impressions[0],
             customized_max_freq=max_frequency,
         )
-        # a relative histogram including zero, capped at the maximum frequency of trainineg point
+        # a relative histogram including zero, capped at the maximum frequency of
+        # the training point
         relative_kplus_reaches_from_zero = np.cumsum(
             predicted_relative_freq_hist[::-1]
         )[::-1]
         kplus_reaches = (
-            (self.N * relative_kplus_reaches_from_zero[1:]).round(0).astype("int32")
+            (self._reach_point.universe_size * relative_kplus_reaches_from_zero[1:])
+            .round(0)
+            .astype("int32")
         )
 
         if self._cpi:
@@ -477,7 +469,7 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
             spend: list of floats of length 1, specifying the hypothetical spend.
             max_frequency: int, specifies the number of frequencies for which reach
                 will be reported.
-                
+
         Returns:
             A ReachPoint specifying the estimated reach for this number of impressions.
         """

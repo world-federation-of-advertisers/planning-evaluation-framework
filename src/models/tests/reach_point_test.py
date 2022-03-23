@@ -14,6 +14,7 @@
 """Tests for reach_point.py."""
 
 from absl.testing import absltest
+import numpy as np
 
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 
@@ -53,6 +54,11 @@ class ReachPointTest(absltest.TestCase):
         self.assertEqual(ReachPoint.frequencies_to_kplus_reaches([]), [])
         self.assertEqual(ReachPoint.frequencies_to_kplus_reaches([1]), [1])
         self.assertEqual(ReachPoint.frequencies_to_kplus_reaches([2, 1]), [3, 1])
+
+    def test_zero_included_histogram(self):
+        rp = ReachPoint(impressions=[10], kplus_reaches=[5, 3, 2], universe_size=10)
+        expected = np.array([5, 2, 1, 2])
+        np.testing.assert_equal(rp.zero_included_histogram, expected)
 
     def test_user_counts_to_frequencies(self):
         self.assertEqual(ReachPoint.user_counts_to_frequencies({}, 3), [0, 0, 0])

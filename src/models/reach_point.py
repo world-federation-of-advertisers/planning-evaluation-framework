@@ -19,6 +19,7 @@ Represents a single point on either a reach curve or a reach surface.
 from typing import Dict
 from typing import Iterable
 from typing import List
+import numpy as np
 
 
 class ReachPoint:
@@ -102,6 +103,23 @@ class ReachPoint:
     @property
     def frequencies_with_kplus_bucket(self) -> List[int]:
         return self._frequencies + [self._kplus_reaches[-1]]
+
+    @property
+    def zero_included_histogram(self) -> np.ndarray:
+        """The zero-included frequency histogram of a ReachPoint.
+
+        Translate the ReachPoint to a vector v where v[f] is the reach at
+        frequency f, for 0 <= f <= F - 1, and v[F] = the reach with frequency
+        >= F, where F is the maximum frequency of the given ReachPoint.
+        """
+        if self._universe_size is None:
+            raise ValueError(
+                "It requires the universe size to be known to obtain a zero-included histogram. "
+                "Please specify the universe size of this ReachPoint."
+            )
+        return np.array(
+            [self.universe_size - self.reach(1)] + self.frequencies_with_kplus_bucket
+        )
 
     @property
     def spends(self) -> Iterable[float]:

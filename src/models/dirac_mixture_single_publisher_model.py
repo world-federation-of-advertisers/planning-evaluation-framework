@@ -343,15 +343,16 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
             )
         self._data = data
         self._reach_point = data[0]
+        self.hist = self._reach_point.zero_included_histogram
         if data[0].spends:
             self._cpi = data[0].spends[0] / data[0].impressions[0]
         else:
             self._cpi = None
         if self._reach_point.universe_size is None:
             raise ValueError(
-                "Dirac mixture model only works when the universe size is given"
+                "A fit requires the universe size to be known, "
+                "please provide a ReachPoint with a known universe size instead."
             )
-        self.hist = self.obtain_zero_included_histogram()
         self.ncomponents = ncomponents
         self._fit_computed = False
 
@@ -390,19 +391,6 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
                 noised_histogram[i] -= pay_back
                 cumulative_bias -= pay_back
         return noised_histogram
-
-    def obtain_zero_included_histogram(self):
-        """Obtain a zero-included frequency histogram from a ReachPoint.
-
-        Translate self._reach_point to a vector v where v[f] is the reach at
-        frequency f, for 0 <= f <= F - 1, and v[F] = the reach with frequency
-        >= F, where F is the maximum frequency of the given ReachPoint.
-        """
-        return np.array(
-            [self._reach_point.universe_size - self._reach_point.reach(1)]
-            + self._reach_point._frequencies
-            + [self._reach_point._kplus_reaches[-1]]
-        )
 
     def _fit(self):
         """Fit the model."""

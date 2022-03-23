@@ -199,12 +199,6 @@ class DiracMixtureSinglePublisherModelTest(parameterized.TestCase):
         expected = np.array([20, 1, 0, 0])
         self.assertSequenceAlmostEqual(res, expected, places=2)
 
-    def test_obtain_zero_included_histogram(self):
-        rp = ReachPoint(impressions=[10], kplus_reaches=[5, 3, 2], universe_size=10)
-        res = self.cls([rp]).hist
-        expected = np.array([5, 2, 1, 2])
-        self.assertSequenceAlmostEqual(res, expected)
-
     def test_fit_with_zero_reach(self):
         rp = ReachPoint(impressions=[10], kplus_reaches=[0], universe_size=10)
         model = self.cls(data=[rp], ncomponents=2)

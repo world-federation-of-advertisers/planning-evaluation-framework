@@ -339,19 +339,26 @@ class ExperimentalTrial:
         # Also, record the maximum frequency in the actual data and the
         # data produced by Halo.
         training_point = reach_surface._data[0]
-        results["max_nonzero_frequency_from_halo"] = [
-            max(
-                [(i + 1) for i, f in enumerate(training_point._kplus_reaches) if f != 0]
-                + [0]
-            )
-        ]
+        results["max_nonzero_frequency_from_halo"] = (
+            [
+                max(
+                    [
+                        (i + 1)
+                        for i, f in enumerate(training_point._kplus_reaches)
+                        if f != 0
+                    ]
+                )
+            ]
+            if training_point._kplus_reaches
+            else [0]
+        )
         data_point = halo.true_reach_by_spend(halo.campaign_spends, max_frequency)
-        results["max_nonzero_frequency_from_data"] = [
-            max(
-                [(i + 1) for i, f in enumerate(data_point._kplus_reaches) if f != 0]
-                + [0]
-            )
-        ]
+        results["max_nonzero_frequency_from_data"] = (
+            [max([(i + 1) for i, f in enumerate(data_point._kplus_reaches) if f != 0])]
+            if data_point._kplus_reaches
+            else [0]
+        )
+
         return pd.DataFrame(results)
 
     def _single_publisher_fractions_dataframe_on_exception(

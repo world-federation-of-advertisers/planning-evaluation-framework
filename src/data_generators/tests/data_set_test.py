@@ -61,6 +61,7 @@ class DataSetTest(absltest.TestCase):
         self.assertEqual(self.data_set.reach_by_impressions([0, 2]).reach(), 2)
         self.assertEqual(self.data_set.reach_by_impressions([4, 2]).reach(), 4)
         self.assertEqual(self.data_set.reach_by_impressions([3, 1]).reach(), 2)
+        self.assertEqual(self.data_set.reach_by_impressions([0, 0]).universe_size, 8)
 
     def test_reach_by_spend(self):
         self.assertEqual(self.data_set.reach_by_spend([0, 0]).reach(), 0)

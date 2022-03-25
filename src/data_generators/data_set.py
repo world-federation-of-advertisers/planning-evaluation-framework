@@ -82,7 +82,7 @@ class DataSet:
         else:
             self._name = "{:012d}".format(randint(0, 1e12))
         if universe_size is None:
-            # As a temporarily solution, set a default universe size
+            # As a temporary solution, set the default universe size
             # as twice the maximum reach.
             # TODO(jiayu) Discuss whether there is a need to
             # tweak this default universe size in the evaluation.

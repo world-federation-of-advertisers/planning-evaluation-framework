@@ -149,6 +149,8 @@ class GammaPoissonModel(ReachCurve):
         else:
             self._cpi = None
 
+        self.binom_dist = scipy.stats._discrete_distns.binom_gen(name="binom_dist")
+
     def _logpmf(self, n, alpha, beta):
         """Log of the PMF of the shifted Gamma-Poisson distribution.
 
@@ -163,7 +165,7 @@ class GammaPoissonModel(ReachCurve):
           alpha: Alpha parameter of the Gamma-Poisson distribution.
           beta: Beta parameter of the Gamma-Poisson distribution.
         Returns:
-          f(n | alpha, beta), where f is the Gamma-Poisson distribution.
+          log f(n | alpha, beta), where f is the Gamma-Poisson distribution.
         """
         return scipy.stats.nbinom.logpmf(n - 1, alpha, 1.0 / (1.0 + beta))
 
@@ -177,19 +179,22 @@ class GammaPoissonModel(ReachCurve):
         where C(n, k) is the binomial coefficient n!/[k!(n-k)!].
 
         Args:
-          k:  Scalar number of impressions that were seen by the user.
-          n:  Available inventory for the user.
-            This can be either a scalar or a numpy array.
+          k:  (C, ) ndarray. Numbers of impressions that were seen by the user.
+          n:  (M, ) ndarray. Available inventory for the user.
           I:  Total number of impressions shown to all users.
           Imax: Total size of impression inventory.
           alpha: Parameter of Gamma-Poisson distribution.
           beta: Parameter of Gamma-Poisson distribution.
         Returns:
-          Probability that a randomly chosen user will have an inventory
-          of n impressions, of which k are shown.
+          (C, M) ndarray. Probability that a randomly chosen user will have an
+          inventory of n impressions, of which k are shown.
         """
-        kprob = scipy.stats.binom.logpmf(k, n, I / Imax)
-        return np.exp(kprob + self._logpmf(n, alpha, beta))
+        kprob = self.binom_dist.logpmf(
+            k.reshape((-1, 1)), n.reshape((1, -1)), I / Imax
+        )  # shape: (C, M)
+        gp_logpmf = self._logpmf(n, alpha, beta)  # shape: (M, )
+
+        return np.exp(kprob + gp_logpmf)
 
     def _kreach(self, k, I, Imax, alpha, beta):
         """Probability that a random user receives k impressions.
@@ -201,30 +206,43 @@ class GammaPoissonModel(ReachCurve):
         impressions, of which k are shown.
 
         Args:
-          k:  np.array specifying number of impressions that were seen by the user.
+          k:  (C, ) ndarray specifying number of impressions that were seen
+            by the user. Values in k are assumed to be consecutive from
+            min_freq to max_freq.
           I:  Total number of impressions shown to all users.
           Imax: Total size of impression inventory.
           alpha: Parameter of Gamma-Poisson distribution.
           beta: Parameter of Gamma-Poisson distribution.
         Returns:
-          For each k, probability that a randomly chosen user will have an inventory
-          of n impressions, of which k are shown.
+          (C, ) ndarray. For each k, probability that a randomly chosen user
+          will have an inventory of n impressions, of which k are shown.
         """
-        return np.array(
-            [
-                np.sum(
-                    self._knreach(
-                        kv,
-                        np.arange(kv, MAXIMUM_COMPUTATIONAL_FREQUENCY + 1),
-                        I,
-                        Imax,
-                        alpha,
-                        beta,
-                    )
-                )
-                for kv in k
-            ]
-        )
+        k = np.asarray(k)
+
+        if k.size == 0:
+            return np.array([])
+
+        if not np.array_equiv(k, np.arange(k[0], k[-1] + 1)):
+            raise RuntimeError(
+                "Values in k have to be consecutively from min_freq to max_freq."
+            )
+
+        # The 2D matrix is formed by the computation of _knreach(min_freq, min_freq)
+        # to _knreach(max_freq, MAXIMUM_COMPUTATIONAL_FREQUENCY)
+        min_freq = np.min(k)
+        mat = self._knreach(
+            k,
+            np.arange(min_freq, MAXIMUM_COMPUTATIONAL_FREQUENCY + 1),
+            I,
+            Imax,
+            alpha,
+            beta,
+        )  # shape: C x (MAXIMUM_COMPUTATIONAL_FREQUENCY - min_freq + 1)
+        # Note that binom_dist.logpmf should already generate zeros for
+        # mat[i][j] with i < j, but we add np.triu in case the behavior of
+        # binom_dist.logpmf changes in the future.
+        upper_triangular = np.triu(mat)
+        return np.sum(upper_triangular, axis=-1)
 
     def _expected_impressions(self, N, alpha, beta):
         """Estimates the expected size of impression inventory for N users.

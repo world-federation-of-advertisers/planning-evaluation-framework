@@ -215,10 +215,12 @@ class ExperimentalTrial:
                 logging.vlog(1, f"Trial   {self._trial_descriptor}")
             logging.vlog(1, f"Modeling failure: {inst}")
             logging.vlog(2, traceback.format_exc())
-            metrics = aggregate_on_exception(inst)
+            metrics = aggregate_on_exception(traceback.format_exc())
             if self._analysis_type == SINGLE_PUB_ANALYSIS:
                 single_publisher_dataframe = (
-                    self._single_publisher_fractions_dataframe_on_exception(max_frequency)
+                    self._single_publisher_fractions_dataframe_on_exception(
+                        max_frequency
+                    )
                 )
 
         independent_vars = self._make_independent_vars_dataframe()
@@ -237,7 +239,9 @@ class ExperimentalTrial:
         filesystem.mkdir(
             filesystem.parent(trial_results_path), parents=True, exist_ok=True
         )
-        filesystem.write_text(trial_results_path, result.to_csv(index=False))
+        filesystem.write_text(
+            trial_results_path, result.to_csv(na_rep="NaN", index=False)
+        )
         filesystem.unlink(pending_path, missing_ok=True)
 
         return result
@@ -335,18 +339,31 @@ class ExperimentalTrial:
         # Also, record the maximum frequency in the actual data and the
         # data produced by Halo.
         training_point = reach_surface._data[0]
-        results["max_nonzero_frequency_from_halo"] = [
-            max(
-                [(i + 1) for i, f in enumerate(training_point._kplus_reaches) if f != 0]
-            )
-        ]
+        results["max_nonzero_frequency_from_halo"] = (
+            [
+                max(
+                    [
+                        (i + 1)
+                        for i, f in enumerate(training_point._kplus_reaches)
+                        if f != 0
+                    ]
+                )
+            ]
+            if training_point._kplus_reaches
+            else [0]
+        )
         data_point = halo.true_reach_by_spend(halo.campaign_spends, max_frequency)
-        results["max_nonzero_frequency_from_data"] = [
-            max([(i + 1) for i, f in enumerate(data_point._kplus_reaches) if f != 0])
-        ]
+        results["max_nonzero_frequency_from_data"] = (
+            [max([(i + 1) for i, f in enumerate(data_point._kplus_reaches) if f != 0])]
+            if data_point._kplus_reaches
+            else [0]
+        )
+
         return pd.DataFrame(results)
 
-    def _single_publisher_fractions_dataframe_on_exception(self, max_frequency) -> pd.DataFrame:
+    def _single_publisher_fractions_dataframe_on_exception(
+        self, max_frequency
+    ) -> pd.DataFrame:
         results = {}
         for r in SINGLE_PUBLISHER_FRACTIONS:
             column_name = f"relative_error_at_{int(r*100):03d}"

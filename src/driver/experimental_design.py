@@ -169,7 +169,7 @@ class ExperimentalDesign:
                 | "Write combined result"
                 >> beam.Map(
                     lambda df: self._filesystem.write_text(
-                        result_path, df.to_csv(index=False)
+                        result_path, df.to_csv(na_rep="NaN", index=False)
                     )
                 )
             )

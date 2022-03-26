@@ -65,7 +65,7 @@ def fake_evaluate_all_trials_using_apache_beam(self, pipeline_options, result_pa
         result_path = client.CloudPath(result_path)
 
     num_trials = len(self._all_trials)
-    df = pd.DataFrame({"col": [i for i in range(num_trials)]})
+    df = pd.DataFrame({"col": list(range(num_trials))})
     df.to_csv(result_path, index=False)
 
 

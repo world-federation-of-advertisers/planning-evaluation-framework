@@ -63,18 +63,24 @@ class GammaPoissonModelTest(absltest.TestCase):
 
     def test_knreach(self):
         gpm = GammaPoissonModel([ReachPoint([20], [10])])
-        self.assertAlmostEqual(gpm._knreach(1, 1, 1, 2, 1.0, 1.0), 0.25)
-        self.assertAlmostEqual(gpm._knreach(2, 1, 1, 2, 1.0, 1.0), 0)
-        self.assertAlmostEqual(gpm._knreach(1, 1, 1, 2, 1.0, 2.0), 1.0 / 6.0)
-        self.assertAlmostEqual(gpm._knreach(1, np.array([1]), 1, 2, 1.0, 1.0)[0], 1 / 4)
         self.assertAlmostEqual(
-            gpm._knreach(1, np.array([1, 2]), 1, 2, 1.0, 1.0)[0], 1 / 4
+            gpm._knreach(np.array([2]), np.array([1]), 1, 2, 1.0, 1.0)[0, 0], 0
         )
         self.assertAlmostEqual(
-            gpm._knreach(1, np.array([1, 2]), 1, 2, 1.0, 1.0)[1], 1 / 8
+            gpm._knreach(np.array([1]), np.array([1]), 1, 2, 1.0, 2.0)[0, 0], 1.0 / 6.0
         )
         self.assertAlmostEqual(
-            gpm._knreach(1, 3, 1, 3, 1.0, 1.0), 3 * (1 / 3) * (2 / 3) ** 2 * (1 / 8)
+            gpm._knreach(np.array([1]), np.array([1]), 1, 2, 1.0, 1.0)[0, 0], 1 / 4
+        )
+        self.assertAlmostEqual(
+            gpm._knreach(np.array([1]), np.array([1, 2]), 1, 2, 1.0, 1.0)[0, 0], 1 / 4
+        )
+        self.assertAlmostEqual(
+            gpm._knreach(np.array([1]), np.array([1, 2]), 1, 2, 1.0, 1.0)[0, 1], 1 / 8
+        )
+        self.assertAlmostEqual(
+            gpm._knreach(np.array([1]), np.array([3]), 1, 3, 1.0, 1.0)[0, 0],
+            3 * (1 / 3) * (2 / 3) ** 2 * (1 / 8),
         )
 
     def test_kreach(self):
@@ -85,6 +91,14 @@ class GammaPoissonModelTest(absltest.TestCase):
         self.assertAlmostEqual(gpm._kreach([0, 1, 2], 1, 3, 1, 1)[0], 1 / 2)
         self.assertAlmostEqual(gpm._kreach([0, 1, 2], 1, 3, 1, 1)[1], 3 / 8)
         self.assertAlmostEqual(gpm._kreach([0, 1, 2], 1, 3, 1, 1)[2], 3 / 32)
+
+    def test_kreach_invalid_k(self):
+        gpm = GammaPoissonModel([ReachPoint([20], [10])])
+        exception_msg = (
+            "Values in k have to be consecutively from min_freq to max_freq."
+        )
+        with self.assertRaises(RuntimeError, msg=exception_msg):
+            gpm._kreach([0, 4, 1, 2, 3], 1, 2, 1, 1)
 
     def test_expected_impressions(self):
         gpm = GammaPoissonModel([ReachPoint([20], [10])])

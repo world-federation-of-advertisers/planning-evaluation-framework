@@ -51,7 +51,7 @@ class KInflatedGammaPoissonDistribution:
     """
 
     def __init__(self, alpha: float, beta: float, a: List[float]):
-        """k-Inflated Gamma-Poisson with parameters alpha, beta, a. """
+        """k-Inflated Gamma-Poisson with parameters alpha, beta, a."""
         if sum(a) > 1.0:
             # In theory, it should be an error to create a distribution where
             # the values of sum to a value > 1, but in practice the easiest
@@ -79,6 +79,8 @@ class KInflatedGammaPoissonDistribution:
         self._pmf = np.array([0.0] + list(a) + list(pmf_tail))
         # Force the series to sum to 1.
         self._pmf[-1] = 1.0 - np.sum(self._pmf[:-1])
+
+        self.binom_dist = scipy.stats._discrete_distns.binom_gen(name="binom_dist")
 
     def _gamma_poisson_pmf(
         self, n: Union[int, Iterable[int]], alpha: float, beta: float
@@ -127,15 +129,15 @@ class KInflatedGammaPoissonDistribution:
         where C(n, k) is the binomial coefficient n!/[k!(n-k)!].
 
         Args:
-          k:  Number of impressions that were seen by the user.
-          n:  Inventory size for the user.
-            This can be either a scalar or a numpy array.
-          p:  Probability that a given impression will be chosen.
+          k:  (C, ) ndarray. Numbers of impressions that were seen by the user.
+          n:  (M, ) ndarray. Inventory size for the user.
+          p:  float. Probability that a given impression will be chosen.
         Returns:
-          Probability that a randomly chosen user will have an inventory
-          of n impressions, of which k are shown.
+          (C, M) ndarray. Probability that a randomly chosen user will have an
+          inventory of n impressions, of which k are shown.
         """
-        return scipy.stats.binom.pmf(k, n, p) * self.pmf(n)
+        kprob = self.binom_dist.pmf(k.reshape(-1, 1), n.reshape(1, -1), p)
+        return kprob * self.pmf(n)
 
     def kreach(self, k: Iterable[float], p: float) -> npt.ArrayLike:
         """Probability that a random user receives k impressions.
@@ -147,15 +149,33 @@ class KInflatedGammaPoissonDistribution:
         impressions, of which k are shown.
 
         Args:
-          k:  np.array specifying number of impressions that were seen by the user.
+          k:  (C, ) ndarray specifying number of impressions that were seen
+            by the user. Values in k are assumed to be consecutive from
+            min_freq to max_freq.
           p:  float, probability that a given impression will be chosen.
         Returns:
-          For each k, probability that a randomly chosen user will have an inventory
-          of n impressions, of which k are shown.
+          (C, ) ndarray.For each k, probability that a randomly chosen user
+          will have an inventory of n impressions, of which k are shown.
         """
-        return np.array(
-            [np.sum([self.knreach(kv, np.arange(kv, len(self._pmf)), p)]) for kv in k]
-        )
+        k = np.asarray(k)
+
+        if k.size == 0:
+            return np.array([])
+
+        if not np.array_equiv(k, np.arange(k[0], k[-1] + 1)):
+            raise RuntimeError(
+                "Values in k have to be consecutively from min_freq to max_freq."
+            )
+
+        min_freq = np.min(k)
+        # The 2D matrix is formed by the computation of knreach(min_freq, min_freq)
+        # to knreach(max_freq, MAXIMUM_COMPUTATIONAL_FREQUENCY)
+        mat = self.knreach(k, np.arange(min_freq, len(self._pmf)), p)
+        # Note that binom_dist.logpmf should already generate zeros for
+        # mat[i][j] with i < j, but we add np.triu in case the behavior of
+        # binom_dist.logpmf changes in the future.
+        upper_triangular = np.triu(mat)
+        return np.sum(upper_triangular, axis=-1)
 
     def kplusreach(self, k: int, p: float) -> npt.ArrayLike:
         """Probability that a random user receives k or more impressions.
@@ -305,7 +325,7 @@ class KInflatedGammaPoissonModel(ReachCurve):
         obj = np.sum((hbar - h) ** 2 / (hbar + 1e-6))
 
         if np.isnan(obj):
-            logging.vlog(2, f"alpha {alpha} beta {beta} N {N} Imax {Imax}")
+            logging.vlog(2, f"alpha {dist._alpha} beta {dist._beta} N {N} Imax {Imax}")
             logging.vlog(2, f"h    {h}")
             logging.vlog(2, f"hbar {hbar}")
             raise RuntimeError("Invalid value of objective function")

@@ -149,14 +149,31 @@ class KInflatedGammaPoissonDistribution:
         impressions, of which k are shown.
 
         Args:
-          k:  (C, ) ndarray specifying number of impressions that were seen by the user.
+          k:  (C, ) ndarray specifying number of impressions that were seen
+            by the user. Values in k are assumed to be consecutive from
+            min_freq to max_freq.
           p:  float, probability that a given impression will be chosen.
         Returns:
           (C, ) ndarray.For each k, probability that a randomly chosen user
           will have an inventory of n impressions, of which k are shown.
         """
         k = np.asarray(k)
-        mat = self.knreach(k, np.arange(len(self._pmf)), p)  # shape:CxM
+
+        if k.size == 0:
+            return np.array([])
+
+        if not np.array_equiv(k, np.arange(k[0], k[-1] + 1)):
+            raise RuntimeError(
+                "Values in k have to be consecutively from min_freq to max_freq."
+            )
+
+        min_freq = np.min(k)
+        # The 2D matrix is formed by the computation of knreach(min_freq, min_freq)
+        # to knreach(max_freq, MAXIMUM_COMPUTATIONAL_FREQUENCY)
+        mat = self.knreach(k, np.arange(min_freq, len(self._pmf)), p)
+        # Note that binom_dist.logpmf should already generate zeros for
+        # mat[i][j] with i < j, but we add np.triu in case the behavior of
+        # binom_dist.logpmf changes in the future.
         upper_triangular = np.triu(mat)
         return np.sum(upper_triangular, axis=-1)
 

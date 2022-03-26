@@ -92,6 +92,14 @@ class GammaPoissonModelTest(absltest.TestCase):
         self.assertAlmostEqual(gpm._kreach([0, 1, 2], 1, 3, 1, 1)[1], 3 / 8)
         self.assertAlmostEqual(gpm._kreach([0, 1, 2], 1, 3, 1, 1)[2], 3 / 32)
 
+    def test_kreach_invalid_k(self):
+        gpm = GammaPoissonModel([ReachPoint([20], [10])])
+        exception_msg = (
+            "Values in k have to be consecutively from min_freq to max_freq."
+        )
+        with self.assertRaises(RuntimeError, msg=exception_msg):
+            gpm._kreach([0, 4, 1, 2, 3], 1, 2, 1, 1)
+
     def test_expected_impressions(self):
         gpm = GammaPoissonModel([ReachPoint([20], [10])])
         self.assertAlmostEqual(gpm._expected_impressions(1, 1, 1), 2.0)

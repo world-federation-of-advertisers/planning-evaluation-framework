@@ -207,7 +207,8 @@ class GammaPoissonModel(ReachCurve):
 
         Args:
           k:  (C, ) ndarray specifying number of impressions that were seen
-            by the user.
+            by the user. Values in k are assumed to be consecutive from
+            min_freq to max_freq.
           I:  Total number of impressions shown to all users.
           Imax: Total size of impression inventory.
           alpha: Parameter of Gamma-Poisson distribution.
@@ -217,9 +218,29 @@ class GammaPoissonModel(ReachCurve):
           will have an inventory of n impressions, of which k are shown.
         """
         k = np.asarray(k)
+
+        if k.size == 0:
+            return np.array([])
+
+        if not np.array_equiv(k, np.arange(k[0], k[-1] + 1)):
+            raise RuntimeError(
+                "Values in k have to be consecutively from min_freq to max_freq."
+            )
+
+        # The 2D matrix is formed by the computation of _knreach(min_freq, min_freq)
+        # to _knreach(max_freq, MAXIMUM_COMPUTATIONAL_FREQUENCY)
+        min_freq = np.min(k)
         mat = self._knreach(
-            k, np.arange(MAXIMUM_COMPUTATIONAL_FREQUENCY + 1), I, Imax, alpha, beta
-        )  # shape: C x MAXIMUM_COMPUTATIONAL_FREQUENCY
+            k,
+            np.arange(min_freq, MAXIMUM_COMPUTATIONAL_FREQUENCY + 1),
+            I,
+            Imax,
+            alpha,
+            beta,
+        )  # shape: C x (MAXIMUM_COMPUTATIONAL_FREQUENCY - min_freq + 1)
+        # Note that binom_dist.logpmf should already generate zeros for
+        # mat[i][j] with i < j, but we add np.triu in case the behavior of
+        # binom_dist.logpmf changes in the future.
         upper_triangular = np.triu(mat)
         return np.sum(upper_triangular, axis=-1)
 

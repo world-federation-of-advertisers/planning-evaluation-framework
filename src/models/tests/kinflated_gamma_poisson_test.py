@@ -117,6 +117,14 @@ class KInflatedGammaPoissonModelTest(absltest.TestCase):
         self.assertAlmostEqual(dist.kreach([0, 1, 2], 1 / 3)[1], 3 / 8)
         self.assertAlmostEqual(dist.kreach([0, 1, 2], 1 / 3)[2], 3 / 32)
 
+    def test_kreach_invalid_k(self):
+        dist = KInflatedGammaPoissonDistribution(1.0, 1.0, [])
+        exception_msg = (
+            "Values in k have to be consecutively from min_freq to max_freq."
+        )
+        with self.assertRaises(RuntimeError, msg=exception_msg):
+            dist.kreach([0, 2, 1], 0.5)
+
     def test_expected_value(self):
         dist1 = KInflatedGammaPoissonDistribution(1.0, 1.0, [])
         self.assertAlmostEqual(dist1.expected_value(), 2.0)

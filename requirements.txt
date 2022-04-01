@@ -16,4 +16,5 @@ tqdm>=4.47.0
 fsspec==2021.7.0
 gcsfs==2021.7.0
 pandas>=1.2.5
+statsmodels==0.13.2
 git+https://github.com/world-federation-of-advertisers/cardinality_estimation_evaluation_framework/@master#egg=wfa_cardinality_estimation_evaluation_framework

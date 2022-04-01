@@ -47,6 +47,7 @@ REQUIRED = [
     "fsspec==2021.7.0",
     "gcsfs==2021.7.0",
     "tqdm>=4.47.0",
+    "statsmodels==0.13.2",
 ]
 
 # What packages are optional?

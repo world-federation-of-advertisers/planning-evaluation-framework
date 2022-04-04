@@ -143,7 +143,7 @@ class CopulaDataSet(DataSet):
         )
     
     @property
-    def frequency_vectors_sampled_distribution(self):
+    def frequency_vectors_sampled_distribution(self) -> Dict:
         """A dictionary of the distribution of the sampled frequency vectors.
         
         Returns: 

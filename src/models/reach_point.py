@@ -117,9 +117,7 @@ class ReachPoint:
                 "It requires the universe size to be known to obtain a zero-included histogram. "
                 "Please specify the universe size of this ReachPoint."
             )
-        return np.array(
-            [self.universe_size - self.reach(1)] + self.frequencies_with_kplus_bucket
-        )
+        return [self.universe_size - self.reach(1)] + self.frequencies_with_kplus_bucket
 
     @property
     def spends(self) -> Iterable[float]:

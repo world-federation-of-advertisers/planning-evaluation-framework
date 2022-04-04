@@ -57,7 +57,7 @@ class ReachPointTest(absltest.TestCase):
 
     def test_zero_included_histogram(self):
         rp = ReachPoint(impressions=[10], kplus_reaches=[5, 3, 2], universe_size=10)
-        expected = np.array([5, 2, 1, 2])
+        expected = [5, 2, 1, 2]
         np.testing.assert_equal(rp.zero_included_histogram, expected)
 
     def test_user_counts_to_frequencies(self):

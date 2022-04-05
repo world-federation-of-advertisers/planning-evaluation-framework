@@ -17,6 +17,7 @@ from absl.testing import absltest
 import numpy as np
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
+from statsmodels.distributions.copula.elliptical import GaussianCopula
 
 from wfa_planning_evaluation_framework.data_generators.synthetic_data_design_generator import (
     SyntheticDataDesignGenerator,
@@ -28,6 +29,12 @@ from wfa_planning_evaluation_framework.data_generators.data_set_parameters impor
 from wfa_planning_evaluation_framework.data_generators.independent_overlap_data_set import (
     IndependentOverlapDataSet,
 )
+from wfa_planning_evaluation_framework.data_generators.copula_data_set import (
+    CopulaDataSet,
+)
+from wfa_planning_evaluation_framework.data_generators.fixed_price_generator import (
+    FixedPriceGenerator,
+)
 from wfa_planning_evaluation_framework.data_generators import lhs_data_design_example
 from wfa_planning_evaluation_framework.data_generators import m3_data_design
 from wfa_planning_evaluation_framework.data_generators import (
@@ -36,13 +43,29 @@ from wfa_planning_evaluation_framework.data_generators import (
 from wfa_planning_evaluation_framework.data_generators import simple_data_design_example
 from wfa_planning_evaluation_framework.data_generators import single_publisher_design
 
-TEST_LEVELS = {
+TEST_LEVELS_INDEPENDENT = {
     "largest_publisher_size": [8, 16],
     "overlap_generator_params": [
         GeneratorParameters(
             "Independent",
             IndependentOverlapDataSet,
             {"largest_pub_to_universe_ratio": 0.5, "random_generator": 1},
+        ),
+    ],
+}
+
+TEST_LEVELS_COPULA = {
+    "largest_publisher_size": [8, 16],
+    "overlap_generator_params": [
+        GeneratorParameters(
+            "Copula",
+            CopulaDataSet,
+            {
+                "largest_pub_to_universe_ratio": 0.5,
+                "copula_generator": GaussianCopula(corr=0),
+                "pricing_generator": FixedPriceGenerator(0.1),
+                "random_generator": 1,
+            },
         ),
     ],
 }
@@ -77,13 +100,29 @@ class SyntheticDataDesignGeneratorTest(absltest.TestCase):
 
     @patch(
         "wfa_planning_evaluation_framework.data_generators.m3_data_design.LEVELS",
-        new=TEST_LEVELS,
+        new=TEST_LEVELS_INDEPENDENT,
     )
     @patch(
         "wfa_planning_evaluation_framework.data_generators.m3_data_design.NUM_SAMPLES_FOR_LHS",
         new=2,
     )
-    def test_m3_design_generate_universe_size(self):
+    def test_m3_design_generate_universe_size_with_independent_overlap(self):
+        test_design = m3_data_design.generate_data_design_config(
+            np.random.default_rng(seed=1)
+        )
+        x = next(test_design).overlap_generator_params.params["universe_size"]
+        y = next(test_design).overlap_generator_params.params["universe_size"]
+        self.assertCountEqual([x, y], [16, 32])
+
+    @patch(
+        "wfa_planning_evaluation_framework.data_generators.m3_data_design.LEVELS",
+        new=TEST_LEVELS_COPULA,
+    )
+    @patch(
+        "wfa_planning_evaluation_framework.data_generators.m3_data_design.NUM_SAMPLES_FOR_LHS",
+        new=2,
+    )
+    def test_m3_design_generate_universe_siz_with_copula(self):
         test_design = m3_data_design.generate_data_design_config(
             np.random.default_rng(seed=1)
         )

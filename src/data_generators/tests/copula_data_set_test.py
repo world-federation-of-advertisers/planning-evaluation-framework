@@ -28,9 +28,6 @@ from wfa_planning_evaluation_framework.data_generators.copula_data_set import (
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
 )
-from wfa_planning_evaluation_framework.data_generators.data_set import (
-    DataSet,
-)
 from wfa_planning_evaluation_framework.data_generators.fixed_price_generator import (
     FixedPriceGenerator,
 )
@@ -67,10 +64,10 @@ class CopulaDataSetTest(absltest.TestCase):
         impressions2 = list(range(150)) * 3
         pdf2 = PublisherData(FixedPriceGenerator(0.1)(impressions2))
         dataset = CopulaDataSet(
-            unlabeled_publisher_datas=[pdf1, pdf2],
+            unlabeled_publisher_data_list=[pdf1, pdf2],
             copula_generator=IndependenceCopula(),
             universe_size=300,
-            rng=np.random.default_rng(0),
+            random_generator=np.random.default_rng(0),
         )
 
         def frequency_dictionary(pdf: PublisherData) -> Dict:
@@ -91,10 +88,10 @@ class CopulaDataSetTest(absltest.TestCase):
         pdf1 = PublisherData(FixedPriceGenerator(0.1)(impressions))
         pdf2 = deepcopy(pdf1)
         dataset = CopulaDataSet(
-            unlabeled_publisher_datas=[pdf1, pdf2],
+            unlabeled_publisher_data_list=[pdf1, pdf2],
             copula_generator=IndependenceCopula(),
             universe_size=400,
-            rng=np.random.default_rng(0),
+            random_generator=np.random.default_rng(0),
         )
         res = dataset.frequency_vectors_sampled_distribution
         # Because of the independence, the frequency vectors
@@ -114,12 +111,12 @@ class CopulaDataSetTest(absltest.TestCase):
         pdf1 = PublisherData(FixedPriceGenerator(0.1)(impressions))
         pdf2 = deepcopy(pdf1)
         dataset = CopulaDataSet(
-            unlabeled_publisher_datas=[pdf1, pdf2],
+            unlabeled_publisher_data_list=[pdf1, pdf2],
             # correlation = 1 is not allowed in GaussianCopula, so
             # choosing a correlation very close to 1 in the next line.
             copula_generator=GaussianCopula(1 - 1e-9),
             universe_size=200,
-            rng=np.random.default_rng(0),
+            random_generator=np.random.default_rng(0),
         )
         res = dataset.frequency_vectors_sampled_distribution
         # Because of the fully positive correlation, the frequency vectors
@@ -132,10 +129,10 @@ class CopulaDataSetTest(absltest.TestCase):
         pdf1 = PublisherData(FixedPriceGenerator(0.1)(impressions))
         pdf2 = deepcopy(pdf1)
         dataset = CopulaDataSet(
-            unlabeled_publisher_datas=[pdf1, pdf2],
+            unlabeled_publisher_data_list=[pdf1, pdf2],
             copula_generator=GaussianCopula(-1 + 1e-9),
             universe_size=200,
-            rng=np.random.default_rng(0),
+            random_generator=np.random.default_rng(0),
         )
         res = dataset.frequency_vectors_sampled_distribution
         # Because of the fully negative correlation, the frequency vectors

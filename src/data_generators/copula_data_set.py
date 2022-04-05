@@ -43,9 +43,9 @@ from wfa_planning_evaluation_framework.data_generators.fixed_price_generator imp
 
 class AnyFrequencyDistribution:
 
-    """Instantiate any frequency distribution with the ppf method. 
-    
-    We will use `CopulaDistribution` later to construct a copula. 
+    """Instantiate any frequency distribution with the ppf method.
+
+    We will use `CopulaDistribution` later to construct a copula.
     `CopulaDistribution` was designed for combining the distribution instances
     in scipy.stats.  After examing its source codes, we found that any list
     of instances with a `ppf` method can be a valid input of `CopulaDistribution`.
@@ -85,11 +85,11 @@ class CopulaDataSet(DataSet):
 
     def __init__(
         self,
-        unlabeled_publisher_datas: Iterable[PublisherData],
+        unlabeled_publisher_data_list: Iterable[PublisherData],
         copula_generator: Copula = GaussianCopula(corr=0),
         universe_size: int = None,
         pricing_generator: PricingGenerator = FixedPriceGenerator(0.1),
-        rng: np.random.Generator = np.random.default_rng(1),
+        random_generator: np.random.Generator = np.random.default_rng(0),
         name: str = "copula",
     ):
         """Constructor for OverlapDataSet.
@@ -98,27 +98,27 @@ class CopulaDataSet(DataSet):
             unlabeled_publisher_data_list:  a list of PublisherData. Each PublisherData
                 indicates the frequency distribution at a publisher --- the
                 ids labels are meaningless while their distribution matters.
-            copula_generator:  An instance of a subclass of 
+            copula_generator:  An instance of a subclass of
                 statsmodels.distributions.copula.copulas.Copula.  See here for the
-                possible choices: 
+                possible choices:
                 https://github.com/statsmodels/statsmodels/tree/32dc52699f994acbf9dbdb9bd10d7eff04d860f5/statsmodels/distributions
             universe_size:  A cross-publisher universe size to construct the copula.
             pricing_generator:  A PricingGenerator object that annotates a list of
                 id's with randomly generated price information.  At this moment,
                 assume that all the publishers share the same PricingGenerator.
-            rng:  A random generator to draw sample from the copula.
+            random_generator:  A random generator to draw sample from the copula.
             name:  If specified, a human-readable name that will be associated to this
                 DataSet.
         """
         if universe_size is None:
             self.universe_size = 2 * max(
-                [1] + [data.max_reach for data in unlabeled_publisher_datas]
+                [1] + [data.max_reach for data in unlabeled_publisher_data_list]
             )
         else:
             self.universe_size = universe_size
         self.marginal_pmfs = [
             self.zero_included_pmf(pub, universe_size)
-            for pub in unlabeled_publisher_datas
+            for pub in unlabeled_publisher_data_list
         ]
         self.copula_generator = copula_generator
         self.distribution = CopulaDistribution(
@@ -127,8 +127,8 @@ class CopulaDataSet(DataSet):
         )
         self.sample = self.distribution.rvs(
             nobs=universe_size,
-            random_state=rng.integers(0, 1e9),
-        ).astype('int32')
+            random_state=random_generator.integers(0, 1e9),
+        ).astype("int32")
         super().__init__(
             publisher_data_list=[
                 PublisherData(
@@ -136,18 +136,18 @@ class CopulaDataSet(DataSet):
                     name=original_pub_data.name,
                 )
                 for pub_imps, original_pub_data in zip(
-                    self.to_impressions(self.sample), unlabeled_publisher_datas
+                    self.to_impressions(self.sample), unlabeled_publisher_data_list
                 )
             ],
             name=name,
         )
-    
+
     @property
     def frequency_vectors_sampled_distribution(self) -> Dict:
         """A dictionary of the distribution of the sampled frequency vectors.
-        
-        Returns: 
-            A dict d where for any frequency vector (f_1, ..., f_p), 
+
+        Returns:
+            A dict d where for any frequency vector (f_1, ..., f_p),
             d[(f_1, ..., f_p)] is the count of this frequency vector in
             the DataSet.
         """
@@ -178,13 +178,13 @@ class CopulaDataSet(DataSet):
         Args:
             frequency_vectors:  A list where each elemnt is the frequency
                 vector at different publishers of a user.
-        
+
         Returns:
             A list which can be called `cross_pub_impressions`, where
             `cross_pub_impressions[i]` is a list of user ids with multiplicities
             that represents the sequence of purchasable impressions at publisher
             i as one increases the spend.
-            The returned `cross_pub_impressions` is consistent with the input 
+            The returned `cross_pub_impressions` is consistent with the input
             `frequency_vectors`.  Explicitly, any frequency vector
             [f_0, f_1, ..., f_{p-1}] appears k times in `frequency_vectors` if and
             only if there exist k distinct user ids that appear f_0 times in
@@ -192,7 +192,9 @@ class CopulaDataSet(DataSet):
             ..., f_{p-1} times in `cross_pub_impressions[p - 1]`.
         """
         p = len(frequency_vectors[0])
-        freq_vec_dist_dict = dict(Counter(tuple(obs.astype("int32")) for obs in frequency_vectors))
+        freq_vec_dist_dict = dict(
+            Counter(tuple(obs.astype("int32")) for obs in frequency_vectors)
+        )
         impressions = [[]] * p
         num_vids = 0
         for freq_vec, count in freq_vec_dist_dict.items():

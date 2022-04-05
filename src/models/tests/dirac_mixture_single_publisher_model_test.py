@@ -194,11 +194,6 @@ class UnivariateMixedPoissonOptimizerTest(absltest.TestCase):
 class DiracMixtureSinglePublisherModelTest(parameterized.TestCase):
     cls = DiracMixtureSinglePublisherModel
 
-    def test_debiased_clip(self):
-        res = self.cls.debiased_clip(noised_histogram=np.array([20, 6, -3, -2]))
-        expected = np.array([20, 1, 0, 0])
-        self.assertSequenceAlmostEqual(res, expected, places=2)
-
     def test_fit_with_zero_reach(self):
         rp = ReachPoint(impressions=[10], kplus_reaches=[0], universe_size=10)
         model = self.cls(data=[rp], ncomponents=2)

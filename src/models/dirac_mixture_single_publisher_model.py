@@ -356,42 +356,6 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
         self.ncomponents = ncomponents
         self._fit_computed = False
 
-    @staticmethod
-    def debiased_clip(noised_histogram: np.ndarray) -> np.ndarray:
-        """Clip a histogram to be non-negative without introducing much bias.
-
-        The observed, noised histogram may have negative counts.  We can
-        round these negative values to zero, but it introduces positive
-        biases.  In particular, the 1+ reach is inflated.
-
-        This method mitigates such positive biases.  The algorithm is as
-        follows.  Iterating from the maximum frequency to one,
-        (1) whenever we round a negative count to zero, we record the bias
-        that is introduced
-        (2) when seeing a positive count in the next frequency levels, we try
-        to substract this positive count by the bias.
-        In this way, we can (almost) guarantee that no bias is introduced at
-        least in the 1+ reach.
-
-        Args:
-            noised_histogram:  A noised frequency histogram of which some
-                elements can be negative.
-
-        Returns:
-            A non-negative histogram of which the cumsums are as close to
-            those of the given histogram as possiblle.
-        """
-        cumulative_bias = 0
-        for i in range(len(noised_histogram) - 1, -1, -1):
-            if noised_histogram[i] < 0:
-                cumulative_bias += 0 - noised_histogram[i]
-                noised_histogram[i] = 0
-            elif cumulative_bias > 0:
-                pay_back = min(cumulative_bias, noised_histogram[i])
-                noised_histogram[i] -= pay_back
-                cumulative_bias -= pay_back
-        return noised_histogram
-
     def _fit(self):
         """Fit the model."""
         if self._fit_computed:

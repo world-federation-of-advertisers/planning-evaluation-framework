@@ -105,7 +105,7 @@ class ReachPoint:
         return self._frequencies + [self._kplus_reaches[-1]]
 
     @property
-    def zero_included_histogram(self) -> np.ndarray:
+    def zero_included_histogram(self) -> List[int]:
         """The zero-included frequency histogram of a ReachPoint.
 
         Translate the ReachPoint to a vector v where v[f] is the reach at

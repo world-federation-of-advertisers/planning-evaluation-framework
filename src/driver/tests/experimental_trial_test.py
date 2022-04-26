@@ -432,7 +432,7 @@ class ExperimentalTrialTest(absltest.TestCase):
             # been checked by the preceding unit tests.  However, we make a few strategic
             # probes.
             self.assertEqual(result.shape[0], 1)
-            self.assertAlmostEqual(result["relative_error_at_100"][0], 0.0, delta=0.01)
+            self.assertAlmostEqual(result["relative_error_at_100"][0], 0.0, delta=0.02)
             self.assertGreater(result["max_nonzero_frequency_from_halo"][0], 0)
             self.assertEqual(result["max_nonzero_frequency_from_data"][0], 5)
 

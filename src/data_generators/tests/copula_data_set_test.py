@@ -58,7 +58,7 @@ class CopulaDataSetTest(absltest.TestCase):
         np.testing.assert_equal(res[0], expected[0])
         np.testing.assert_equal(res[1], expected[1])
 
-    def test_approximate_agreeement_with_marginals(self):
+    def test_approximate_agreement_with_marginals(self):
         impressions1 = list(range(100)) * 1 + list(range(100, 200)) * 2
         pdf1 = PublisherData(FixedPriceGenerator(0.1)(impressions1))
         impressions2 = list(range(150)) * 3

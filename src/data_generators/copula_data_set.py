@@ -30,9 +30,6 @@ from wfa_planning_evaluation_framework.data_generators.publisher_data import (
 from wfa_planning_evaluation_framework.data_generators.data_set import (
     DataSet,
 )
-from wfa_planning_evaluation_framework.data_generators.data_set import (
-    DataSet,
-)
 from wfa_planning_evaluation_framework.data_generators.pricing_generator import (
     PricingGenerator,
 )
@@ -62,7 +59,8 @@ class AnyFrequencyDistribution:
                 or probability of frequency f, for f = 0, ..., a maximum
                 frequency.
         """
-        self.hist = histogram
+        self.pmf = histogram / sum(histogram)
+        self.cdf = np.cumsum(self.pmf)
 
     def ppf(self, p: float) -> int:
         """Calculates ppf of the count distribution defined by the histogram.
@@ -76,8 +74,7 @@ class AnyFrequencyDistribution:
             A count x for which cdf[x] <= p and cdf[x + 1] > p, where cdf is
             the cumulative sum of self.hist.
         """
-        cdf = np.cumsum(self.hist / sum(self.hist))
-        return np.searchsorted(a=cdf, v=p)
+        return np.searchsorted(a=self.cdf, v=p)
 
 
 class CopulaDataSet(DataSet):
@@ -95,7 +92,7 @@ class CopulaDataSet(DataSet):
         """Constructor for OverlapDataSet.
 
         Args:
-            unlabeled_publisher_data_list:  a list of PublisherData. Each PublisherData
+            unlabeled_publisher_data_list:  A list of PublisherData. Each PublisherData
                 indicates the frequency distribution at a publisher --- the
                 ids labels are meaningless while their distribution matters.
             copula_generator:  An instance of a subclass of
@@ -116,14 +113,14 @@ class CopulaDataSet(DataSet):
             )
         else:
             self.universe_size = universe_size
-        self.marginal_pmfs = [
-            self.zero_included_pmf(pub, universe_size)
+        self.marginal_distributions = [
+            AnyFrequencyDistribution(self.zero_included_pmf(pub, universe_size))
             for pub in unlabeled_publisher_data_list
         ]
         self.copula_generator = copula_generator
         self.distribution = CopulaDistribution(
             copula=self.copula_generator,
-            marginals=[AnyFrequencyDistribution(pmf) for pmf in self.marginal_pmfs],
+            marginals=self.marginal_distributions,
         )
         self.sample = self.distribution.rvs(
             nobs=universe_size,
@@ -176,11 +173,17 @@ class CopulaDataSet(DataSet):
         DataSet.
 
         Args:
-            frequency_vectors:  A list where each elemnt is the frequency
-                vector at different publishers of a user.
+            frequency_vectors:  A length <n> list of length <p> arrays, where
+                n is the number of users in the sample, and p is the number of
+                publishers.
+                frequency_vectors[k] [i] indicates the frequency at pub i of
+                the k-th user in the sample.
 
         Returns:
-            A list which can be called `cross_pub_impressions`, where
+            A list of <p> lists of lengths n_1, ..., n_p,
+            where p is the number of pubs and n_i is the number of impressions
+            at pub i.
+            Call this return as `cross_pub_impressions`.  Then,
             `cross_pub_impressions[i]` is a list of user ids with multiplicities
             that represents the sequence of purchasable impressions at publisher
             i as one increases the spend.

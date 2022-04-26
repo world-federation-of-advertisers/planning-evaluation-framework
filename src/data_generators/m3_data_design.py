@@ -16,6 +16,7 @@
 from pyDOE import lhs
 from typing import Iterable
 import numpy as np
+from copy import deepcopy
 from statsmodels.distributions.copula.elliptical import GaussianCopula
 
 
@@ -165,7 +166,6 @@ OVERLAP_GENERATORS = [
         {
             "largest_pub_to_universe_ratio": 0.5,
             "copula_generator": GaussianCopula(corr=0),
-            "pricing_generator": FixedPriceGenerator(0.1),
             "random_generator": 1,
         },
     ),
@@ -203,13 +203,18 @@ def generate_data_design_config(
             "Copula",
         ]:
             raw_overlap_params = design_parameters["overlap_generator_params"]
+            kwargs = deepcopy(raw_overlap_params.params)
+            kwargs["universe_size"] = int(
+                design_parameters["largest_publisher_size"]
+                / kwargs["largest_pub_to_universe_ratio"]
+            )
+            del kwargs["largest_pub_to_universe_ratio"]
+            if design_parameters["overlap_generator_params"].name == "Copula":
+                pricing_generator_params = design_parameters["pricing_generator_params"]
+                kwargs["pricing_generator"] = pricing_generator_params.generator(
+                    **pricing_generator_params.params
+                )
             design_parameters["overlap_generator_params"] = raw_overlap_params._replace(
-                params={
-                    "universe_size": int(
-                        design_parameters["largest_publisher_size"]
-                        / raw_overlap_params.params["largest_pub_to_universe_ratio"]
-                    ),
-                    "random_generator": raw_overlap_params.params["random_generator"],
-                }
+                params=kwargs
             )
         yield DataSetParameters(**design_parameters)

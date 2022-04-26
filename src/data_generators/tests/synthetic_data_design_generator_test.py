@@ -56,14 +56,18 @@ TEST_LEVELS_INDEPENDENT = {
 
 TEST_LEVELS_COPULA = {
     "largest_publisher_size": [8, 16],
+    "pricing_generator_params": [
+        GeneratorParameters(
+            "FixedPrice", FixedPriceGenerator, {"cost_per_impression": 0.1}
+        )
+    ],
     "overlap_generator_params": [
         GeneratorParameters(
             "Copula",
             CopulaDataSet,
             {
                 "largest_pub_to_universe_ratio": 0.5,
-                "copula_generator": GaussianCopula(corr=0),
-                "pricing_generator": FixedPriceGenerator(0.1),
+                "copula_generator": GaussianCopula(corr=0.2),
                 "random_generator": 1,
             },
         ),
@@ -122,7 +126,7 @@ class SyntheticDataDesignGeneratorTest(absltest.TestCase):
         "wfa_planning_evaluation_framework.data_generators.m3_data_design.NUM_SAMPLES_FOR_LHS",
         new=2,
     )
-    def test_m3_design_generate_universe_siz_with_copula(self):
+    def test_m3_design_generate_universe_size_with_copula(self):
         test_design = m3_data_design.generate_data_design_config(
             np.random.default_rng(seed=1)
         )

@@ -58,7 +58,7 @@ TEST_LEVELS_COPULA = {
     "largest_publisher_size": [8, 16],
     "pricing_generator_params": [
         GeneratorParameters(
-            "FixedPrice", FixedPriceGenerator, {"cost_per_impression": 0.1}
+            "FixedPrice", FixedPriceGenerator, {"cost_per_impression": 0.3}
         )
     ],
     "overlap_generator_params": [
@@ -67,7 +67,7 @@ TEST_LEVELS_COPULA = {
             CopulaDataSet,
             {
                 "largest_pub_to_universe_ratio": 0.5,
-                "copula_generator": GaussianCopula(corr=0.2),
+                "copula_generator": GaussianCopula(corr=-0.2),
                 "random_generator": 1,
             },
         ),

@@ -14,9 +14,13 @@
 """Tests for dirac_mixture_single_publisher_model.py."""
 
 from absl.testing import absltest
+from absl.testing import parameterized
 import numpy as np
+from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
+from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.models.dirac_mixture_single_publisher_model import (
     UnivariateMixedPoissonOptimizer,
+    DiracMixtureSinglePublisherModel,
 )
 
 
@@ -185,6 +189,78 @@ class UnivariateMixedPoissonOptimizerTest(absltest.TestCase):
         res = optimizer.predict(scaling_factor=0.5)
         expected = np.array([0.725, 0.212, 0.063])
         self.assertSequenceAlmostEqual(res, expected, places=2)
+
+
+class DiracMixtureSinglePublisherModelTest(parameterized.TestCase):
+    cls = DiracMixtureSinglePublisherModel
+
+    def test_fit_with_zero_reach(self):
+        rp = ReachPoint(impressions=[10], kplus_reaches=[0], universe_size=10)
+        model = self.cls(data=[rp], ncomponents=2)
+        model._fit()
+        expected = np.array([1, 0])
+        self.assertSequenceAlmostEqual(model.optimizer.ws, expected, places=2)
+
+    def test_fit_with_non_zero_reach(self):
+        rp = ReachPoint(
+            impressions=[10], kplus_reaches=[3], spends=[1.0], universe_size=10
+        )
+        model = self.cls(data=[rp], ncomponents=2)
+        model._fit()
+        expected = np.array([0.525, 0.475])
+        self.assertSequenceAlmostEqual(model.optimizer.ws, expected, places=2)
+
+    @parameterized.named_parameters(
+        {"testcase_name": "zero_impression", "impressions": 0, "expected": 0},
+        {"testcase_name": "sample_impressions", "impressions": 10, "expected": 3},
+        {"testcase_name": "double_impressions", "impressions": 20, "expected": 4},
+    )
+    def test_by_impressions(self, impressions: int, expected: int):
+        rp = ReachPoint(impressions=[10], kplus_reaches=[3], universe_size=10)
+        model = self.cls(data=[rp], ncomponents=5)
+        res = model.by_impressions(impressions=[impressions])
+        self.assertEqual(
+            res._kplus_reaches[0],
+            expected,
+        )
+
+    def test_by_impressions_with_infinite_impressions(self):
+        rp = ReachPoint(impressions=[10], kplus_reaches=[3], universe_size=10)
+        model = self.cls(data=[rp], ncomponents=5)
+        res = model.by_impressions(impressions=[10000])
+        expected = round(rp.universe_size * (1 - model.optimizer.ws[0]), 0)
+        self.assertEqual(
+            res._kplus_reaches[0],
+            expected,
+        )
+
+    @parameterized.named_parameters(
+        {"testcase_name": "zero_spend", "spend": 0.0, "expected": 0},
+        {"testcase_name": "sample_spend", "spend": 1.0, "expected": 3},
+        {"testcase_name": "double_spend", "spend": 2.0, "expected": 4},
+    )
+    def test_by_spend(self, spend: float, expected: int):
+        rp = ReachPoint(
+            impressions=[10], kplus_reaches=[3], spends=[1.0], universe_size=10
+        )
+        model = self.cls(data=[rp], ncomponents=5)
+        res = model.by_spend(spends=[spend])
+        self.assertEqual(
+            res._kplus_reaches[0],
+            expected,
+        )
+
+    def test_by_spend_with_infinite_spend(self):
+        rp = ReachPoint(
+            impressions=[10], kplus_reaches=[3], spends=[1.0], universe_size=10
+        )
+        model = self.cls(data=[rp], ncomponents=5)
+        res = model.by_spend(spends=[10000.0])
+        expected = round(rp.universe_size * (1 - model.optimizer.ws[0]), 0)
+        self.assertEqual(
+            res._kplus_reaches[0],
+            expected,
+        )
 
 
 if __name__ == "__main__":

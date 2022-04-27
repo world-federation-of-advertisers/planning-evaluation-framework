@@ -19,6 +19,7 @@ Represents a single point on either a reach curve or a reach surface.
 from typing import Dict
 from typing import Iterable
 from typing import List
+import numpy as np
 
 
 class ReachPoint:
@@ -29,6 +30,7 @@ class ReachPoint:
         impressions: Iterable[int],
         kplus_reaches: Iterable[int],
         spends: Iterable[float] = None,
+        universe_size: int = None,
     ):
         """Represents a single point on a reach surface.
 
@@ -40,22 +42,34 @@ class ReachPoint:
             is the number of people who were reached AT LEAST k+1 times.
           spends:  If given, the amount that was spent at this point on each
             publisher.  An iterable.
+          universe_size:  If given, the universe size associated with this
+            reach point.
         """
         if spends and len(impressions) != len(spends):
             raise ValueError("impressions and spends must have same length")
         self._impressions = tuple(impressions)
         self._kplus_reaches = tuple(kplus_reaches)
-        self._frequencies = [kplus_reaches[i] - kplus_reaches[i+1]
-                             for i in range(len(kplus_reaches)-1)]
+        self._frequencies = [
+            kplus_reaches[i] - kplus_reaches[i + 1]
+            for i in range(len(kplus_reaches) - 1)
+        ]
         if spends:
             self._spends = tuple(spends)
         else:
             self._spends = None
+        self._universe_size = universe_size
 
     @property
     def impressions(self) -> int:
         """Returns the number of impressions associated with this point."""
         return self._impressions
+
+    @property
+    def universe_size(self) -> int:
+        """Returns the universe size associated with this point."""
+        if self._universe_size is None:
+            raise ValueError("Universe size is not given in this ReachPoint")
+        return self._universe_size
 
     @property
     def max_frequency(self) -> int:
@@ -80,7 +94,7 @@ class ReachPoint:
                     k, len(self._kplus_reaches)
                 )
             )
-        return self._frequencies[k-1]
+        return self._frequencies[k - 1]
 
     @property
     def frequencies(self) -> List[int]:
@@ -89,6 +103,21 @@ class ReachPoint:
     @property
     def frequencies_with_kplus_bucket(self) -> List[int]:
         return self._frequencies + [self._kplus_reaches[-1]]
+
+    @property
+    def zero_included_histogram(self) -> List[int]:
+        """The zero-included frequency histogram of a ReachPoint.
+
+        Translate the ReachPoint to a vector v where v[f] is the reach at
+        frequency f, for 0 <= f <= F - 1, and v[F] = the reach with frequency
+        >= F, where F is the maximum frequency of the given ReachPoint.
+        """
+        if self._universe_size is None:
+            raise ValueError(
+                "It requires the universe size to be known to obtain a zero-included histogram. "
+                "Please specify the universe size of this ReachPoint."
+            )
+        return [self.universe_size - self.reach(1)] + self.frequencies_with_kplus_bucket
 
     @property
     def spends(self) -> Iterable[float]:

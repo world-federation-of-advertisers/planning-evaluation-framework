@@ -75,12 +75,12 @@ class CopulaDataSetTest(absltest.TestCase):
             return dict(Counter(freq_by_vid.values()))
 
         res1, res2 = [frequency_dictionary(pdf) for pdf in dataset._data]
-        try:
-            self.assertAlmostEqual(res1[1] / 100, 1, delta=0.2)
-            self.assertAlmostEqual(res1[2] / 100, 1, delta=0.2)
-            self.assertAlmostEqual(res2[3] / 150, 1, delta=0.2)
-        except:
-            self.fail()
+        self.assertTrue(1 in res1)
+        self.assertTrue(2 in res1)
+        self.assertTrue(3 in res2)
+        self.assertAlmostEqual(res1[1] / 100, 1, delta=0.2)
+        self.assertAlmostEqual(res1[2] / 100, 1, delta=0.2)
+        self.assertAlmostEqual(res2[3] / 150, 1, delta=0.2)
 
     def test_independent_copula(self):
         # 200 ids with freq = 1 and 200 ids with freq = 2
@@ -97,13 +97,14 @@ class CopulaDataSetTest(absltest.TestCase):
         # Because of the independence, the frequency vectors
         # (1, 1), (1, 2), (2, 1), (2, 2) should roughly appear
         # 50 times respectively.
-        try:
-            self.assertAlmostEqual(res[(1, 1)] / 100, 1, delta=0.2)
-            self.assertAlmostEqual(res[(2, 1)] / 100, 1, delta=0.2)
-            self.assertAlmostEqual(res[(1, 2)] / 100, 1, delta=0.2)
-            self.assertAlmostEqual(res[(2, 2)] / 100, 1, delta=0.2)
-        except:
-            self.fail()
+        self.assertTrue((1, 1) in res)
+        self.assertTrue((2, 1) in res)
+        self.assertTrue((1, 2) in res)
+        self.assertTrue((2, 2) in res)
+        self.assertAlmostEqual(res[(1, 1)] / 100, 1, delta=0.2)
+        self.assertAlmostEqual(res[(2, 1)] / 100, 1, delta=0.2)
+        self.assertAlmostEqual(res[(1, 2)] / 100, 1, delta=0.2)
+        self.assertAlmostEqual(res[(2, 2)] / 100, 1, delta=0.2)
 
     def test_fully_positively_correlated_copula(self):
         # 100 ids with freq = 1 and 100 ids with freq = 2

@@ -40,47 +40,54 @@ class MultivariateMixedPoissonOptimizer:
         """Construct an optimizer for multivariate mixed Poisson distribution.
 
         Args:
-            observable_directions:  A matrix of whcih each row represents a
-                direction that the frequency histogram is observable. For
-                example, observable_directions = [[1, 0], [0, 1], [1, 1]] means
-                that we observe histograms on 3 directions:
-                    - histogram of frequency at publisher 1
-                    - histogram of frequency at publisher 2
-                    - histogram of total frequency at pubs 1 & 2.
+            observable_directions:  An <n * p> matrix where n = #training points,
+                p = #pubs.
 
-                In the case that only "subset histograms" of a single campaign
-                is observable, each observable direction is in {0, 1}^p, p being
-                the number of publishers. However, you are allowed to specify
-                other directions.  For example, observable_directions =
-                [[2, 0], [0, 3], [1, 4]] means that we observe:
-                    - histogram of total frequency when having 2X impressions on
-                        pub 1 and 0 impressions on pub 2.
-                    - histogram of total frequency when having 0 impressions on
-                        pub 1 and 3Y impressions on pub 2.
-                    - histogram of total frequency when having 1X impressions on
-                        pub 1 and 4Y impressions on pub 2,
-                where X and Y can be any number. So, each direction can be any
-                impression vector, or ratios with respect to a baseline
-                impression vector (X, Y).
+                The i-th row of the matrix represents the impression vector of
+                the i-th training point.  In reality, the impression vector
+                could be like [1e6, 2e6], which means 1e6 impressions at pub 1
+                and 2e6 impressions at pub 2.  Computing with these raw, large
+                numbers of impresssions may introduce numerical errors.
+                As such, we standardize impression vectors as "directions".  For
+                example, suppose
+                - training point 1 has impression vector = [1e6, 2e6],
+                - training point 2 has impression vector = [1e6, 0],
+                - training point 3 has impression vector = [0, 2e6],
+                then we say that
+                - the "baseline impression vector" = [1e6, 2e6],
+                - the 3 training points have observable_directions = [1, 1],
+                    [1, 0], [0, 1] respectively.
+                Observable_directions is also a more compact representation
+                Compared to impression vectors.
 
-                Like in UnivariateMixedPoissonOptimizer, all the histograms
-                start at frequency=0 and is truncated at a certain maximum
-                frequency.
-            frequency_histograms_on_observable_directions: A matrix of which
-                the i-th row is the observed frequency histogram at the i-th
-                direction in observable_directions.
-            prior_marginal_frequency_histograms: A matrix of which the i-th row
-                is a frequency histogram at the i-th publisher under the
-                baseline impression (see description of observable_directions).
-                They are (only) used to decide the weights when sampling
-                the components.
-                These frequency histograms are the same as the observed single
-                pub frequency histograms which are also present in
-                frequency_histograms_on_observable_directions.
-                However, being called 'prior', these frequency histograms are
-                allowed to be estimates (say, from models or historical data),
-                instead of actual observations.
-            ncomponents: Number of components in the Poisson mixture.
+                As of Apr 2022, all the training points from halo_simulator will
+                have a binary observable_direction (like the above example).
+                We allow non-binary observable_direction in the future.
+            frequency_histograms_on_observable_directions:  An <n * (F + 1)> matrix
+                where n = #training points, F = maximum frequency.
+                Its i-th row is the observed frequency histogram at the i-th
+                row of observable_directions, i.e., the i-th training point.
+            prior_marginal_frequency_histograms:  A <p * (F + 1)> matrix where
+                n = #training points, F = maximum frequency.
+
+                Its i-th row is a marginal frequency histogram at the i-th
+                publisher under the baseline impression (see the description of
+                the `observable_directions` arg).  In other words, its rows are
+                frequency_histograms at the single-pub observation_directions =
+                [1, 0, ..., 0], [0, 1, 0, ..., 0], ..., [0, ..., 0, 1],
+                respectively.  As of Apr 2022, halo_simulator generates a training
+                point on each of these single pub observable_direction, so,
+                this `prior_marginal_frequency_histograms` arg just consists of
+                partial rows of `frequency_histograms_on_observable_directions`.
+                It's not necessarily the case in the future though.  We require
+                always specifying this `prior_marginal_frequency_histograms`
+                arg so that the model is runnable regardless of what are provided
+                by halo_simulator.
+
+                Being called "prior_marginal_frequency_histograms", these
+                frequency histograms are allowed to be estimates (say, from models
+                or historical data), instead of actual observations.
+            ncomponents:  Number of components in the Poisson mixture.
             rng:  Random Generator for the random sampling of high dimensional
                 components.
         """
@@ -110,15 +117,15 @@ class MultivariateMixedPoissonOptimizer:
             raise ValueError("Inconsistent number of publishers")
         if self.observable_directions.shape[0] != self.observed_pmf_matrix.shape[0]:
             raise ValueError("Inconsistent number of directions")
-        # Note that we don't require self.marginal_pmfs to have the same
-        # max_freq as observed_pmf_matrix.
+        # Minor note: for flexibity, we don't require self.marginal_pmfs to have
+        # the same max_freq as self.observed_pmf_matrix.
 
     @classmethod
     def normalize_rows(cls, matrix: np.ndarray) -> np.ndarray:
         """Normalize a matrix so that each row sums up to 1."""
         row_sums = matrix.sum(axis=1)
-        return matrix / row_sums[:, np.newaxis]
         # Using numpy broadcasting
+        return matrix / row_sums[:, np.newaxis]
 
     @classmethod
     def weighted_random_sampling(
@@ -127,18 +134,22 @@ class MultivariateMixedPoissonOptimizer:
         marginal_pmfs: np.ndarray,
         rng: np.random.Generator = np.random.default_rng(0),
     ) -> np.ndarray:
-        """Randomly sample high dimensional components based on marginal pmfs.
+        """Randomly sample components based on marginal pmfs.
+
+        Each coordinate of the component is independently sampled based on
+        the corresponding marginal pmf.
 
         Args:
-            ncomponents: Number of components to sample. (Precisely, we sample
-                these many components plus a special component: all zeros.)
+            ncomponents:  Number of components to sample. 
+                (Precisely, we sample these many components plus a special
+                component: the component of all zeros. This is to
+                reflect the never-reached users.)
             marginal_pmfs:  Prior pmf of frequency at each publisher.
             rng:  Random generator.
 
         Returns:
-            A n * p matrix where p is the number of publishers and n is the
-            number of components.  Each row is a component, i.e., a vector
-            of PoTuple[np.ndarray]isson means at all publishers.
+            A <C * p> matrix where C = #components and p = #pubs.
+            Each row is a component, i.e., a vector of Poisson means at all pubs.
         """
         p, f = marginal_pmfs.shape
         sample = np.array(
@@ -153,19 +164,22 @@ class MultivariateMixedPoissonOptimizer:
         observable_directions: np.ndarray,
         max_freq: int,
     ) -> np.ndarray:
-        """Obtain pmfs on each observable direction of a component.
+        """Obtain the pmfs on each observable direction of a component.
 
         Args:
-            component_vector:  A length-p vector indicating the Poisson means
-                at each of the p publishers.
-            observable_directions:  A matrix where each row is a length-p vector
-                indicating which direction is observable.  See the description
-                in __init__ for more details.
-            max_freq:  Maximum value of the support of the pmf vector.
+            component_vector:  A length <p> vector where p = #pubs.
+                A vector of Poisson means at all the pubs.  A component can be
+                interpreted as a user group.  Its i-th coordinate means the
+                average frequency at pub i of this user group.
+            observable_directions:   An <n * p> matrix where n = #training points,
+                p = #pubs.  Each row indicates the impression vector of a training
+                point.  See the description of __init__ for more details.
+            max_freq:  Maximum frequency.
 
         Returns:
-            A matrix of which the i-th row is the pmf of the given component at
-            the i-th direction in observable_directions.
+            A <C * (F + 1)> matrix where C = #components.
+            the i-th row is the pmf of the given component at the i-th direction
+            of observable_directions.
         """
         projected_poisson_means = observable_directions.dot(component_vector)
         return np.array(
@@ -189,6 +203,7 @@ class MultivariateMixedPoissonOptimizer:
             )
             for component in self.components
         ]
+        # self.ws saves the weights of each component
         self.ws = UnivariateMixedPoissonOptimizer.solve_optimal_weights(
             observed_arr=self.observed_pmf_matrix,
             component_arrs=self.component_pmf_matrices,
@@ -199,25 +214,23 @@ class MultivariateMixedPoissonOptimizer:
     def predict(
         self, hypothetical_direction: np.ndarray, customized_max_freq: int = None
     ) -> np.ndarray:
-        """Predict frequency histogram of a hyperthetical direction.
+        """Predict frequency histogram of a hyperthetical campaign.
 
         Args:
-            hypothetical_direction:  As explained in the docstring of __init__,
-                an observable_direction (a, b, c) means that we observe the
-                histogram of total frequency when spending aX impressions on
-                pub 1, bY impressions on pub 2 and cZ impressions on pub 3,
-                where (X, Y, Z) are "baseline" numbers of impressions, or
-                typically, the numbers of impressions of the actual campaign
-                on pubs 1-3.
-                Likewise, a hypothetical_direction (a', b', c') means that we
-                want to predict the histogram of total frequency when spending
-                a'X impressions on pub 1, b'Y impressions on pub 2 and c'Z
-                impressions on pub 3.
+            hypothetical_direction:  A length <p> vector.
+                Please see the description of the `observable_directions` arg in
+                `__init__()`, especially the concept of baseline impression vector.
+                Suppose baseline impression vector = [1e6, 2e6, 3e6].  A
+                hypothetical_direction = [0.5, 1, 2] means that we want to predict
+                a hypothetical campaign with impression vector = [0.5 * 1e6,
+                1 * 2e6, 2 * 3e6].
             customized_max_freq:  If specified, the predicted frequency
-                histogram will be capped by this maximum frequency.
+                histogram will be capped by this maximum frequency. It can be
+                different from the maximum frequency of the training data.
 
         Returns:
-            A vector v where v[f] is the pmf at f of the total frequency.
+            A length <F + 1> vector.
+            Its f-th coordinate is the pmf at frequency f of the hypothetical campiaign.
         """
         if len(hypothetical_direction) != self.p:
             raise ValueError("Hypothetical direction does match number of publishers")
@@ -226,7 +239,6 @@ class MultivariateMixedPoissonOptimizer:
         projected_components = [
             component.dot(hypothetical_direction) for component in self.components
         ]
-
         projected_component_pmfs = [
             UnivariateMixedPoissonOptimizer.truncated_poisson_pmf_vec(
                 poisson_mean=c,
@@ -246,8 +258,8 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
 
     def __init__(
         self,
-        reach_curves: Union[None, List[ReachCurve]],
         reach_points: List[ReachPoint],
+        reach_curves: List[ReachCurve] = None,
         single_publisher_reach_agreement: bool = True,
         universe_size: int = None,
         universe_reach_ratio: float = 3,
@@ -257,8 +269,11 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
         """Constructor for DiracMixtureReachSurface.
 
         Args:
-            reach_curves: A list of ReachCurves to be used in model fitting
-                and prediction.  Explicitedly, it can
+            reach_points: A length <n> vector where n = #(training points).
+                List of ReachPoints on which the model is to be trained.
+            reach_curves: A length <p> list where p = #pubs.
+                List of ReachCurves to be used in model fitting and prediction.
+                Explicitly, it can
                     - force single publisher agreement if required
                     - possibly provide (additional) single publisher points
                         for training
@@ -266,10 +281,6 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
                 the multi pub model is trained purely based on discrete
                 reach points, and the single pub models will be induced from
                 this multi pub model.
-            reach_points: A list of ReachPoints on which the model is to be
-                trained. This list is of arbitrary length and includes arbitrary
-                points (either single pub or multi pub points) on the reach
-                surface.
             single_publisher_reach_agreement:  Specifies if we want to force
                 single publisher agreements when reach_curves are given.
                 In this class we have implemented a method to force single
@@ -286,8 +297,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
                 compared to the reach, then specify this argument instead of
                 the previous argument.
             ncomponents:  Number of components in the Poisson mixture.  If not
-                specified, then follow the default choice
-                min(5000, 200 * p**2).
+                specified, then follow the default choice min(5000, 200 * p**2).
             rng:  Random Generator for the random sampling of high dimensional
                 components.
         """

@@ -13,6 +13,7 @@
 # limitations under the License.
 """Dirac mixture single publisher model."""
 
+from absl import logging
 import numpy as np
 import cvxpy as cp
 from scipy import stats
@@ -315,3 +316,125 @@ class UnivariateMixedPoissonOptimizer:
             for c in self.components
         ]
         return sum([w * pmf for w, pmf in zip(self.ws, scaled_component_pmfs)])
+
+
+class DiracMixtureSinglePublisherModel(ReachCurve):
+    def __init__(
+        self,
+        data: List[ReachPoint],
+        ncomponents: int = 200,
+    ):
+        """Constructs a Dirac mixture single publisher model.
+
+        Args:
+            data:  A list consisting of the single ReachPoint to which the model
+                is to be fit.
+            ncomponents:  Number of components in the Poisson mixture.  Based on
+                our experience, 100 components are enough, and more components
+                are also fine (they will not introduce overfitting).
+        """
+        if len(data) != 1:
+            raise ValueError("Exactly one ReachPoint must be specified")
+        if data[0].impressions[0] < 0.001:
+            raise ValueError("Attempt to create model with 0 impressions")
+        if data[0].impressions[0] < data[0].reach(1):
+            raise ValueError(
+                "Cannot have a model with fewer impressions than reached people"
+            )
+        self._data = data
+        self._reach_point = data[0]
+        self.hist = np.array(self._reach_point.zero_included_histogram)
+        if data[0].spends:
+            self._cpi = data[0].spends[0] / data[0].impressions[0]
+        else:
+            self._cpi = None
+        if self._reach_point.universe_size is None:
+            raise ValueError(
+                "A fit requires the universe size to be known, "
+                "please provide a ReachPoint with a known universe size instead."
+            )
+        self.ncomponents = ncomponents
+        self._fit_computed = False
+
+    def _fit(self):
+        """Fit the model."""
+        if self._fit_computed:
+            return
+        while self.ncomponents > 0:
+            self.optimizer = UnivariateMixedPoissonOptimizer(
+                frequency_histogram=self.hist, ncomponents=self.ncomponents
+            )
+            try:
+                self.optimizer.fit()
+                break
+            except Exception as inst:
+                # There is a tiny chance of exception when cvxpy mistakenly
+                # thinks the problem is non-convex due to numerical errors.
+                # If this occurs, it is likely that we have a large number
+                # of components.  In this case, try reducing the number of
+                # components.
+                logging.vlog(1, f"Optimizer failure: {inst}")
+                self.ncomponents = int(self.ncomponents / 2)
+                continue
+        self._fit_computed = True
+
+    def by_impressions(
+        self, impressions: List[int], max_frequency: int = 1
+    ) -> ReachPoint:
+        """Returns the estimated reach as a function of impressions.
+
+        Args:
+            impressions: list of ints of length 1, specifying the hypothetical number
+                of impressions that are shown.
+            max_frequency: int, specifies the number of frequencies for which reach
+                will be reported.
+
+        Returns:
+            A ReachPoint specifying the estimated reach for this number of impressions.
+        """
+        if len(impressions) != 1:
+            raise ValueError("Impressions vector must have a length of 1.")
+
+        self._fit()
+        predicted_relative_freq_hist = self.optimizer.predict(
+            scaling_factor=impressions[0] / self._reach_point.impressions[0],
+            customized_max_freq=max_frequency,
+        )
+        # a relative histogram including zero, capped at the maximum frequency of
+        # the training point
+        relative_kplus_reaches_from_zero = np.cumsum(
+            predicted_relative_freq_hist[::-1]
+        )[::-1]
+        kplus_reaches = (
+            (self._reach_point.universe_size * relative_kplus_reaches_from_zero[1:])
+            .round(0)
+            .astype("int32")
+        )
+
+        if self._cpi:
+            return ReachPoint(impressions, kplus_reaches, [impressions[0] * self._cpi])
+        else:
+            return ReachPoint(impressions, kplus_reaches)
+
+    def by_spend(self, spends: List[int], max_frequency: int = 1) -> ReachPoint:
+        """Returns the estimated reach as a function of spend assuming constant CPM.
+
+        Args:
+            spend: list of floats of length 1, specifying the hypothetical spend.
+            max_frequency: int, specifies the number of frequencies for which reach
+                will be reported.
+
+        Returns:
+            A ReachPoint specifying the estimated reach for this number of impressions.
+        """
+        if len(spends) != 1:
+            raise ValueError("Spend vector must have a length of 1.")
+        return self.by_impressions(
+            [self.impressions_for_spend(spends[0])], max_frequency
+        )
+
+    def impressions_for_spend(self, spend: float) -> int:
+        """Returns the number of impressions under a spend."""
+        if not self._cpi:
+            raise ValueError("Impression cost is not known for this ReachPoint.")
+        return spend / self._cpi

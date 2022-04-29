@@ -199,6 +199,9 @@ class HaloSimulator:
         kplus_reaches = np.minimum.accumulate(np.maximum(kplus_reaches, 0))
 
         # TODO(jiayu,pasin): Does this look right?
+        # Jiayu: Looks right to me.  Let's add Pasin's new dGaussian accounting
+        # when we got bandwidth...  Before that, perhaps approximate it by
+        # continuous Gaussian accounting?
         for noiser_class, epsilon, delta in estimator.output_privacy_parameters():
             self._privacy_tracker.append(
                 NoisingEvent(
@@ -211,9 +214,14 @@ class HaloSimulator:
         # convert result to a ReachPoint
         impressions = self._data_set.impressions_by_spend(spends)
         if np.sum(impressions) <= kplus_reaches[0]:
-            kplus_reaches = [max(np.sum(impressions)-1, 1)] + [0] * max(0, max_frequency-1)
+            kplus_reaches = [max(np.sum(impressions) - 1, 1)] + [0] * max(
+                0, max_frequency - 1
+            )
         return ReachPoint(
-            impressions=impressions, kplus_reaches=kplus_reaches, spends=spends
+            impressions=impressions,
+            kplus_reaches=kplus_reaches,
+            spends=spends,
+            universe_size=self._data_set.universe_size,
         )
 
     def _liquid_legions_cardinality_estimate_variance(self, n: int) -> float:
@@ -680,7 +688,12 @@ class HaloSimulator:
             sub_spends = np.array(spends) * pub_vector
 
             reach_points.append(
-                ReachPoint(sub_imps.tolist(), [sub_reach], sub_spends.tolist())
+                ReachPoint(
+                    sub_imps.tolist(),
+                    [sub_reach],
+                    sub_spends.tolist(),
+                    self._data_set.universe_size,
+                )
             )
 
         return reach_points

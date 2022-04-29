@@ -51,7 +51,12 @@ class DataSet:
     have an IndependentDataSet, a SequentiallyCorrelatedDataSet, etc.
     """
 
-    def __init__(self, publisher_data_list: Iterable[PublisherData], name: str = None):
+    def __init__(
+        self,
+        publisher_data_list: Iterable[PublisherData],
+        name: str = None,
+        universe_size: int = None,
+    ):
         """Constructor
 
         Args:
@@ -62,6 +67,8 @@ class DataSet:
             of the parameters that were used to create this DataSet,
             such as "homog_p=10_rep=3".  If no name is given, then a random
             digit string is assigned as the name.
+          universe_size:  The universe size associated with this DataSet.
+            Every reached user in this DataSet belongs to this universe.
         """
         self._data = deepcopy(publisher_data_list)
 
@@ -74,6 +81,14 @@ class DataSet:
             self._name = name
         else:
             self._name = "{:012d}".format(randint(0, 1e12))
+        if universe_size is None:
+            # As a temporary solution, set the default universe size
+            # as twice the maximum reach.
+            # TODO(jiayu) Discuss whether there is a need to
+            # tweak this default universe size in the evaluation.
+            self._universe_size = 2 * self.maximum_reach
+        else:
+            self._universe_size = universe_size
 
     @property
     def publisher_count(self):
@@ -84,6 +99,11 @@ class DataSet:
     def maximum_reach(self):
         """Total number of reachable people across all publishers."""
         return self._maximum_reach
+
+    @property
+    def universe_size(self):
+        """he universe size associated with this DataSet."""
+        return self._universe_size
 
     @property
     def name(self):
@@ -152,7 +172,7 @@ class DataSet:
             for id, freq in self._data[i].user_counts_by_impressions(imp).items():
                 counts[id] += freq
         kplus_reaches = self._counts_to_histogram(counts, max_frequency)
-        return ReachPoint(impressions, kplus_reaches, spends)
+        return ReachPoint(impressions, kplus_reaches, spends, self.universe_size)
 
     def _counts_to_histogram(
         self, counts: Dict[int, int], max_frequency: int
@@ -198,7 +218,7 @@ class DataSet:
             for id, freq in user_counts.items():
                 counts[id] += freq
         kplus_reaches = self._counts_to_histogram(counts, max_frequency)
-        return ReachPoint(impressions, kplus_reaches, spends)
+        return ReachPoint(impressions, kplus_reaches, spends, self.universe_size)
 
     def write_data_set(
         self,

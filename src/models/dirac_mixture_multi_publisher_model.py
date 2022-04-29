@@ -13,7 +13,7 @@
 # limitations under the License.
 """Dirac mixture multi publisher model."""
 
-from multiprocessing.sharedctypes import Value
+from absl import logging
 import numpy as np
 import copy
 from typing import Callable, List, Tuple, Union, Dict
@@ -22,7 +22,6 @@ from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 from wfa_planning_evaluation_framework.models.reach_surface import ReachSurface
 from wfa_planning_evaluation_framework.models.dirac_mixture_single_publisher_model import (
     UnivariateMixedPoissonOptimizer,
-    DiracMixtureSinglePublisherModel,
 )
 
 
@@ -140,7 +139,7 @@ class MultivariateMixedPoissonOptimizer:
         the corresponding marginal pmf.
 
         Args:
-            ncomponents:  Number of components to sample. 
+            ncomponents:  Number of components to sample.
                 (Precisely, we sample these many components plus a special
                 component: the component of all zeros. This is to
                 reflect the never-reached users.)
@@ -261,12 +260,10 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
         reach_points: List[ReachPoint],
         reach_curves: List[ReachCurve] = None,
         single_publisher_reach_agreement: bool = True,
-        universe_size: int = None,
-        universe_reach_ratio: float = 3,
         ncomponents: int = None,
         rng: np.random.Generator = np.random.default_rng(0),
     ):
-        """Constructor for DiracMixtureReachSurface.
+        """Constructs a Dirac mixture multi publisher model.
 
         Args:
             reach_points: A length <n> vector where n = #(training points).
@@ -288,40 +285,42 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
                 words, agreement in reach but not frequency.  As such, this
                 argument is called "single_publisher_reach_agreement" instead
                 of "single_publisher_agreement".
-            universe_size:  The universe size from which we can compute the
-                non-reach from the given ReachPoint and thus obtain a
-                zero-included frequency histogram.
-            universe_reach_ratio:  Ratio between the universe size and the
-                max reach of the given ReachPoints.  If we don't know absolute
-                universe size but just want the universe to be large enough
-                compared to the reach, then specify this argument instead of
-                the previous argument.
             ncomponents:  Number of components in the Poisson mixture.  If not
                 specified, then follow the default choice min(5000, 200 * p**2).
             rng:  Random Generator for the random sampling of high dimensional
                 components.
         """
+        super().__init__(data=reach_points)
+        self.p = len(reach_points[0].impressions)
+        # We require at least a ReachPoint to have universe size.
+        # We choose the common_universe_size to be the max universe size of the
+        # given ReachPoints and reset each training point to have this common
+        # universe size.
+        sizes = [
+            rp._universe_size for rp in self._data if rp._universe_size is not None
+        ]
+        if len(sizes) == 0:
+            raise ValueError(
+                "The model requires at least one ReachPoint to have universe size."
+            )
+        self.common_universe_size = max(sizes)
+        for rp in self._data:
+            rp._universe_size = self.common_universe_size
         if reach_curves is None:
             self.single_publisher_reach_agreement = False
         else:
             self.single_publisher_reach_agreement = single_publisher_reach_agreement
             self.ensure_compatible_num_publishers(reach_curves, reach_points)
             self.reach_curves = copy.deepcopy(reach_curves)
-        if universe_size is None:
-            self.N = max([rp.reach(1) for rp in reach_points]) * universe_reach_ratio
-        else:
-            self.N = universe_size
-        self.p = len(reach_points[0].impressions)
         self.ncomponents = (
             min(5000, 200 * self.p ** 2) if ncomponents is None else ncomponents
         )
         self.rng = rng
-        super().__init__(data=reach_points)
         self._fit_computed = False
 
-    @classmethod
+    @staticmethod
     def ensure_compatible_num_publishers(
-        cls, reach_curves: List[ReachCurve], reach_points: List[ReachPoint]
+        reach_curves: List[ReachCurve], reach_points: List[ReachPoint]
     ):
         """Check if the number of publishers match in different inputs."""
         p = len(reach_curves)
@@ -331,14 +330,14 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
                     "Number of publishers in reach point does not match length of reach curves"
                 )
 
-    @classmethod
+    @staticmethod
     def select_single_publisher_points(
-        cls, reach_points: List[ReachPoint]
-    ) -> Tuple[Dict, bool]:
+        reach_points: List[ReachPoint],
+    ) -> Dict[int, List[ReachPoint]]:
         """Select reach points that describe the reach on a single publisher.
 
         Args:
-            reach_points:  A list of ReachPoint.
+            reach_points:  Any list of ReachPoints.
 
         Returns:
             A dictionary of which the value of key = i is the sub-list of
@@ -359,7 +358,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
 
     @classmethod
     def obtain_marginal_frequency_histograms(
-        cls, reach_points: List[ReachPoint], universe_size: int
+        cls, reach_points: List[ReachPoint]
     ) -> Tuple[np.ndarray]:
         """One way to obtain prior_marginal_frequency_histograms as an input of MultivariateMixedPoissonOptimizer.
 
@@ -367,120 +366,113 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
         reach points to the inputs of MultivariateMixedPoissonOptimizer.
 
         Args:
-            reach_points:  A list of ReachPoint.
-            universe_size:  Any universe size to include non-reach in the
-                frequency histogram.
+            reach_points:  Any list of ReachPoint.
 
         Return:
-            A tuple (prior_marginal_frequency_histograms, impressions_at_prior).
+            A length <2> tuple
+            (prior_marginal_frequency_histograms, baseline_impression_vector).
 
-            This function assumes that the marginal frequency histograms at each
-            publisher are already observed and collected in the given list of ReachPoint.
-            So, this function simply extracts the frequeny histograms and put them in
+            This method assumes that each single pub frequency histogram is
+            already observed, and collected in the given ReachPoints (self._data).
+            This method extracts the single pub frequeny histograms and put them in
             a matrix, as the `prior_marginal_frequency_histograms` argument of
             MultivariateMixedPoissonOptimizer.
 
             The impressions at these single publisher points are also returned.
-            They will be used to standardize any impression vector to an
-            "observable direction" in MultivariateMixedPoissonOptimizer.
-
-            (As explained in the docstring of MultivariateMixedPoissonOptimizer,
-            I'm using the abstract name "prior" for the inclusion of general
-            cases where the marginal distributions are not observable.  But
-            this is out of the scope of PR #102.)
+            They will be used as baseline_impression_vector (see the description
+            of MultivariateMixedPoissonOptimizer).
         """
         single_pub_points = cls.select_single_publisher_points(reach_points)
         p = len(reach_points[0].impressions)
         prior_marginal_frequency_histograms = []
-        impressions_at_prior = []
+        baseline_impression_vector = []
         for i in range(p):
             if not i in single_pub_points.keys():
                 raise AssertionError(f"Cannot find single pub reach point for pub {i}")
             rp = single_pub_points[i][0]
-            prior_marginal_frequency_histograms.append(
-                DiracMixtureSinglePublisherModel.obtain_zero_included_histogram(
-                    universe_size=universe_size, rp=rp
-                )
-            )
-            impressions_at_prior.append(rp.impressions[i])
-        return np.array(prior_marginal_frequency_histograms), np.array(
-            impressions_at_prior
+            prior_marginal_frequency_histograms.append(rp.zero_included_histogram)
+            baseline_impression_vector.append(rp.impressions[i])
+        return (
+            np.array(prior_marginal_frequency_histograms),
+            np.array(baseline_impression_vector),
         )
 
-    @classmethod
+    @staticmethod
     def obtain_observable_directions(
-        cls, reach_points: List[ReachPoint], impressions_at_prior: np.ndarray
+        reach_points: List[ReachPoint], baseline_impression_vector: np.ndarray
     ) -> np.ndarray:
-        """Obtain observable_directions as an input of MultivariateMixedPoissonOptimizer."""
+        """Obtain observable_directions as an input of MultivariateMixedPoissonOptimizer.
+
+        As mentioned in the description of , the observable_directions are obtain
+        by standardizing the impression vector of each training point with the
+        baseline_impression_vector.
+        """
         return (
             np.array([list(rp.impressions) for rp in reach_points])
-            / impressions_at_prior[np.newaxis, :]
+            / baseline_impression_vector[np.newaxis, :]
         )
 
     @classmethod
     def obtain_frequency_histograms_on_observable_directions(
-        cls, reach_points: List[ReachPoint], universe_size: int
+        cls, reach_points: List[ReachPoint]
     ) -> np.ndarray:
         """Obtain frequency_histograms_on_observable_directions as an input of MultivariateMixedPoissonOptimizer."""
-        return np.array(
-            [
-                DiracMixtureSinglePublisherModel.obtain_zero_included_histogram(
-                    universe_size=universe_size, rp=rp
-                )
-                for rp in reach_points
-            ]
-        )
+        return np.array([rp.zero_included_histogram for rp in reach_points])
 
     def _fit(self):
         if self._fit_computed:
             return
-        while True:
-            prior_hists, self.imps_at_prior = self.obtain_marginal_frequency_histograms(
-                reach_points=self._data, universe_size=self.N
+        prior_hists, self.baseline_imps = self.obtain_marginal_frequency_histograms(
+            reach_points=self._data
+        )
+        obs_dirs = self.obtain_observable_directions(
+            reach_points=self._data, baseline_impression_vector=self.baseline_imps
+        )
+        hists_on_obs_dirs = self.obtain_frequency_histograms_on_observable_directions(
+            reach_points=self._data
+        )
+        while self.ncomponents > 0:
+            self.optimizer = MultivariateMixedPoissonOptimizer(
+                observable_directions=obs_dirs,
+                frequency_histograms_on_observable_directions=hists_on_obs_dirs,
+                prior_marginal_frequency_histograms=prior_hists,
+                ncomponents=self.ncomponents,
+                rng=self.rng,
             )
-            obs_dirs = self.obtain_observable_directions(
-                reach_points=self._data, impressions_at_prior=self.imps_at_prior
-            )
-            hists_on_obs_dirs = (
-                self.obtain_frequency_histograms_on_observable_directions(
-                    reach_points=self._data, universe_size=self.N
-                )
-            )
-            while self.ncomponents > 0:
-                self.optimizer = MultivariateMixedPoissonOptimizer(
-                    observable_directions=obs_dirs,
-                    frequency_histograms_on_observable_directions=hists_on_obs_dirs,
-                    prior_marginal_frequency_histograms=prior_hists,
-                    ncomponents=self.ncomponents,
-                    rng=self.rng,
-                )
-                try:
-                    self.optimizer.fit()
-                    break
-                except:
-                    # There is a tiny chance of exception when cvxpy mistakenly
-                    # thinks the problem is non-convex due to numerical errors.
-                    # If this occurs, it is likely that we have a large number
-                    # of components.  In this case, try reducing the number of
-                    # components.
-                    self.ncomponents = int(self.ncomponents / 2)
-                    continue
-            if self.optimizer.ws[0] > 0.1:
-                # The first weight is that of the zero component.
-                # We want the zero component to have significantly positive
-                # weight so there's always room for non-reach.
+            try:
+                self.optimizer.fit()
                 break
-            else:
-                self.N *= 2
+            except Exception as inst:
+                # There is a tiny chance of exception when cvxpy mistakenly
+                # thinks the problem is non-convex due to numerical errors.
+                # If this occurs, it is likely that we have a large number
+                # of components.  In this case, try reducing the number of
+                # components.
+                logging.vlog(1, f"Optimizer failure: {inst}")
+                self.ncomponents = int(self.ncomponents / 2)
                 continue
         self._fit_computed = True
 
     def by_impressions_no_single_pub_reach_agreement(
         self, impressions: List[int], max_frequency: int = 1
     ) -> ReachPoint:
+        """Predicts reach as a function of impressions, without single pub reach agreement.
+
+        Args:
+            impressions:  A length <p> list where p = #pubs.  The impression vector for
+                which we want to predict.
+            max_frequency: int, specifies the number of frequencies for which reach
+                will be reported.
+
+        Returns:
+            A ReachPoint specifying the predicted reach for this number of impressions.
+        """
         self._fit()
         hypothetical_direction = np.array(
-            [this / that for this, that in zip(impressions, self.imps_at_prior)]
+            [
+                hypothetical / baseline
+                for hypothetical, baseline in zip(impressions, self.baseline_imps)
+            ]
         )
         predicted_relative_freq_hist = self.optimizer.predict(
             hypothetical_direction=hypothetical_direction,
@@ -490,24 +482,31 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
             predicted_relative_freq_hist[::-1]
         )[::-1]
         kplus_reaches = (
-            (self.N * relative_kplus_reaches_from_zero[1:]).round(0).astype("int32")
+            (self.common_universe_size * relative_kplus_reaches_from_zero[1:])
+            .round(0)
+            .astype("int32")
         )
         return ReachPoint(impressions, kplus_reaches)
 
-    @classmethod
+    @staticmethod
     def backsolve_impression(
-        cls, curve: Callable, target_reach: int, starting_impression: int
+        curve: Callable, target_reach: int, starting_impression: int
     ) -> int:
-        """Backsolve the impression from a target reach.
+        """From a reach curve, backsolves the impression from a target reach.
+
+        The backsolving is done by a customized bisection search.
+        This method is to be used in the later
+        `by_impressions_with_single_pub_reach_agreement` method.
 
         Args:
-            curve:  A function from impression to (1+) reach.
+            curve:  A reach curve, i.e., function from impression (short for #impressions)
+                to reach.  Here reach only means the 1+ reach.
             target_reach:  The target reach.
             starting_impression:  Starting point when searching the impression.
 
         Returns:
-            A impression, i.e., number of impressions such that curve(impression) is
-            closest to target_reach.
+            A value of impression such that curve(impression) equals to
+            target_reach.
         """
         if target_reach == 0:
             return 0
@@ -522,8 +521,12 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
                 )
         right = probe
         left = 0 if count == 0 else int(probe / 2)
-        while ((curve(left) < target_reach) or (curve(right) > target_reach)) and (
-            right - left > 1
+        # Loop termination criterion:  right - left <= 1, or either left or right hits
+        # the target reach.
+        while not (
+            curve(left) == target_reach
+            or curve(right) == target_reach
+            or right - left <= 1
         ):
             mid = (left + right) / 2
             mid = int(round(mid))
@@ -531,26 +534,65 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
                 left = mid
             else:
                 right = mid
-        if right - left > 1:
-            return int(round((left + right) / 2))
         if abs(curve(left) - target_reach) < abs(curve(right) - target_reach):
             return left
         return right
 
-    @classmethod
+    @staticmethod
     def induced_single_pub_curve(
-        cls, reach_surface: Callable, num_pubs: int, pub_index: int
-    ) -> Callable:
+        surface: Callable[[List[int]], int], num_pubs: int, pub_index: int
+    ) -> Callable[[int], int]:
+        """Returns a induced single pub reach curve from a multi pub reach surface.
+
+        This is another method to be used in the later
+        `by_impressions_with_single_pub_reach_agreement` method.
+
+        Args:
+            surface:  A function from a multi pub impression vector to reach.
+            num_pubs:  Number of publishers.
+            pub_index:  We want the induced reach curve on this pub.
+
+        Returns:
+            The induced reach curve on the given `pub_index`.  That is, the function
+            of reach on the impression at this given pub, while having zero
+            impressions at all other pubs.
+        """
+
         def curve(num_impressions: int) -> int:
             impressions = [0] * num_pubs
             impressions[pub_index] = num_impressions
-            return reach_surface(impressions)
+            return surface(impressions)
 
         return curve
 
     def by_impressions_with_single_pub_reach_agreement(
         self, impressions: List[int], max_frequency: int = 1
     ) -> ReachPoint:
+        """Predicts reach as a function of impressions, with single pub reach agreement.
+
+        With single pub reach agreement, the induced reach curve (see description of the
+        previous method) of the predicted reach surface aligns with the given reach curve
+        at each pub.
+        This is done by first predicting without single pub reach agreement and then
+        applying an adjustment.  Mathematically, let
+        - S(x, y) be the predicted surface without single pub reach agreement,
+        - s1(x) = S(x, 0), s2(y) = S(0, y) be the induced curves of S,
+        - c1(x), c2(y) be the given curves,
+        Then the adjusted surface is
+        S'(x, y) = S(s1^{-1}(c1(x)), s2^{-1}(c2(y))).
+        It can be seen that S'(x, 0) = c1(x), S'(0, y) = c2(y), thus single pub reach
+        agreement.  (Note that the agreement is on 1+ but not necessarily k+ reach.
+        Per confirmation in a WFA meeting, k+ reach agreement is not a requirement.)
+
+        Args:
+            impressions:  A length <p> list where p = #pubs.  The impression vector for
+                which we want to predict.
+            max_frequency: int, specifies the number of frequencies for which reach
+                will be reported.
+
+        Returns:
+            A ReachPoint specifying the predicted reach for this number of impressions.
+        """
         self._fit()
         target_single_pub_reaches = [
             self.reach_curves[i].by_impressions([impressions[i]]).reach(1)
@@ -561,7 +603,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
         ).reach(1)
         induced_single_pub_curves = [
             self.induced_single_pub_curve(
-                reach_surface=reach_surface, num_pubs=self.p, pub_index=i
+                surface=reach_surface, num_pubs=self.p, pub_index=i
             )
             for i in range(self.p)
         ]
@@ -580,6 +622,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
     def by_impressions(
         self, impressions: List[int], max_frequency: int = 1
     ) -> ReachPoint:
+        """Predicts reach either with or without single pub reach agreement."""
         if self.single_publisher_reach_agreement:
             return self.by_impressions_with_single_pub_reach_agreement(
                 impressions, max_frequency

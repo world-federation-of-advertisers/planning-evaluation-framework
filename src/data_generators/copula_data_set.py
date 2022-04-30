@@ -135,7 +135,7 @@ class CopulaDataSet(DataSet):
                 )
             ],
             name=name,
-            universe_size=universe_size
+            universe_size=universe_size,
         )
 
     @property

@@ -107,12 +107,6 @@ class CopulaDataSet(DataSet):
             name:  If specified, a human-readable name that will be associated to this
                 DataSet.
         """
-        if universe_size is None:
-            self.universe_size = 2 * max(
-                [1] + [data.max_reach for data in unlabeled_publisher_data_list]
-            )
-        else:
-            self.universe_size = universe_size
         self.marginal_distributions = [
             AnyFrequencyDistribution(self.zero_included_pmf(pub, universe_size))
             for pub in unlabeled_publisher_data_list
@@ -137,6 +131,7 @@ class CopulaDataSet(DataSet):
                 )
             ],
             name=name,
+            universe_size=universe_size,
         )
 
     @property
@@ -176,8 +171,8 @@ class CopulaDataSet(DataSet):
             frequency_vectors:  A length <n> list of length <p> arrays, where
                 n is the number of users in the sample, and p is the number of
                 publishers.
-                frequency_vectors[k] [i] indicates the frequency at pub i of
-                the k-th user in the sample.
+                frequency_vectors[k] [i] is the frequency at pub i of the k-th
+                user in the sample.
 
         Returns:
             A list of <p> lists of lengths n_1, ..., n_p,
@@ -206,3 +201,60 @@ class CopulaDataSet(DataSet):
                 impressions[i] = impressions[i] + vids * freq_vec[i]
             num_vids += count
         return impressions
+
+    @staticmethod
+    def random_correlation_matrix(p: int, eta: float = 0) -> np.ndarray:
+        """Randomly draw a correlation matrix using the "Onion method".
+
+
+
+        The onion method is referred to the "onion method" in [Ref.1] and the
+        "extended onion method" in [Ref.2] in the following:
+        [Ref.1] S. Ghosh, S. Henderson, "Behavior of the NORTA Method for
+            Correlated Random Vector Generation as the Dimension Increases,"
+            ACM Transactions on Modeling and Computer Simulation, Vol. 13,
+            Iss. 3, July 2003, pp. 276–294
+        [Ref.2] D. Lewandowski, D. Kurowickaa, H. Joe, "Generating random
+            correlation matrices based on vines and extended onion method,"
+            Journal of Multivariate Analysis, Vol. 100, Iss. 9, October 2009,
+            pp. 1989-2001 (see Section 3.2)
+        Compared to the algorithm in [Ref.1], the algorithm in [Ref.2] provides
+        an additional input argument 'eta'. Since the algorithm in [Ref.2] has
+        typos, the algorithm in [Ref.1] is implmented here by incorparing 'eta'.
+
+        Args:
+            p:  A positive integer, the number of the publishers
+            eta:  A non-negative float, a tuning parameter
+
+        Returns:
+            Shape <p * p> 2d-array, a correlation matrix
+        """
+        # Initliaze the correlation matrix
+        corr = np.matrix(np.ones(1))
+
+        # Increment the size of correlation matrix by one each time
+        for k in range(2, p + 1):
+            # sample y = r^2 from a beta distribution
+            # with alpha_1 = (k-1)/2 and alpha_2 = (d-k)/2
+            y = np.random.beta((k - 1) / 2, (p + 1 - k) / 2 + eta)
+            r = np.sqrt(y)
+
+            # sample a unit vector theta uniformly
+            # from the unit ball surface B^(k-1)
+            v = np.random.randn(k - 1)
+            theta = v / np.linalg.norm(v)
+
+            # set w = r theta
+            w = np.dot(r, theta)
+
+            # set q = corr**(1/2) w
+            q = np.dot(linalg.sqrtm(corr), w)
+
+            # incrementally create the next_corr
+            next_corr = np.zeros((k, k))
+            next_corr[: (k - 1), : (k - 1)] = corr
+            next_corr[k - 1, k - 1] = 1
+            next_corr[k - 1, : (k - 1)] = q
+            next_corr[: (k - 1), k - 1] = q
+
+            corr = next_corr

@@ -108,11 +108,9 @@ class CopulaDataSet(DataSet):
                 DataSet.
         """
         if universe_size is None:
-            self.universe_size = 2 * max(
+            universe_size = 2 * max(
                 [1] + [data.max_reach for data in unlabeled_publisher_data_list]
             )
-        else:
-            self.universe_size = universe_size
         self.marginal_distributions = [
             AnyFrequencyDistribution(self.zero_included_pmf(pub, universe_size))
             for pub in unlabeled_publisher_data_list
@@ -137,6 +135,7 @@ class CopulaDataSet(DataSet):
                 )
             ],
             name=name,
+            universe_size=universe_size
         )
 
     @property

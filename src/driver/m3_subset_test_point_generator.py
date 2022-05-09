@@ -53,8 +53,9 @@ class M3SubsetTestPointGenerator(TestPointGenerator):
             campaign_spend_fractions:  The campaign_spend / inventory_spend
                 at each publisher, where each inventory_spend is given by
                 dataset._max_spends.
-            max_num_points:  If (2^p - 1) - (2p + 1) > max_num_points, then
-                randomly sample max_num_points subsets.
+            max_num_points:  If (2^p - 1) - (2p + 1) > `max_num_points`, then
+                randomly sample `max_num_points` subsets from the
+                (2^p - 1) - (2p + 1) subsets.
             rng:  A numpy Generator object that is used to seed the generation
                 of random test points.
         """
@@ -67,6 +68,12 @@ class M3SubsetTestPointGenerator(TestPointGenerator):
     def subset_layer(p: int, q: int) -> List[np.ndarray]:
         """Returns a list of subset indicators for a layer of subsets.
 
+        For example, when p = 3, and q = 2, returns
+        [[1, 1, 0],  # indicating subset {A, B}
+         [1, 0, 1],  # indicating subset {A, C}
+         [0, 0, 1]]   # indicating subset {A, C}
+        In general, a subset indicator is a binary vector v where v[i] = 1
+        if and only if pub i is in the subset.
         A layer of subsets means the collection of subsets with the same
         cardinality.
 
@@ -75,7 +82,8 @@ class M3SubsetTestPointGenerator(TestPointGenerator):
             q: Number of publishers in the subsets.
 
         Returns:
-            A list of arrays that iterate over x in {0, 1}^p where sum(x) = q.
+            A length <p choose q> list of length <p> arrays.
+            Each array is a different binary vector that sums up to 1.
         """
 
         def one_direction(indices: List) -> np.ndarray:
@@ -101,7 +109,7 @@ class M3SubsetTestPointGenerator(TestPointGenerator):
             while n < self.max_num_points:
                 subset_indicator = np.random.choice([0, 1], p)
                 num_involved_subsets = np.count_nonzero(subset_indicator)
-                if num_involved_subsets > 1 and num_involved_subsets < p - 1:
+                if 1 < num_involved_subsets < p - 1:
                     yield list(self._campaign_spends * subset_indicator)
                     n += 1
         else:

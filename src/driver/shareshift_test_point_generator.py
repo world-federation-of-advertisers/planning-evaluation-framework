@@ -32,34 +32,48 @@ class ShareShiftTestPointGenerator(TestPointGenerator):
     ):
         """Constructs a ShareShiftTestPointGenerator.
 
-        Suppose that the original spend vector is [s_1, ..., s_p].
-        This class generates p * m testing points v with:
-            v[i] = s_i + s_i * a_k and
-            v[j] = s_j - s_j / (sum(s) - s[i]) * (s_i * a_k) for j != i,
-        iterating over 1 <= i <= p and k = 1, ..., m.  Here, a_1, ..., a_m are a list
-        of shift fractions.
-        (Note that a testing point will be dropped if any of its element is negative,
-        so there could be fewer than p * m testing points.)
 
-        For example, if
-            * the original spend is [1, 2, 3]
-            * we consider shift fraction = - 0.5, 0.5,
-        then this class generates 2 * 3 testing points with the following spend
-        vectors:
-            * [1 - 0.5 * 1, 2 + (0.5 * 1) * 2 / (2 + 3), 3 + (0.5 * 1) * 3 / (2 + 3)]
-            * [1 + 0.5 * 1, 2 - (0.5 * 1) * 2 / (2 + 3), 3 - (0.5 * 1) * 3 / (2 + 3)]
-            * [1 + (0.5 * 2) * 1 / (1 + 3), 2 - 0.5 * 2, 3 + (0.5 * 2) * 3 / (1 + 3)]
-            * [1 - (0.5 * 2) * 1 / (1 + 3), 2 + 0.5 * 2, 3 - (0.5 * 2) * 3 / (1 + 3)]
+        A ShareShift testing point means a spend vector is obtained by "share-shifting"
+        from the original spend vector.  "Share-shifting" means increasing/descreasing
+        the budget on one pub, and descreasing/increasing the budgets proportionally
+        on other pubs to keep the same total budget.
+
+        For example, consider
+            * 3 pubs with original spend vector = [1, 2, 3],
+            * 2 shift fractions of interest, -0.5 and 0.5,
+        then this class generates 3 * 2 spend vectors for testing:
+            a. Decreasing budget on pub 1, proportionally increasing 2 & 3
+                [1 - 0.5 * 1, 2 + (0.5 * 1) * 2 / (2 + 3), 3 + (0.5 * 1) * 3 / (2 + 3)]
+            b. Increasing budget on pub 1, proportionally increasing 2 & 3
+                [1 + 0.5 * 1, 2 - (0.5 * 1) * 2 / (2 + 3), 3 - (0.5 * 1) * 3 / (2 + 3)]
+            c. Decreasing budget on pub 2, proportionally increasing 1 & 3
+                [1 + (0.5 * 2) * 1 / (1 + 3), 2 - 0.5 * 2, 3 + (0.5 * 2) * 3 / (1 + 3)]
+            d. Increasing budget on pub 2, proportionally decreasing 1 & 3
+                [1 - (0.5 * 2) * 1 / (1 + 3), 2 + 0.5 * 2, 3 - (0.5 * 2) * 3 / (1 + 3)]
             * [1 + (0.5 * 3) * 1 / (1 + 2), 2 + (0.5 * 3) * 2 / (1 + 2), 3 - 3 * 0.5]
             * [1 - (0.5 * 3) * 1 / (1 + 2), 2 - (0.5 * 3) * 2 / (1 + 2), 3 + 3 * 0.5]
 
+        Generally, consider
+            * p pubs with original spend vector = [s_1, ..., s_p],
+            * m shift fractions of interest, a_1, ..., a_m,
+        we generate p * m spend vectors for testing:
+        For i in {1, ..., p}:
+            For j in {1, ..., m}:
+                The (i, j)-th spend vector v has
+                v[i] = s_i + a_j * s_i, and
+                for any k != i,
+                v[k] = s_k - (a_j * s_i) * <proprotion shift to pub k>
+                where <proprotion shift to pub k> = s_k / (sum(s) - s_i).
+        (Note that a testing point will be dropped if any of its element is negative,
+        so there could be fewer than p * m testing points.)
+
         Args:
             dataset:  The DataSet for which test points are to be generated.
-            campaign_spend_fractions:  The campaign_spend / inventory_spend
-                at each publisher, where each inventory_spend is given by
-                dataset._max_spends.
-            shift_fraction_choices:  A list of shift fractions to consider, i.e.,
-                the a_1, ..., a_m in the above description.
+            campaign_spend_fractions:  A length <p> array where p = #pubs.
+                Indicates the <orginal spend vector> in the above description normalized
+                by the inventory max spends.
+            shift_fraction_choices:  A length <m> list where m = #shift fractions of interest.
+                Indicates the shift fractions a_1, ..., a_m in the above description.
         """
         super().__init__(dataset)
         self._campaign_spends = self._max_spends * campaign_spend_fractions
@@ -85,15 +99,22 @@ class ShareShiftTestPointGenerator(TestPointGenerator):
         Returns:
             The spend vector of the testing point.  Explicitly, this vector
             v has:
-                v[i] = s_i - s_i * a and
-                v[j] = s_j + s_j / (sum(s) - s[i]) * (s_i * a) for j != i,
+                v[i] = s_i + a * s_i, and
+                for any k != i,
+                v[k] = s_k - (a * s_i) * <proprotion shift to pub k>
+                where <proprotion shift to pub k> = s_k / (sum(s) - s_i).
             where i = selected_pub and a = shift_fraction.
         """
         v = self._campaign_spends.copy()
         shift_amount = v[selected_pub] * shift_fraction
-        if sum(v) - v[selected_pub] > 0:
+        if v[selected_pub] < sum(v):
+            # The k-th entry of shift_proportions is the
+            # <proprotion shift to pub k> in the description
             shift_proportions = v / (sum(v) - v[selected_pub])
         else:
+            # In the extreme case that sum(v) - v[selected_pub] = 0, i.e.,
+            # all other pubs (except the selected_pub) have original spends = 0,
+            # we just evenly allocate the shift to all other pubs.
             shift_proportions = np.array(
                 [1 / (self._npublishers - 1)] * self._npublishers
             )

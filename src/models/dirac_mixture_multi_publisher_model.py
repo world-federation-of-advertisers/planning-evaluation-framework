@@ -42,22 +42,40 @@ class MultivariateMixedPoissonOptimizer:
             observable_directions:  An <n * p> matrix where n = #training points,
                 p = #pubs.
 
-                The i-th row of the matrix represents the impression vector of
-                the i-th training point.  In reality, the impression vector
-                could be like [1e6, 2e6], which means 1e6 impressions at pub 1
-                and 2e6 impressions at pub 2.  Computing with these raw, large
-                numbers of impresssions may introduce numerical errors.
-                As such, we standardize impression vectors as "directions".  For
-                example, suppose
+                Each training point has
+                    input = an impression vector, and
+                    output = the frequency historgam under the impression vector.
+                The i-th row of the observable_directions matrix represents the
+                impression vector of the i-th training point.
+                In reality, the impression vector could be like [1e6, 2e6],
+                which means 1e6 impressions at pub 1 and 2e6 impressions at pub 2.
+                Computing with these raw, large numbers of impresssions may
+                introduce numerical errors. As such, we standardize impression
+                vectors as "directions".  For example, suppose
                 - training point 1 has impression vector = [1e6, 2e6],
                 - training point 2 has impression vector = [1e6, 0],
                 - training point 3 has impression vector = [0, 2e6],
                 then we say that
                 - the "baseline impression vector" = [1e6, 2e6],
-                - the 3 training points have observable_directions = [1, 1],
-                    [1, 0], [0, 1] respectively.
+                - the 3 training points have observable_directions = [
+                    [1, 1],
+                    [1, 0],
+                    [0, 1]
+                ] respectively.
                 Observable_directions is also a more compact representation
                 Compared to impression vectors.
+
+                As another example, observable_directions = [
+                    [1, 0, 0],
+                    [0, 1, 0],
+                    [0, 0, 1],
+                    [1, 1, 0],
+                    [1, 0, 1],
+                    [0, 1, 1],
+                    [1, 1, 1]
+                ] means that we observe the frequency histogram on all the subsets
+                of 3 publishers.  Rows 1-3 are single-pub observable_directions,
+                rows 4-6 indicate 2-pub unions, and rows 7 indicates 3-pub union.
 
                 As of Apr 2022, all the training points from halo_simulator will
                 have a binary observable_direction (like the above example).
@@ -67,12 +85,12 @@ class MultivariateMixedPoissonOptimizer:
                 Its i-th row is the observed frequency histogram at the i-th
                 row of observable_directions, i.e., the i-th training point.
             prior_marginal_frequency_histograms:  A <p * (F + 1)> matrix where
-                n = #training points, F = maximum frequency.
+                p = #pubs, F = maximum frequency.
 
                 Its i-th row is a marginal frequency histogram at the i-th
                 publisher under the baseline impression (see the description of
                 the `observable_directions` arg).  In other words, its rows are
-                frequency_histograms at the single-pub observation_directions =
+                frequency_histograms at the single-pub observable_directions =
                 [1, 0, ..., 0], [0, 1, 0, ..., 0], ..., [0, ..., 0, 1],
                 respectively.  As of Apr 2022, halo_simulator generates a training
                 point on each of these single pub observable_direction, so,
@@ -121,7 +139,15 @@ class MultivariateMixedPoissonOptimizer:
 
     @classmethod
     def normalize_rows(cls, matrix: np.ndarray) -> np.ndarray:
-        """Normalize a matrix so that each row sums up to 1."""
+        """Normalize a matrix so that each row sums up to 1.
+
+        Args:
+            matrix: Any m * n array for any m, n.
+
+        Returns:
+            An m * n array B such that B[i, :] = A[i, :] / sum(A[i, :])
+            for any i, where A is the given matrix.
+        """
         row_sums = matrix.sum(axis=1)
         # Using numpy broadcasting
         return matrix / row_sums[:, np.newaxis]
@@ -150,9 +176,20 @@ class MultivariateMixedPoissonOptimizer:
             A <C * p> matrix where C = #components and p = #pubs.
             Each row is a component, i.e., a vector of Poisson means at all pubs.
         """
-        p, f = marginal_pmfs.shape
+        p, max_f = marginal_pmfs.shape
+        # For any frequency level 0 <= f <= <max frequency>,
+        # and any pub i,
+        # Pr(the i-th coordinate of a random component falls in [f, f + 1))
+        # = marginal_pmfs[i] [f].
+        # And with in [f, f + 1), the coordinate is uniformly distributed.
+        # So the codes below first randomly choose an integer f according to the
+        # marginal pmf, and then add rng.random() to make it a random float
+        # in [f, f + 1).
         sample = np.array(
-            [rng.choice(a=range(f), p=pmf, size=ncomponents) for pmf in marginal_pmfs]
+            [
+                rng.choice(a=range(max_f), p=pmf, size=ncomponents)
+                for pmf in marginal_pmfs
+            ]
         ) + rng.random(size=(p, ncomponents))
         return np.hstack((np.zeros((p, 1)), sample)).transpose()
 
@@ -228,8 +265,9 @@ class MultivariateMixedPoissonOptimizer:
                 different from the maximum frequency of the training data.
 
         Returns:
-            A length <F + 1> vector.
-            Its f-th coordinate is the pmf at frequency f of the hypothetical campiaign.
+            A length <F + 1> vector, where F is the maximum frequency.
+            Its f-th coordinate is the pmf at frequency f of the hypothetical campiaign,
+            for 0 <= f < = F.
         """
         if len(hypothetical_direction) != self.p:
             raise ValueError("Hypothetical direction does match number of publishers")
@@ -349,11 +387,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
             involved_pubs = [i for i in range(p) if rp.impressions[i] > 0]
             if len(involved_pubs) == 1:
                 pub = involved_pubs[0]
-                single_pub_points[pub] = (
-                    single_pub_points[pub] + [rp]
-                    if pub in single_pub_points.keys()
-                    else [rp]
-                )
+                single_pub_points[pub] = single_pub_points.get(pub, []) + [rp]
         return single_pub_points
 
     @classmethod
@@ -362,7 +396,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
     ) -> Tuple[np.ndarray]:
         """One way to obtain prior_marginal_frequency_histograms as an input of MultivariateMixedPoissonOptimizer.
 
-        This and the following two functions are for translating the given
+        This and the next two methods are for translating the given
         reach points to the inputs of MultivariateMixedPoissonOptimizer.
 
         Args:
@@ -387,7 +421,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
         prior_marginal_frequency_histograms = []
         baseline_impression_vector = []
         for i in range(p):
-            if not i in single_pub_points.keys():
+            if i not in single_pub_points:
                 raise AssertionError(f"Cannot find single pub reach point for pub {i}")
             rp = single_pub_points[i][0]
             prior_marginal_frequency_histograms.append(rp.zero_included_histogram)
@@ -403,9 +437,9 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
     ) -> np.ndarray:
         """Obtain observable_directions as an input of MultivariateMixedPoissonOptimizer.
 
-        As mentioned in the description of , the observable_directions are obtain
-        by standardizing the impression vector of each training point with the
-        baseline_impression_vector.
+        As mentioned in the description of MultivariateMixedPoissonOptimizer.__init__(),
+        the observable_directions are obtained by standardizing the impression vector of
+        each training point with the baseline_impression_vector.
         """
         return (
             np.array([list(rp.impressions) for rp in reach_points])
@@ -449,7 +483,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
                 # of components.  In this case, try reducing the number of
                 # components.
                 logging.vlog(1, f"Optimizer failure: {inst}")
-                self.ncomponents = int(self.ncomponents / 2)
+                self.ncomponents = self.ncomponents // 2
                 continue
         self._fit_computed = True
 
@@ -490,7 +524,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
 
     @staticmethod
     def backsolve_impression(
-        curve: Callable, target_reach: int, starting_impression: int
+        curve: Callable[[int], int], target_reach: int, starting_impression: int
     ) -> int:
         """From a reach curve, backsolves the impression from a target reach.
 

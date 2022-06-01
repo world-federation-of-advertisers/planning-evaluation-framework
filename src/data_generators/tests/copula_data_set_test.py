@@ -16,9 +16,12 @@
 from collections import Counter
 from typing import Dict
 from copy import deepcopy
+from itertools import product
 from absl.testing import absltest
+from absl.testing import parameterized
 import numpy as np
-from statsmodels.distributions.copula.elliptical import GaussianCopula
+from scipy import linalg
+from statsmodels.distributions.copula.elliptical import GaussianCopula, StudentTCopula
 from statsmodels.distributions.copula.other_copulas import IndependenceCopula
 
 from wfa_planning_evaluation_framework.data_generators.copula_data_set import (
@@ -43,7 +46,7 @@ class AnyFrequencyDistributionTest(absltest.TestCase):
         self.assertEqual(dist.ppf(0.1), 0)
 
 
-class CopulaDataSetTest(absltest.TestCase):
+class CopulaDataSetTest(parameterized.TestCase):
     def test_zero_included_pmf(self):
         pdf = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)])
         res = CopulaDataSet.zero_included_pmf(pdf, 10)
@@ -58,6 +61,11 @@ class CopulaDataSetTest(absltest.TestCase):
         np.testing.assert_equal(res[0], expected[0])
         np.testing.assert_equal(res[1], expected[1])
 
+    @staticmethod
+    def frequency_dictionary(pdf: PublisherData) -> Dict:
+        freq_by_vid = pdf.user_counts_by_impressions(pdf.max_impressions)
+        return dict(Counter(freq_by_vid.values()))
+
     def test_approximate_agreement_with_marginals(self):
         impressions1 = list(range(100)) * 1 + list(range(100, 200)) * 2
         pdf1 = PublisherData(FixedPriceGenerator(0.1)(impressions1))
@@ -70,11 +78,7 @@ class CopulaDataSetTest(absltest.TestCase):
             random_generator=np.random.default_rng(0),
         )
 
-        def frequency_dictionary(pdf: PublisherData) -> Dict:
-            freq_by_vid = pdf.user_counts_by_impressions(pdf.max_impressions)
-            return dict(Counter(freq_by_vid.values()))
-
-        res1, res2 = [frequency_dictionary(pdf) for pdf in dataset._data]
+        res1, res2 = [self.frequency_dictionary(pdf) for pdf in dataset._data]
         self.assertTrue(1 in res1)
         self.assertTrue(2 in res1)
         self.assertTrue(3 in res2)
@@ -140,6 +144,89 @@ class CopulaDataSetTest(absltest.TestCase):
         # (1, 1) and (2, 2) are impossible.
         self.assertFalse((1, 1) in res)
         self.assertFalse((2, 2) in res)
+
+    # When using statsmodels.distributions.copula for more than 2 pubs, there is
+    # "UserWarning: copulas for more than 2 dimension is untested."
+    # So here, we added some tests with more than 2 pubs.
+    # We did more tests in notebooks, and we believe the pacakge is correctly
+    # generating at least the Gaussian and t- copulas even with >2 pubs.
+    def test_approximate_agreement_with_marginals_with_more_than_two_pubs(self):
+        impressions = list(range(100)) * 1 + list(range(100, 200)) * 2
+        pdf = PublisherData(FixedPriceGenerator(0.1)(impressions))
+        for num_pubs in [3, 5, 10]:
+            # Correlation matrix with all correlations = 0.5
+            cor_mat = linalg.toeplitz([1] + [0.5] * (num_pubs - 1))
+            for gen in [
+                GaussianCopula(corr=cor_mat),
+                StudentTCopula(corr=cor_mat, df=5),
+            ]:
+                dataset = CopulaDataSet(
+                    unlabeled_publisher_data_list=[pdf] * num_pubs,
+                    copula_generator=gen,
+                    universe_size=300,
+                    random_generator=np.random.default_rng(0),
+                )
+                for pdf in dataset._data:
+                    res = self.frequency_dictionary(pdf)
+                    self.assertTrue(1 in res)
+                    self.assertTrue(2 in res)
+                    # With more than 2 pubs, we conduct a large number of tests.
+                    # Then, some test results significantly deviate from the expected
+                    # values purely due to randomness.  As such, we set the tolerance
+                    # delta to be larger (0.5 instead of the previous 0.2).
+                    self.assertAlmostEqual(res[1] / 100, 1, delta=0.5)
+                    self.assertAlmostEqual(res[2] / 100, 1, delta=0.5)
+
+    def test_uncorrelated_copula_with_more_than_two_pubs(self):
+        for num_pubs in [3, 4]:
+            for gen in [
+                GaussianCopula(np.identity(num_pubs)),
+                StudentTCopula(np.identity(num_pubs), df=5),
+            ]:
+                # Suppose there are 100 * 2^p users in total, where p = #pubs.
+                # At each pub, half users have frequency 1, and the other half
+                # have frequency 2.
+                half_size = int(100 * 2 ** num_pubs / 2)
+                impressions = (
+                    list(range(half_size)) * 1
+                    + list(range(half_size, half_size * 2)) * 2
+                )
+                pdf = PublisherData(FixedPriceGenerator(0.1)(impressions))
+                dataset = CopulaDataSet(
+                    unlabeled_publisher_data_list=[pdf] * num_pubs,
+                    copula_generator=gen,
+                    universe_size=100 * 2 ** num_pubs,
+                    random_generator=np.random.default_rng(0),
+                )
+                res = dataset.frequency_vectors_sampled_distribution
+                for key in product(*tuple([(1, 2)] * num_pubs)):
+                    self.assertTrue(key in res)
+                    self.assertAlmostEqual(res[key] / 100, 1, delta=0.5)
+
+    def test_fully_positively_correlated_copula_with_more_than_two_pubs(self):
+        # Note: fully negatively correlated cases do not exist with more than 2 pubs.
+        for num_pubs in [3, 4]:
+            correlation_matrix = np.ones((num_pubs, num_pubs)) - 1e-9
+            np.fill_diagonal(correlation_matrix, 1)
+            for gen in [
+                GaussianCopula(correlation_matrix),
+                StudentTCopula(correlation_matrix, df=5),
+            ]:
+                impressions = list(range(100)) * 1 + list(range(100, 200)) * 2
+                pdf = PublisherData(FixedPriceGenerator(0.1)(impressions))
+                dataset = CopulaDataSet(
+                    unlabeled_publisher_data_list=[pdf] * num_pubs,
+                    copula_generator=gen,
+                    universe_size=100 * 2 ** num_pubs,
+                    random_generator=np.random.default_rng(0),
+                )
+                res = dataset.frequency_vectors_sampled_distribution
+                key1 = tuple([1] * num_pubs)
+                self.assertTrue(key1 in res)
+                self.assertAlmostEqual(res[key1] / 100, 1, delta=0.2)
+                key2 = tuple([2] * num_pubs)
+                self.assertTrue(key2 in res)
+                self.assertAlmostEqual(res[key2] / 100, 1, delta=0.2)
 
 
 if __name__ == "__main__":

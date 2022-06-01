@@ -55,6 +55,7 @@ TEST_LEVELS_INDEPENDENT = {
 }
 
 TEST_LEVELS_COPULA = {
+    "num_publishers": [2],
     "largest_publisher_size": [8, 16],
     "pricing_generator_params": [
         GeneratorParameters(
@@ -67,12 +68,39 @@ TEST_LEVELS_COPULA = {
             CopulaDataSet,
             {
                 "largest_pub_to_universe_ratio": 0.5,
-                "copula_generator": GaussianCopula(corr=-0.2),
-                "random_generator": 1,
+                "copula_class": {
+                    "generator": GaussianCopula,
+                    "kwargs": {},
+                },
+                "correlation_matrix": {
+                    "generator": m3_data_design.CopulaCorrelationMatrixGenerator.homogeneous,
+                    "kwargs": {"rho": 0.2},
+                },
+                "random_generator": np.random.default_rng(1),
             },
-        ),
+        )
     ],
 }
+
+
+class CopulaCorrelationMatrixGeneratorTest(absltest.TestCase):
+    cls = m3_data_design.CopulaCorrelationMatrixGenerator
+
+    def test_homogenous(self):
+        res = self.cls.homogeneous(p=3, rho=0.1)
+        expected = np.array([[1, 0.1, 0.1], [0.1, 1, 0.1], [0.1, 0.1, 1]])
+        np.testing.assert_almost_equal(res, expected, decimal=3)
+
+    def test_autoregressive(self):
+        res = self.cls.autoregressive(p=3, rho=0.5)
+        expected = np.array([[1, 0.5, 0.25], [0.5, 1, 0.5], [0.25, 0.5, 1]])
+        np.testing.assert_almost_equal(res, expected, decimal=3)
+
+    def test_random(self):
+        for seed in [1, 2, 3, 4]:
+            res = self.cls.random(p=5, rng=np.random.default_rng(seed))
+            # For a randomly generated correlation matrix, we test if it's positive definite
+            self.assertTrue(all(np.linalg.eig(res)[0] > 0))
 
 
 class SyntheticDataDesignGeneratorTest(absltest.TestCase):
@@ -92,7 +120,7 @@ class SyntheticDataDesignGeneratorTest(absltest.TestCase):
         m3_design = m3_data_design.generate_data_design_config(
             np.random.default_rng(seed=1)
         )
-        self.assertLen(list(m3_design), 100)
+        self.assertLen(list(m3_design), 200)
 
     def test_analysis_example_design_size(self):
         analysis_example_design = (

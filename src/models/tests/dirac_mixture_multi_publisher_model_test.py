@@ -30,6 +30,9 @@ from wfa_planning_evaluation_framework.models.dirac_mixture_multi_publisher_mode
 class FakeRandomGenerator:
     def choice(self, a: List, p: np.ndarray, size: int) -> np.ndarray:
         """Fake method to replace np.random.choice."""
+        if len(a) == 2:
+            n = int(size * p[0])
+            return np.array([a[0]] * n + [a[1]] * (size - n))
         return np.array([len(a) - 1] * size)
 
     def random(self, size: Tuple) -> np.ndarray:
@@ -38,65 +41,70 @@ class FakeRandomGenerator:
 
 
 class MultivariateMixedPoissonOptimizerTest(absltest.TestCase):
-
-    cls = MultivariateMixedPoissonOptimizer
-
     def test_normalize_rows(self):
         matrix = np.array([[1, 2, 1], [2, 3, 5]])
-        res = self.cls.normalize_rows(matrix)
+        res = MultivariateMixedPoissonOptimizer.normalize_rows(matrix)
         expected = np.array([[0.25, 0.5, 0.25], [0.2, 0.3, 0.5]])
         np.testing.assert_almost_equal(res, expected, decimal=2)
         # For 2d arrays, absltest.assertSequenceAlmostEqual no longer works.
 
-    def test_check_dimension_campatibility(self):
-        try:
-            MultivariateMixedPoissonOptimizer(
-                observable_directions=np.array([[1, 0], [0, 1], [1, 1]]),
-                frequency_histograms_on_observable_directions=np.array(
-                    [[0.7, 0.3], [0.6, 0.4], [0.3, 0.7]]
-                ),
-                prior_marginal_frequency_histograms=np.array(
-                    [[0.75, 0.25], [0.65, 0.35]]
-                ),
-            )
-            # Note that check_dimension_campatibility() is already
-            # executed in __init__().
-        except:
-            self.fail("Rejected compatible dimensions")
-        # number of pubs don't match
-        with self.assertRaises(ValueError):
-            MultivariateMixedPoissonOptimizer(
-                observable_directions=np.array([[1, 0], [0, 1], [1, 1]]),
-                frequency_histograms_on_observable_directions=np.array(
-                    [[0.7, 0.3], [0.6, 0.4], [0.3, 0.7]]
-                ),
-                prior_marginal_frequency_histograms=np.array(
-                    [[0.75, 0.25], [0.65, 0.35], [0.5, 0.5]]
-                ),
-            )
-        # number of observable directions don't match
-        with self.assertRaises(ValueError):
-            MultivariateMixedPoissonOptimizer(
-                observable_directions=np.array([[1, 0], [0, 1], [1, 1]]),
-                frequency_histograms_on_observable_directions=np.array(
-                    [[0.7, 0.3], [0.6, 0.4]]
-                ),
-                prior_marginal_frequency_histograms=np.array(
-                    [[0.75, 0.25], [0.65, 0.35]]
-                ),
-            )
-
-    def test_weighted_random_sampling(self):
-        res = self.cls.weighted_random_sampling(
-            ncomponents=1,
-            marginal_pmfs=np.array([[0.5, 0.5], [0.7, 0.3]]),
-            rng=FakeRandomGenerator(),
+    def test_find_single_pub_pmfs(self):
+        inst = MultivariateMixedPoissonOptimizer(
+            observable_directions=np.array(
+                [[1, 0, 0], [1, 1, 1], [0, 1, 0], [1, 1, 0], [0, 0, 1]]
+            ),
+            frequency_histograms_on_observable_directions=np.array(
+                [[2, 2], [1, 3], [1, 4], [2, 3], [2, 4]]
+            ),
         )
-        expected = np.array([[0, 0], [1, 1]])
-        np.testing.assert_almost_equal(res, expected)
+        res = inst.find_single_pub_pmfs()
+        self.assertLen(res, 3)
+        np.testing.assert_almost_equal(res[0], [0.5, 0.5], decimal=3)
+        np.testing.assert_almost_equal(res[1], [0.2, 0.8], decimal=3)
+        np.testing.assert_almost_equal(res[2], [0.333, 0.667], decimal=3)
+
+    def test_in_bound_weighted_sampling(self):
+        inst = MultivariateMixedPoissonOptimizer(
+            observable_directions=np.array(
+                [[1, 0, 0], [1, 1, 1], [0, 1, 0], [1, 1, 0], [0, 0, 1]]
+            ),
+            frequency_histograms_on_observable_directions=np.array(
+                [[2, 2], [1, 3], [1, 4], [2, 3], [2, 4]]
+            ),
+            rng=FakeRandomGenerator(),
+            ncomponents=1,
+            dilusion=0,
+        )
+        res = inst.in_bound_weighted_sampling()
+        expected = np.array([[0, 0, 0], [1, 1, 1]])
+        np.testing.assert_almost_equal(res, expected, decimal=3)
+
+    def test_in_bound_weighted_sampling_with_more_components(self):
+        inst = MultivariateMixedPoissonOptimizer(
+            observable_directions=np.array(
+                [[1, 0, 0], [1, 1, 1], [0, 1, 0], [1, 1, 0], [0, 0, 1]]
+            ),
+            frequency_histograms_on_observable_directions=np.array(
+                [[0, 3], [1, 3], [0, 3], [2, 3], [0, 3]]
+            ),
+            rng=FakeRandomGenerator(),
+            ncomponents=5,
+            dilusion=0,
+        )
+        res = inst.in_bound_weighted_sampling()
+        expected = np.array(
+            [[0, 0, 0], [1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]]
+        )
+        np.testing.assert_almost_equal(res, expected, decimal=3)
+        inst.dilusion = 1
+        res = inst.in_bound_weighted_sampling()
+        expected = np.array(
+            [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1, 1, 1], [1, 1, 1], [1, 1, 1]]
+        )
+        np.testing.assert_almost_equal(res, expected, decimal=3)
 
     def test_obtain_pmf_matrix_with_zero_component(self):
-        res = self.cls.obtain_pmf_matrix(
+        res = MultivariateMixedPoissonOptimizer.obtain_pmf_matrix(
             component_vector=np.array([0, 0]),
             observable_directions=np.array([[1, 0], [0, 1], [1, 1]]),
             max_freq=1,
@@ -105,7 +113,7 @@ class MultivariateMixedPoissonOptimizerTest(absltest.TestCase):
         np.testing.assert_almost_equal(res, expected, decimal=2)
 
     def test_obtain_pmf_matrix_with_non_zero_component(self):
-        res = self.cls.obtain_pmf_matrix(
+        res = MultivariateMixedPoissonOptimizer.obtain_pmf_matrix(
             component_vector=np.array([1, 2]),
             observable_directions=np.array([[1, 0], [0, 1], [1, 1]]),
             max_freq=1,
@@ -120,11 +128,12 @@ class MultivariateMixedPoissonOptimizerTest(absltest.TestCase):
             frequency_histograms_on_observable_directions=np.array(
                 [[1, 0], [1, 0], [1, 0]]
             ),
-            prior_marginal_frequency_histograms=np.array([[0.5, 0.5], [0.7, 0.3]]),
             ncomponents=1,
+            dilusion=1,
             rng=FakeRandomGenerator(),
         )
         optimizer.fit()
+        # weight should be concentrated at the zero component.
         expected_ws = np.array([1, 0])
         np.testing.assert_almost_equal(optimizer.ws, expected_ws, decimal=2)
 
@@ -135,7 +144,6 @@ class MultivariateMixedPoissonOptimizerTest(absltest.TestCase):
             frequency_histograms_on_observable_directions=np.array(
                 [[0.7, 0.3], [0.6, 0.4], [0.3, 0.7]]
             ),
-            prior_marginal_frequency_histograms=np.array([[0.5, 0.5], [0.7, 0.3]]),
             ncomponents=1,
             rng=FakeRandomGenerator(),
         )
@@ -159,7 +167,6 @@ class MultivariateMixedPoissonOptimizerTest(absltest.TestCase):
             frequency_histograms_on_observable_directions=np.array(
                 [[0.7, 0.3, 0], [0.6, 0.4, 0], [0.3, 0.7, 0]]
             ),
-            prior_marginal_frequency_histograms=np.array([[0.5, 0.5], [0.7, 0.3]]),
             ncomponents=1,
             rng=FakeRandomGenerator(),
         )
@@ -206,7 +213,6 @@ class MultivariateMixedPoissonOptimizerTest(absltest.TestCase):
             frequency_histograms_on_observable_directions=np.array(
                 [[0.7, 0.3, 0], [0.6, 0.4, 0], [0.3, 0.7, 0]]
             ),
-            prior_marginal_frequency_histograms=np.array([[0.5, 0.5], [0.7, 0.3]]),
             ncomponents=1,
             rng=FakeRandomGenerator(),
         )
@@ -228,7 +234,6 @@ class MultivariateMixedPoissonOptimizerTest(absltest.TestCase):
             frequency_histograms_on_observable_directions=np.array(
                 [[0.7, 0.3, 0], [0.6, 0.4, 0], [0.3, 0.7, 0]]
             ),
-            prior_marginal_frequency_histograms=np.array([[0.5, 0.5], [0.7, 0.3]]),
             ncomponents=1,
             rng=FakeRandomGenerator(),
         )
@@ -244,13 +249,11 @@ class MultivariateMixedPoissonOptimizerTest(absltest.TestCase):
 
 
 class DiracMixtureMultiPublisherModelTest(parameterized.TestCase):
-    cls = DiracMixtureMultiPublisherModel
-
     def test_set_common_universe_size(self):
         rp1 = ReachPoint(impressions=[3, 0, 0], kplus_reaches=[1])
         rp2 = ReachPoint(impressions=[5, 0, 0], kplus_reaches=[2], universe_size=10)
         rp3 = ReachPoint(impressions=[2, 4, 0], kplus_reaches=[3], universe_size=20)
-        model = self.cls(reach_points=[rp1, rp2, rp3])
+        model = DiracMixtureMultiPublisherModel(reach_points=[rp1, rp2, rp3])
         self.assertEqual(model.common_universe_size, 20)
         for rp in model._data:
             self.assertEqual(rp.universe_size, 20)
@@ -270,40 +273,16 @@ class DiracMixtureMultiPublisherModelTest(parameterized.TestCase):
         ]
         reach_points = [ReachPoint(impressions=imps, kplus_reaches=[4])]
         try:
-            self.cls.ensure_compatible_num_publishers(reach_curves, reach_points)
+            DiracMixtureMultiPublisherModel.ensure_compatible_num_publishers(
+                reach_curves, reach_points
+            )
         except:
             self.fail("Rejected compatible inputs")
         reach_points += [ReachPoint(impressions=[1, 2, 3, 4], kplus_reaches=[4])]
         with self.assertRaises(ValueError):
-            self.cls.ensure_compatible_num_publishers(reach_curves, reach_points)
-
-    def test_select_single_publisher_points(self):
-        rp1 = ReachPoint(impressions=[3, 0, 0], kplus_reaches=[1])
-        rp2 = ReachPoint(impressions=[5, 0, 0], kplus_reaches=[2])
-        rp3 = ReachPoint(impressions=[2, 4, 0], kplus_reaches=[3])
-        rp4 = ReachPoint(impressions=[0, 0, 7], kplus_reaches=[4])
-        res = self.cls.select_single_publisher_points([rp1, rp2, rp3, rp4])
-        expected = [0, 2]
-        self.assertListEqual(list(res.keys()), expected)
-        self.assertLen(res[0], 2)
-        self.assertLen(res[2], 1)
-        self.assertEqual(res[2][0].reach(1), 4)
-
-    def test_obtain_marginal_frequency_histograms(self):
-        rp1 = ReachPoint(impressions=[3, 0, 0], kplus_reaches=[1], universe_size=15)
-        rp2 = ReachPoint(impressions=[5, 0, 0], kplus_reaches=[2], universe_size=15)
-        rp3 = ReachPoint(impressions=[2, 4, 0], kplus_reaches=[3], universe_size=15)
-        rp4 = ReachPoint(impressions=[0, 0, 7], kplus_reaches=[4], universe_size=15)
-        with self.assertRaises(AssertionError):
-            self.cls.obtain_marginal_frequency_histograms([rp1, rp2, rp3, rp4])
-        rp5 = ReachPoint(impressions=[0, 8, 0], kplus_reaches=[5], universe_size=15)
-        res_hists, res_impressions = self.cls.obtain_marginal_frequency_histograms(
-            [rp1, rp2, rp3, rp4, rp5]
-        )
-        expected_hists = np.array([[14, 1], [10, 5], [11, 4]])
-        expected_impressions = np.array([3, 8, 7])
-        np.testing.assert_equal(res_hists, expected_hists)
-        np.testing.assert_equal(res_impressions, expected_impressions)
+            DiracMixtureMultiPublisherModel.ensure_compatible_num_publishers(
+                reach_curves, reach_points
+            )
 
     def test_obtain_observable_directions(self):
         rp1 = ReachPoint(impressions=[3, 0, 0], kplus_reaches=[1])
@@ -312,30 +291,24 @@ class DiracMixtureMultiPublisherModelTest(parameterized.TestCase):
         rp4 = ReachPoint(impressions=[0, 0, 7], kplus_reaches=[4])
         rp5 = ReachPoint(impressions=[0, 8, 0], kplus_reaches=[5])
         rp6 = ReachPoint(impressions=[4, 6, 10], kplus_reaches=[10])
-        res = self.cls.obtain_observable_directions(
+        (
+            baseline_imps,
+            directions,
+        ) = DiracMixtureMultiPublisherModel.obtain_observable_directions(
             reach_points=[rp1, rp2, rp3, rp4, rp5, rp6],
-            baseline_impression_vector=np.array([3, 8, 7]),
         )
+        np.testing.assert_almost_equal(baseline_imps, [5, 8, 10], decimal=2)
         expected = np.array(
             [
+                [3 / 5, 0, 0],
                 [1, 0, 0],
-                [5 / 3, 0, 0],
-                [2 / 3, 4 / 8, 0],
-                [0, 0, 1],
+                [2 / 5, 4 / 8, 0],
+                [0, 0, 7 / 10],
                 [0, 1, 0],
-                [4 / 3, 6 / 8, 10 / 7],
+                [4 / 5, 6 / 8, 1],
             ]
         )
-        np.testing.assert_almost_equal(res, expected, decimal=2)
-
-    def test_obtain_frequency_histograms_on_observable_directions(self):
-        rp1 = ReachPoint(impressions=[5, 6], kplus_reaches=[7, 2], universe_size=15)
-        rp2 = ReachPoint(impressions=[7, 3], kplus_reaches=[5, 4], universe_size=15)
-        res = self.cls.obtain_frequency_histograms_on_observable_directions(
-            reach_points=[rp1, rp2]
-        )
-        expected = np.array([[8, 5, 2], [10, 1, 4]])
-        np.testing.assert_equal(res, expected)
+        np.testing.assert_almost_equal(directions, expected, decimal=2)
 
     @parameterized.named_parameters(
         {
@@ -370,11 +343,11 @@ class DiracMixtureMultiPublisherModelTest(parameterized.TestCase):
         rp3 = ReachPoint(
             impressions=[10, 10], kplus_reaches=[reaches[2]], universe_size=15
         )
-        model = self.cls(
+        model = DiracMixtureMultiPublisherModel(
             reach_curves=[rc1, rc2],
             reach_points=[rp1, rp2, rp3],
             ncomponents=1,
-            # which means 1 component plus the zero component, a total of 2
+            dilusion=1,
             rng=FakeRandomGenerator(),
         )
         model._fit()
@@ -418,9 +391,10 @@ class DiracMixtureMultiPublisherModelTest(parameterized.TestCase):
         rp3 = ReachPoint(impressions=[4, 6], kplus_reaches=[0], universe_size=10)
         # The above parameters don't matter since we'll manually set its optimizer
         # parameters below.
-        model = self.cls(
+        model = DiracMixtureMultiPublisherModel(
             reach_points=[rp1, rp2, rp3],
             ncomponents=1,
+            dilusion=1,
             rng=FakeRandomGenerator(),
         )
         model._fit()
@@ -438,10 +412,14 @@ class DiracMixtureMultiPublisherModelTest(parameterized.TestCase):
         target_reach = 26
         expected = 5
         starting_impression = 9
-        res = self.cls.backsolve_impression(curve, target_reach, starting_impression)
+        res = DiracMixtureMultiPublisherModel.backsolve_impression(
+            curve, target_reach, starting_impression
+        )
         self.assertEqual(res, expected)
         starting_impression = 2
-        res = self.cls.backsolve_impression(curve, target_reach, starting_impression)
+        res = DiracMixtureMultiPublisherModel.backsolve_impression(
+            curve, target_reach, starting_impression
+        )
         self.assertEqual(res, expected)
 
     def test_by_impressions_with_single_pub_reach_agreement(self):
@@ -456,10 +434,11 @@ class DiracMixtureMultiPublisherModelTest(parameterized.TestCase):
         rp3 = ReachPoint(impressions=[20, 20], kplus_reaches=[13], universe_size=30)
         # The above parameters don't matter since we'll manually set its optimizer
         # parameters below.
-        model = self.cls(
+        model = DiracMixtureMultiPublisherModel(
             reach_curves=[rc1, rc2],
             reach_points=[rp1, rp2, rp3],
             ncomponents=5,
+            dilusion=1,
             rng=FakeRandomGenerator(),
         )
         model._fit()

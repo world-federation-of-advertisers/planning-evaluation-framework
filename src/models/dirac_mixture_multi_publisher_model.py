@@ -32,8 +32,8 @@ class MultivariateMixedPoissonOptimizer:
         self,
         observable_directions: np.ndarray,
         frequency_histograms_on_observable_directions: np.ndarray,
-        prior_marginal_frequency_histograms: np.ndarray,
         ncomponents: int = 1000,
+        dilusion: float = 0,
         rng: np.random.Generator = np.random.default_rng(0),
     ):
         """Construct an optimizer for multivariate mixed Poisson distribution.
@@ -84,66 +84,37 @@ class MultivariateMixedPoissonOptimizer:
                 where n = #training points, F = maximum frequency.
                 Its i-th row is the observed frequency histogram at the i-th
                 row of observable_directions, i.e., the i-th training point.
-            prior_marginal_frequency_histograms:  A <p * (F + 1)> matrix where
-                p = #pubs, F = maximum frequency.
-
-                Its i-th row is a marginal frequency histogram at the i-th
-                publisher under the baseline impression (see the description of
-                the `observable_directions` arg).  In other words, its rows are
-                frequency_histograms at the single-pub observable_directions =
-                [1, 0, ..., 0], [0, 1, 0, ..., 0], ..., [0, ..., 0, 1],
-                respectively.  As of Apr 2022, halo_simulator generates a training
-                point on each of these single pub observable_direction, so,
-                this `prior_marginal_frequency_histograms` arg just consists of
-                partial rows of `frequency_histograms_on_observable_directions`.
-                It's not necessarily the case in the future though.  We require
-                always specifying this `prior_marginal_frequency_histograms`
-                arg so that the model is runnable regardless of what are provided
-                by halo_simulator.
-
-                Being called "prior_marginal_frequency_histograms", these
-                frequency histograms are allowed to be estimates (say, from models
-                or historical data), instead of actual observations.
+                For each frequency histogram H, H[0] indicates the non-reach,
+                H[f] indicates the reach at frequency f for f = 1, ..., F - 1,
+                and H[F] indicates the F+ reach.
             ncomponents:  Number of components in the Poisson mixture.
+            dilusion:  An arg to control the weights when sampling components.
+                The same argument as in the in_bound_grid method of the
+                UnivariateMixedPoissonOptimizer class for single pub model.
             rng:  Random Generator for the random sampling of high dimensional
                 components.
         """
         self.observable_directions = observable_directions
         self.p = observable_directions.shape[1]
-
         for hist in frequency_histograms_on_observable_directions:
             UnivariateMixedPoissonOptimizer.validate_frequency_histogram(hist)
         self.observed_pmf_matrix = self.normalize_rows(
             frequency_histograms_on_observable_directions
         )
-        self.max_freq = self.observed_pmf_matrix.shape[1] - 1
-
-        for hist in prior_marginal_frequency_histograms:
-            UnivariateMixedPoissonOptimizer.validate_frequency_histogram(hist)
-        self.marginal_pmfs = self.normalize_rows(prior_marginal_frequency_histograms)
-        self.check_dimension_campatibility()
-
-        self.components = self.weighted_random_sampling(
-            ncomponents, self.marginal_pmfs, rng
-        )
-        self.fitted = False
-
-    def check_dimension_campatibility(self):
-        """Check the compatibility of dimensions among the matrix attributes."""
-        if self.marginal_pmfs.shape[0] != self.p:
-            raise ValueError("Inconsistent number of publishers")
         if self.observable_directions.shape[0] != self.observed_pmf_matrix.shape[0]:
             raise ValueError("Inconsistent number of directions")
-        # Minor note: for flexibity, we don't require self.marginal_pmfs to have
-        # the same max_freq as self.observed_pmf_matrix.
+        self.max_freq = self.observed_pmf_matrix.shape[1] - 1
+        self.rng = rng
+        self.ncomponents = ncomponents
+        self.dilusion = dilusion
+        self.components = self.in_bound_weighted_sampling()
+        self.fitted = False
 
     @classmethod
     def normalize_rows(cls, matrix: np.ndarray) -> np.ndarray:
         """Normalize a matrix so that each row sums up to 1.
-
         Args:
             matrix: Any m * n array for any m, n.
-
         Returns:
             An m * n array B such that B[i, :] = A[i, :] / sum(A[i, :])
             for any i, where A is the given matrix.
@@ -152,46 +123,99 @@ class MultivariateMixedPoissonOptimizer:
         # Using numpy broadcasting
         return matrix / row_sums[:, np.newaxis]
 
-    @classmethod
-    def weighted_random_sampling(
-        cls,
-        ncomponents: int,
-        marginal_pmfs: np.ndarray,
-        rng: np.random.Generator = np.random.default_rng(0),
-    ) -> np.ndarray:
-        """Randomly sample components based on marginal pmfs.
+    def find_single_pub_pmfs(self) -> List[int]:
+        """Find all the indices in self.observable_directions that indicate a single pub.
 
-        Each coordinate of the component is independently sampled based on
-        the corresponding marginal pmf.
+        As of June 2022, restrict the definition of a single pub direction as:
+        vectors like [1, 0, 0], [0, 1, 0] or [0, 0, 1], i.e., binary vectors that
+        are 1 at exactly one coordinate.
 
-        Args:
-            ncomponents:  Number of components to sample.
-                (Precisely, we sample these many components plus a special
-                component: the component of all zeros. This is to
-                reflect the never-reached users.)
-            marginal_pmfs:  Prior pmf of frequency at each publisher.
-            rng:  Random generator.
+        (Note: Later, if we have multi campaigns to train the model, we might have
+        directions such as [0.6, 0, 0] which might be also considered as single
+        pub directions.  In that case, we may be multiple single pub directions
+        at one pub which adds the complexity.  We will refactor the codes if that
+        happens.)
+
+        Returns:
+            A length <p> list where p = #pubs.
+            For each 1 <= i <= p, its i-th element is a length <F + 1> array, where
+            F = max freq, which indicates the frequency pmf at a single pub direction
+            at pub i.
+
+        Raises:
+            AssertionError:  As of June 2022, assume that self.observable_directions
+                include a single pub direction for every pub.  Otherwise, raise
+                an error.
+        """
+        n, p = self.observable_directions.shape
+        single_pub_direction_indices = {}
+        numerical_err = 1e-6
+        for k in range(n):
+            dir = self.observable_directions[k]
+            involved_pubs = np.where(dir > numerical_err)[0]
+            if len(involved_pubs) == 1:
+                pub = involved_pubs[0]
+                if abs(dir[pub] - 1) < numerical_err:
+                    single_pub_direction_indices[pub] = k
+        if len(single_pub_direction_indices) < p:
+            raise AssertionError(
+                "Not every pub has an observable single pub direction."
+            )
+        return [
+            self.observed_pmf_matrix[single_pub_direction_indices[i]] for i in range(p)
+        ]
+
+    def in_bound_weighted_sampling(self) -> np.ndarray:
+        """Randomly sample components based on the given single pub points.
+
+        Each component of the Dirac mixture model is a length <p> vector where
+        p = #pubs.  In this class, we randomly sample a bunch of components
+        from the p-dimensional space.  The assumption is that when the number
+        of components is large enough, randomly sampled components with optimized
+        weights can well approximate the components in the true model.
+
+        In the Dirac mixture single pub model, we sampled components using
+        weighted grid search.  The main idea was:  A Poisson distribution has
+        high pmf around its mean parameter.  So, if we observe a high pmf at a
+        frequency level, we tend to draw more Poisson components around it.
+
+        Following the same idea, we also do weighted sampling of components in the
+        multi pub model.  However, unlike the single pub case, in the multi pub
+        case we do not have straightforward weights for sampling, since we do
+        not observe the joint distribution of cross-pub frequency.  So, as a proxy,
+        instead of directly sampling components in the high dimensional space, we
+        independently sample each coordinate of the component according to the
+        observed single pub distributions, like what we did in the single pub.
+
+        This approach assumes that we observe the single pub distribution at each
+        pub.  In this class, these single pub distributions can be obtained by
+        identifying the single pub directions in self.observable_directions.
 
         Returns:
             A <C * p> matrix where C = #components and p = #pubs.
             Each row is a component, i.e., a vector of Poisson means at all pubs.
         """
-        p, max_f = marginal_pmfs.shape
-        # For any frequency level 0 <= f <= <max frequency>,
-        # and any pub i,
-        # Pr(the i-th coordinate of a random component falls in [f, f + 1))
-        # = marginal_pmfs[i] [f].
-        # And with in [f, f + 1), the coordinate is uniformly distributed.
-        # So the codes below first randomly choose an integer f according to the
-        # marginal pmf, and then add rng.random() to make it a random float
-        # in [f, f + 1).
+        marginal_pmfs = self.find_single_pub_pmfs()
+        # The following 3 lines of codes follow the same "dilusion" logic when
+        # sampling components in the single pub model.  See here:
+        # https://github.com/world-federation-of-advertisers/planning-evaluation-framework/blob/ad18cdce5959168b1620d814ba269d898c8bb117/src/models/dirac_mixture_single_publisher_model.py#L83
+        water = np.array([self.dilusion / (self.max_freq + 1)] * (self.max_freq + 1))
+        diluted_marginal_pmfs = [
+            pmf * (1 - self.dilusion) + water for pmf in marginal_pmfs
+        ]
         sample = np.array(
             [
-                rng.choice(a=range(max_f), p=pmf, size=ncomponents)
-                for pmf in marginal_pmfs
+                self.rng.choice(
+                    a=range(self.max_freq + 1), p=pmf, size=self.ncomponents
+                )
+                for pmf in diluted_marginal_pmfs
             ]
-        ) + rng.random(size=(p, ncomponents))
-        return np.hstack((np.zeros((p, 1)), sample)).transpose()
+        ).astype("float")
+        # The above sample are integers.  We further add uniformly distributed
+        # numbers in (0, 1) to make the component coordinates decimals.
+        sample += self.rng.random(size=(self.p, self.ncomponents))
+        # Always include the zero component to reflect non-reach.
+        return np.hstack((np.zeros((self.p, 1)), sample)).transpose()
 
     @classmethod
     def obtain_pmf_matrix(
@@ -299,6 +323,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
         reach_curves: List[ReachCurve] = None,
         single_publisher_reach_agreement: bool = True,
         ncomponents: int = None,
+        dilusion: float = 0,
         rng: np.random.Generator = np.random.default_rng(0),
     ):
         """Constructs a Dirac mixture multi publisher model.
@@ -325,6 +350,9 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
                 of "single_publisher_agreement".
             ncomponents:  Number of components in the Poisson mixture.  If not
                 specified, then follow the default choice min(5000, 200 * p**2).
+            dilusion:  An arg to control the weights when sampling components.
+                The same argument as in the in_bound_grid method of the
+                UnivariateMixedPoissonOptimizer class for single pub model.
             rng:  Random Generator for the random sampling of high dimensional
                 components.
         """
@@ -353,6 +381,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
         self.ncomponents = (
             min(5000, 200 * self.p ** 2) if ncomponents is None else ncomponents
         )
+        self.dilusion = dilusion
         self.rng = rng
         self._fit_computed = False
 
@@ -369,108 +398,37 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
                 )
 
     @staticmethod
-    def select_single_publisher_points(
-        reach_points: List[ReachPoint],
-    ) -> Dict[int, List[ReachPoint]]:
-        """Select reach points that describe the reach on a single publisher.
-
-        Args:
-            reach_points:  Any list of ReachPoints.
-
-        Returns:
-            A dictionary of which the value of key = i is the sub-list of
-            reach points that involve only pub i.
-        """
-        single_pub_points = {}
-        p = len(reach_points[0].impressions)
-        for rp in reach_points:
-            involved_pubs = [i for i in range(p) if rp.impressions[i] > 0]
-            if len(involved_pubs) == 1:
-                pub = involved_pubs[0]
-                single_pub_points[pub] = single_pub_points.get(pub, []) + [rp]
-        return single_pub_points
-
-    @classmethod
-    def obtain_marginal_frequency_histograms(
-        cls, reach_points: List[ReachPoint]
-    ) -> Tuple[np.ndarray]:
-        """One way to obtain prior_marginal_frequency_histograms as an input of MultivariateMixedPoissonOptimizer.
-
-        This and the next two methods are for translating the given
-        reach points to the inputs of MultivariateMixedPoissonOptimizer.
-
-        Args:
-            reach_points:  Any list of ReachPoint.
-
-        Return:
-            A length <2> tuple
-            (prior_marginal_frequency_histograms, baseline_impression_vector).
-
-            This method assumes that each single pub frequency histogram is
-            already observed, and collected in the given ReachPoints (self._data).
-            This method extracts the single pub frequeny histograms and put them in
-            a matrix, as the `prior_marginal_frequency_histograms` argument of
-            MultivariateMixedPoissonOptimizer.
-
-            The impressions at these single publisher points are also returned.
-            They will be used as baseline_impression_vector (see the description
-            of MultivariateMixedPoissonOptimizer).
-        """
-        single_pub_points = cls.select_single_publisher_points(reach_points)
-        p = len(reach_points[0].impressions)
-        prior_marginal_frequency_histograms = []
-        baseline_impression_vector = []
-        for i in range(p):
-            if i not in single_pub_points:
-                raise AssertionError(f"Cannot find single pub reach point for pub {i}")
-            rp = single_pub_points[i][0]
-            prior_marginal_frequency_histograms.append(rp.zero_included_histogram)
-            baseline_impression_vector.append(rp.impressions[i])
-        return (
-            np.array(prior_marginal_frequency_histograms),
-            np.array(baseline_impression_vector),
-        )
-
-    @staticmethod
-    def obtain_observable_directions(
-        reach_points: List[ReachPoint], baseline_impression_vector: np.ndarray
-    ) -> np.ndarray:
+    def obtain_observable_directions(reach_points: List[ReachPoint]) -> np.ndarray:
         """Obtain observable_directions as an input of MultivariateMixedPoissonOptimizer.
 
         As mentioned in the description of MultivariateMixedPoissonOptimizer.__init__(),
         the observable_directions are obtained by standardizing the impression vector of
         each training point with the baseline_impression_vector.
         """
+        raw_impression_vectors = np.array([list(rp.impressions) for rp in reach_points])
+        # Construct baseline_impression_vector by selecting the maximum num_impressions
+        # at each pub
+        baseline_impression_vector = np.max(raw_impression_vectors, axis=0)
         return (
-            np.array([list(rp.impressions) for rp in reach_points])
-            / baseline_impression_vector[np.newaxis, :]
+            baseline_impression_vector,
+            raw_impression_vectors / baseline_impression_vector[np.newaxis, :],
         )
-
-    @classmethod
-    def obtain_frequency_histograms_on_observable_directions(
-        cls, reach_points: List[ReachPoint]
-    ) -> np.ndarray:
-        """Obtain frequency_histograms_on_observable_directions as an input of MultivariateMixedPoissonOptimizer."""
-        return np.array([rp.zero_included_histogram for rp in reach_points])
 
     def _fit(self):
         if self._fit_computed:
             return
-        prior_hists, self.baseline_imps = self.obtain_marginal_frequency_histograms(
-            reach_points=self._data
+        self.baseline_imps, observable_dirs = self.obtain_observable_directions(
+            self._data
         )
-        obs_dirs = self.obtain_observable_directions(
-            reach_points=self._data, baseline_impression_vector=self.baseline_imps
-        )
-        hists_on_obs_dirs = self.obtain_frequency_histograms_on_observable_directions(
-            reach_points=self._data
+        hists_on_observable_dirs = np.array(
+            [rp.zero_included_histogram for rp in self._data]
         )
         while self.ncomponents > 0:
             self.optimizer = MultivariateMixedPoissonOptimizer(
-                observable_directions=obs_dirs,
-                frequency_histograms_on_observable_directions=hists_on_obs_dirs,
-                prior_marginal_frequency_histograms=prior_hists,
+                observable_directions=observable_dirs,
+                frequency_histograms_on_observable_directions=hists_on_observable_dirs,
                 ncomponents=self.ncomponents,
+                dilusion=self.dilusion,
                 rng=self.rng,
             )
             try:
@@ -554,7 +512,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
                     "Cannot achieve target reach.  Does the given reach curve has a upper bound?"
                 )
         right = probe
-        left = 0 if count == 0 else int(probe / 2)
+        left = 0 if count == 0 else probe // 2
         # Loop termination criterion:  right - left <= 1, or either left or right hits
         # the target reach.
         while not (

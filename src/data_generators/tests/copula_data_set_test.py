@@ -20,7 +20,7 @@ from itertools import product
 from absl.testing import absltest
 from absl.testing import parameterized
 import numpy as np
-from scipy import linalg
+from scipy import linalg as splinalg
 from statsmodels.distributions.copula.elliptical import GaussianCopula, StudentTCopula
 from statsmodels.distributions.copula.other_copulas import IndependenceCopula
 
@@ -58,8 +58,7 @@ class CopulaDataSetTest(parameterized.TestCase):
         frequnecy_vectors = [np.array(vec) for vec in frequnecy_vectors]
         res = CopulaDataSet.to_impressions(frequnecy_vectors)
         expected = [[0, 1, 2, 3, 2, 3, 4, 4, 4], [0, 1, 4, 4, 4]]
-        np.testing.assert_equal(res[0], expected[0])
-        np.testing.assert_equal(res[1], expected[1])
+        np.testing.assert_equal(res, expected)
 
     @staticmethod
     def frequency_dictionary(pdf: PublisherData) -> Dict:
@@ -155,7 +154,7 @@ class CopulaDataSetTest(parameterized.TestCase):
         pdf = PublisherData(FixedPriceGenerator(0.1)(impressions))
         for num_pubs in [3, 5, 10]:
             # Correlation matrix with all correlations = 0.5
-            cor_mat = linalg.toeplitz([1] + [0.5] * (num_pubs - 1))
+            cor_mat = splinalg.toeplitz([1] + [0.5] * (num_pubs - 1))
             for gen in [
                 GaussianCopula(corr=cor_mat),
                 StudentTCopula(corr=cor_mat, df=5),
@@ -204,13 +203,11 @@ class CopulaDataSetTest(parameterized.TestCase):
                     self.assertAlmostEqual(res[key] / 100, 1, delta=0.5)
 
     def test_fully_positively_correlated_copula_with_more_than_two_pubs(self):
-        # Note: fully negatively correlated cases do not exist with more than 2 pubs.
         for num_pubs in [3, 4]:
-            correlation_matrix = np.ones((num_pubs, num_pubs)) - 1e-9
-            np.fill_diagonal(correlation_matrix, 1)
+            cor_mat = splinalg.toeplitz([1] + [1 - 1e-9] * (num_pubs - 1))
             for gen in [
-                GaussianCopula(correlation_matrix),
-                StudentTCopula(correlation_matrix, df=5),
+                GaussianCopula(cor_mat),
+                StudentTCopula(cor_mat, df=5),
             ]:
                 impressions = list(range(100)) * 1 + list(range(100, 200)) * 2
                 pdf = PublisherData(FixedPriceGenerator(0.1)(impressions))
@@ -227,6 +224,34 @@ class CopulaDataSetTest(parameterized.TestCase):
                 key2 = tuple([2] * num_pubs)
                 self.assertTrue(key2 in res)
                 self.assertAlmostEqual(res[key2] / 100, 1, delta=0.2)
+
+    def test_fully_negatively_correlated_copula_special_case(self):
+        # Consider a specail case where pub 1 and pub 2 are fully positively
+        # correlated and they are both fully negatively correlated with pub 3.
+        cor_mat = np.array(
+            [
+                [1, 1 - 1e-9, -1 + 1e-9],
+                [1 - 1e-9, 1, -1 + 1e-9],
+                [-1 + 1e-9, -1 + 1e-9, 1],
+            ]
+        )
+        for gen in [
+            GaussianCopula(cor_mat),
+            StudentTCopula(cor_mat, df=5),
+        ]:
+            impressions = list(range(100)) * 1 + list(range(100, 200)) * 2
+            pdf = PublisherData(FixedPriceGenerator(0.1)(impressions))
+            dataset = CopulaDataSet(
+                unlabeled_publisher_data_list=[pdf] * 3,
+                copula_generator=gen,
+                universe_size=200,
+                random_generator=np.random.default_rng(0),
+            )
+            res = dataset.frequency_vectors_sampled_distribution
+            self.assertTrue((1, 1, 2) in res)
+            self.assertAlmostEqual(res[(1, 1, 2)] / 100, 1, delta=0.2)
+            self.assertTrue((2, 2, 1) in res)
+            self.assertAlmostEqual(res[(2, 2, 1)] / 100, 1, delta=0.2)
 
 
 if __name__ == "__main__":

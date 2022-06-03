@@ -54,8 +54,8 @@ from wfa_planning_evaluation_framework.data_generators.sequentially_correlated_o
 # The latin hypercube design constructs a subset of the cartesian product
 # of these parameter settings.
 NUM_PUBLISHERS = [2, 5, 10, 20]
-LARGEST_PUBLISHER = [int(1e5), int(1e6), int(1e7)]
-PUBLISHER_RATIOS = [1, 0.5, 0.3, 0.1, 0.01]
+LARGEST_PUBLISHER = [int(1e5), int(2e5), int(3e5)]
+PUBLISHER_RATIOS = [1, 0.5, 0.3, 0.1]
 PRICING_GENERATORS = [
     GeneratorParameters(
         "FixedPrice", FixedPriceGenerator, {"cost_per_impression": 0.1}
@@ -210,7 +210,7 @@ class CopulaCorrelationMatrixGenerator:
         defines a probability space.  This function uniformly draws a correlation
         matrix from this natural probability space.
 
-        We implemented the uniform sampling algorithm in Section 3.2 of:
+        We implemented the uniform sampling algorithm in:
             S. Ghosh, S. Henderson, "Behavior of the NORTA Method for
             Correlated Random Vector Generation as the Dimension Increases,"
             ACM Transactions on Modeling and Computer Simulation, Vol. 13,
@@ -228,7 +228,7 @@ class CopulaCorrelationMatrixGenerator:
         # Increment the size of correlation matrix by one each time.
         for k in range(2, p + 1):
             # Sample y = r^2 from a beta distribution with alpha_1 = (k-1)/2
-            # and alpha_2 = (d-k)/2.
+            # and alpha_2 = (p + 1 - k)/2.
             y = rng.beta((k - 1) / 2, (p + 1 - k) / 2)
             r = np.sqrt(y)
             # Sample a unit vector theta uniformly from the (k-1)-dimensional
@@ -250,112 +250,115 @@ class CopulaCorrelationMatrixGenerator:
 
 # Following this design that was reviewed by WFA:
 # https://docs.google.com/document/d/1pRA_fc0RbhRVUPsxbmUDmcrvNRwpNILpO-CGZtG5gYI/edit#
-OVERLAP_GENERATORS_COPULA = (
-    [
-        GeneratorParameters(
-            "Copula",
-            CopulaDataSet,
-            {
-                "largest_pub_to_universe_ratio": ratio,
-                "copula_class": {
-                    "generator": GaussianCopula,
-                    "kwargs": {},
-                },
-                "correlation_matrix": {
-                    "generator": CopulaCorrelationMatrixGenerator.homogeneous,
-                    "kwargs": {"rho": rho},
-                },
-                "random_generator": np.random.default_rng(RNG.integers(1e9)),
+OVERLAP_GENERATORS_COPULA_GAUSSIAN_HOMO = [
+    GeneratorParameters(
+        "Copula",
+        CopulaDataSet,
+        {
+            "largest_pub_to_universe_ratio": ratio,
+            "copula_class": {
+                "generator": GaussianCopula,
+                "kwargs": {},
             },
-        )
-        for ratio in [0.25, 0.75]
-        for rho in [0, 0.25, 0.5, 0.75]
-    ]
-    + [
-        GeneratorParameters(
-            "Copula",
-            CopulaDataSet,
-            {
-                "largest_pub_to_universe_ratio": ratio,
-                "copula_class": {
-                    "generator": GaussianCopula,
-                    "kwargs": {},
-                },
-                "correlation_matrix": {
-                    "generator": CopulaCorrelationMatrixGenerator.autoregressive,
-                    "kwargs": {"rho": rho},
-                },
-                "random_generator": np.random.default_rng(RNG.integers(1e9)),
+            "correlation_matrix": {
+                "generator": CopulaCorrelationMatrixGenerator.homogeneous,
+                "kwargs": {"rho": rho},
             },
-        )
-        for ratio in [0.25, 0.75]
-        for rho in [-0.5, -0.25, 0.25, 0.5]
-    ]
-    + [
-        GeneratorParameters(
-            "Copula",
-            CopulaDataSet,
-            {
-                "largest_pub_to_universe_ratio": ratio,
-                "copula_class": {
-                    "generator": GaussianCopula,
-                    "kwargs": {},
-                },
-                "correlation_matrix": {
-                    "generator": CopulaCorrelationMatrixGenerator.random,
-                    "kwargs": {"rng": np.random.default_rng(seed)},
-                },
-                "random_generator": np.random.default_rng(RNG.integers(1e9)),
+            "random_generator": np.random.default_rng(RNG.integers(1e9)),
+        },
+    )
+    for ratio in [0.25, 0.75]
+    for rho in [0, 0.25, 0.5, 0.75]
+]
+OVERLAP_GENERATORS_COPULA_GAUSSIAN_AUTO = [
+    GeneratorParameters(
+        "Copula",
+        CopulaDataSet,
+        {
+            "largest_pub_to_universe_ratio": ratio,
+            "copula_class": {
+                "generator": GaussianCopula,
+                "kwargs": {},
             },
-        )
-        for ratio in [0.25, 0.75]
-        for seed in [1, 2, 3, 4]
-    ]
-    + [
-        GeneratorParameters(
-            "Copula",
-            CopulaDataSet,
-            {
-                "largest_pub_to_universe_ratio": ratio,
-                "copula_class": {
-                    "generator": StudentTCopula,
-                    "kwargs": {"df": df},  # degrees of freedom in t-copula
-                },
-                "correlation_matrix": {
-                    "generator": CopulaCorrelationMatrixGenerator.homogeneous,
-                    "kwargs": {"rho": 0.5},
-                },
-                "random_generator": np.random.default_rng(RNG.integers(1e9)),
+            "correlation_matrix": {
+                "generator": CopulaCorrelationMatrixGenerator.autoregressive,
+                "kwargs": {"rho": rho},
             },
-        )
-        for ratio in [0.25, 0.75]
-        for df in [2, 10]
-    ]
-    + [
-        GeneratorParameters(
-            "Copula",
-            CopulaDataSet,
-            {
-                "largest_pub_to_universe_ratio": ratio,
-                "copula_class": {
-                    "generator": StudentTCopula,
-                    "kwargs": {"df": df},
-                },
-                "correlation_matrix": {
-                    "generator": CopulaCorrelationMatrixGenerator.autoregressive,
-                    "kwargs": {"rho": rho},
-                },
-                "random_generator": np.random.default_rng(RNG.integers(1e9)),
+            "random_generator": np.random.default_rng(RNG.integers(1e9)),
+        },
+    )
+    for ratio in [0.25, 0.75]
+    for rho in [-0.5, -0.25, 0.25, 0.5]
+]
+OVERLAP_GENERATORS_COPULA_GAUSSIAN_RAND = [
+    GeneratorParameters(
+        "Copula",
+        CopulaDataSet,
+        {
+            "largest_pub_to_universe_ratio": ratio,
+            "copula_class": {
+                "generator": GaussianCopula,
+                "kwargs": {},
             },
-        )
-        for ratio in [0.25, 0.75]
-        for df in [2, 10]
-        for rho in [-0.5, 0.5]
-    ]
-)
+            "correlation_matrix": {
+                "generator": CopulaCorrelationMatrixGenerator.random,
+                "kwargs": {"rng": np.random.default_rng(seed)},
+            },
+            "random_generator": np.random.default_rng(RNG.integers(1e9)),
+        },
+    )
+    for ratio in [0.25, 0.75]
+    for seed in [1, 2, 3, 4]
+]
+OVERLAP_GENERATORS_COPULA_T_HOMO = [
+    GeneratorParameters(
+        "Copula",
+        CopulaDataSet,
+        {
+            "largest_pub_to_universe_ratio": ratio,
+            "copula_class": {
+                "generator": StudentTCopula,
+                "kwargs": {"df": df},  # degrees of freedom in t-copula
+            },
+            "correlation_matrix": {
+                "generator": CopulaCorrelationMatrixGenerator.homogeneous,
+                "kwargs": {"rho": 0.5},
+            },
+            "random_generator": np.random.default_rng(RNG.integers(1e9)),
+        },
+    )
+    for ratio in [0.25, 0.75]
+    for df in [2, 10]
+]
+OVERLAP_GENERATORS_COPULA_T_AUTO = [
+    GeneratorParameters(
+        "Copula",
+        CopulaDataSet,
+        {
+            "largest_pub_to_universe_ratio": ratio,
+            "copula_class": {
+                "generator": StudentTCopula,
+                "kwargs": {"df": df},
+            },
+            "correlation_matrix": {
+                "generator": CopulaCorrelationMatrixGenerator.autoregressive,
+                "kwargs": {"rho": rho},
+            },
+            "random_generator": np.random.default_rng(RNG.integers(1e9)),
+        },
+    )
+    for ratio in [0.25, 0.75]
+    for df in [2, 10]
+    for rho in [-0.5, 0.5]
+]
 
 OVERLAP_GENERATORS = (
-    OVERLAP_GENERATORS_INDEPENDENT_GIVEN_UNIVERSE_SIZE + OVERLAP_GENERATORS_COPULA
+    OVERLAP_GENERATORS_INDEPENDENT_GIVEN_UNIVERSE_SIZE
+    + OVERLAP_GENERATORS_COPULA_GAUSSIAN_HOMO
+    + OVERLAP_GENERATORS_COPULA_GAUSSIAN_AUTO
+    + OVERLAP_GENERATORS_COPULA_GAUSSIAN_RAND
+    + OVERLAP_GENERATORS_COPULA_T_HOMO
+    + OVERLAP_GENERATORS_COPULA_T_AUTO
 )
 
 # Key values should be field names of DataSetParameters

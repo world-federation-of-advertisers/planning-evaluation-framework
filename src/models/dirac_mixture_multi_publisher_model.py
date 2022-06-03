@@ -398,12 +398,25 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
                 )
 
     @staticmethod
-    def obtain_observable_directions(reach_points: List[ReachPoint]) -> np.ndarray:
+    def obtain_observable_directions(
+        reach_points: List[ReachPoint],
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """Obtain observable_directions as an input of MultivariateMixedPoissonOptimizer.
 
-        As mentioned in the description of MultivariateMixedPoissonOptimizer.__init__(),
-        the observable_directions are obtained by standardizing the impression vector of
-        each training point with the baseline_impression_vector.
+        Args:
+            reach_point:  Any list of ReachPoint.
+
+        Returns:
+            A tuple (baseline_impression_vector, observable_directions).
+            - baseline_impression_vector is a length <p> array where p = #pubs.
+                baseline_impression_vector[i] equals the maximum number of impressions
+                at pub i among the given reach_points.
+            - observable_directions is a <n * p> matrix where n = #ReachPoint in the given
+                list, and p = #pubs.  Its k-th row the observable direction of the k-th
+                ReachPoint, i.e., the impression vector at this ReachPoint divided by
+                the baseline_impression_vector.
+            See the description of MultivariateMixedPoissonOptimizer.__init__() for why
+            we convert impression vectors to observable directions.
         """
         raw_impression_vectors = np.array([list(rp.impressions) for rp in reach_points])
         # Construct baseline_impression_vector by selecting the maximum num_impressions
@@ -513,20 +526,15 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
                 )
         right = probe
         left = 0 if count == 0 else probe // 2
-        # Loop termination criterion:  right - left <= 1, or either left or right hits
-        # the target reach.
-        while not (
-            curve(left) == target_reach
-            or curve(right) == target_reach
-            or right - left <= 1
-        ):
-            mid = (left + right) / 2
-            mid = int(round(mid))
-            if curve(mid) < target_reach:
+        while left < right - 1:
+            mid = left + (right - left) // 2
+            if curve(mid) == target_reach:
+                return mid
+            elif curve(mid) < target_reach:
                 left = mid
             else:
                 right = mid
-        if abs(curve(left) - target_reach) < abs(curve(right) - target_reach):
+        if target_reach - curve(left) < curve(right) - target_reach:
             return left
         return right
 

@@ -27,6 +27,7 @@ from statsmodels.distributions.copula.other_copulas import IndependenceCopula
 from wfa_planning_evaluation_framework.data_generators.copula_data_set import (
     AnyFrequencyDistribution,
     CopulaDataSet,
+    CopulaCorrelationMatrixGenerator,
 )
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
     PublisherData,
@@ -252,6 +253,36 @@ class CopulaDataSetTest(parameterized.TestCase):
             self.assertAlmostEqual(res[(1, 1, 2)] / 100, 1, delta=0.2)
             self.assertTrue((2, 2, 1) in res)
             self.assertAlmostEqual(res[(2, 2, 1)] / 100, 1, delta=0.2)
+
+
+class CopulaCorrelationMatrixGeneratorTest(absltest.TestCase):
+    def test_homogenous(self):
+        res = CopulaCorrelationMatrixGenerator.homogeneous(p=3, rho=0.1)
+        expected = np.array([[1, 0.1, 0.1], [0.1, 1, 0.1], [0.1, 0.1, 1]])
+        np.testing.assert_almost_equal(res, expected, decimal=3)
+
+    def test_autoregressive(self):
+        res = CopulaCorrelationMatrixGenerator.autoregressive(p=3, rho=0.5)
+        expected = np.array([[1, 0.5, 0.25], [0.5, 1, 0.5], [0.25, 0.5, 1]])
+        np.testing.assert_almost_equal(res, expected, decimal=3)
+
+    def test_random_positive_definitiveness(self):
+        for seed in [1, 2, 3, 4]:
+            res = CopulaCorrelationMatrixGenerator.random(
+                p=5, rng=np.random.default_rng(seed)
+            )
+            # For a randomly generated correlation matrix, we test if it's positive definite
+            self.assertTrue(all(np.linalg.eig(res)[0] > 0))
+
+    def test_random_uniformity_with_two_pubs(self):
+        rng = np.random.default_rng(0)
+        cor_mats = [
+            CopulaCorrelationMatrixGenerator.random(p=2, rng=rng)
+            for _ in range(400)
+        ]
+        cors = [cor_mat[0, 1] for cor_mat in cor_mats]
+        dets = [np.linalg.det(cor_mat) for cor_mat in cor_mats]
+        # TODO(jiayu) decide the uniformity definition and complete the test.
 
 
 if __name__ == "__main__":

@@ -17,12 +17,12 @@ from pyDOE import lhs
 from typing import Iterable
 import numpy as np
 from copy import deepcopy
-from scipy import linalg as splinalg
 from statsmodels.distributions.copula.elliptical import GaussianCopula, StudentTCopula
 
 
 from wfa_planning_evaluation_framework.data_generators.copula_data_set import (
     CopulaDataSet,
+    CopulaCorrelationMatrixGenerator,
 )
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.data_generators.data_set_parameters import (
@@ -172,85 +172,9 @@ OVERLAP_GENERATORS_INDEPENDENT_GIVEN_UNIVERSE_SIZE = [
 ]
 
 
-class CopulaCorrelationMatrixGenerator:
-    @staticmethod
-    def homogeneous(p: int, rho: float) -> np.ndarray:
-        """Generate a homogeneous correlation matrix.
-
-        Args:
-            p:  Number of pubs.
-            rho:  Homogenous correlation.
-
-        Returns:
-            A p * p matrix with diagonals being 1 and all off-diagonals being rho.
-        """
-        return splinalg.toeplitz([1] + [rho] * (p - 1))
-
-    @staticmethod
-    def autoregressive(p: int, rho: float) -> np.ndarray:
-        """Generate a autoregressive correlation matrix.
-
-        Args:
-            p:  Number of pubs.
-            rho:  Homogenous correlation.
-
-        Returns:
-            A <p * p> matrix C where C[i, j] = rho^|i - j| for any i, j.
-        """
-        return splinalg.toeplitz(np.power(np.array([rho] * p), np.arange(p)))
-
-    @staticmethod
-    def random(
-        p: int, rng: np.random.Generator = np.random.default_rng(0)
-    ) -> np.ndarray:
-        """Randomly, uniformly draw a correlation matrix.
-
-        Given the dimension, all the possible correlation matrices form a space,
-        and there is a geometric measure on this space.  The geoemetric measure
-        defines a probability space.  This function uniformly draws a correlation
-        matrix from this natural probability space.
-
-        We implemented the uniform sampling algorithm in:
-            S. Ghosh, S. Henderson, "Behavior of the NORTA Method for
-            Correlated Random Vector Generation as the Dimension Increases,"
-            ACM Transactions on Modeling and Computer Simulation, Vol. 13,
-            Iss. 3, July 2003, pp. 276–294.
-
-        Args:
-            p:  Number of pubs.
-            rng:  A random number generator.
-
-        Returns:
-            A <p * p> random correlation matrix.
-        """
-        # Initliaze the correlation matrix.
-        corr = np.ones(shape=(1, 1))
-        # Increment the size of correlation matrix by one each time.
-        for k in range(2, p + 1):
-            # Sample y = r^2 from a beta distribution with alpha_1 = (k-1)/2
-            # and alpha_2 = (p + 1 - k)/2.
-            y = rng.beta((k - 1) / 2, (p + 1 - k) / 2)
-            r = np.sqrt(y)
-            # Sample a unit vector theta uniformly from the (k-1)-dimensional
-            # unit ball surface.
-            v = rng.normal(size=k - 1)
-            theta = v / np.linalg.norm(v)
-            # Set w = r * theta and set q = corr**(1/2) * w.
-            w = np.dot(r, theta)
-            q = np.dot(splinalg.sqrtm(corr), w)
-            # Incrementally create the next_corr.
-            next_corr = np.zeros((k, k))
-            next_corr[: (k - 1), : (k - 1)] = corr
-            next_corr[k - 1, k - 1] = 1
-            next_corr[k - 1, : (k - 1)] = q
-            next_corr[: (k - 1), k - 1] = q
-            corr = next_corr
-        return corr
-
-
 # Following this design that was reviewed by WFA:
 # https://docs.google.com/document/d/1pRA_fc0RbhRVUPsxbmUDmcrvNRwpNILpO-CGZtG5gYI/edit#
-OVERLAP_GENERATORS_COPULA_GAUSSIAN_HOMO = [
+OVERLAP_GENERATORS_COPULA_GAUSSIAN_HOMOGENEOUS = [
     GeneratorParameters(
         "Copula",
         CopulaDataSet,
@@ -270,7 +194,7 @@ OVERLAP_GENERATORS_COPULA_GAUSSIAN_HOMO = [
     for ratio in [0.25, 0.75]
     for rho in [0, 0.25, 0.5, 0.75]
 ]
-OVERLAP_GENERATORS_COPULA_GAUSSIAN_AUTO = [
+OVERLAP_GENERATORS_COPULA_GAUSSIAN_AUTOREGRESSIVE = [
     GeneratorParameters(
         "Copula",
         CopulaDataSet,
@@ -290,7 +214,7 @@ OVERLAP_GENERATORS_COPULA_GAUSSIAN_AUTO = [
     for ratio in [0.25, 0.75]
     for rho in [-0.5, -0.25, 0.25, 0.5]
 ]
-OVERLAP_GENERATORS_COPULA_GAUSSIAN_RAND = [
+OVERLAP_GENERATORS_COPULA_GAUSSIAN_RANDOM = [
     GeneratorParameters(
         "Copula",
         CopulaDataSet,
@@ -310,7 +234,7 @@ OVERLAP_GENERATORS_COPULA_GAUSSIAN_RAND = [
     for ratio in [0.25, 0.75]
     for seed in [1, 2, 3, 4]
 ]
-OVERLAP_GENERATORS_COPULA_T_HOMO = [
+OVERLAP_GENERATORS_COPULA_T_HOMOGENEOUS = [
     GeneratorParameters(
         "Copula",
         CopulaDataSet,
@@ -330,7 +254,7 @@ OVERLAP_GENERATORS_COPULA_T_HOMO = [
     for ratio in [0.25, 0.75]
     for df in [2, 10]
 ]
-OVERLAP_GENERATORS_COPULA_T_AUTO = [
+OVERLAP_GENERATORS_COPULA_T_AUTOREGRESSIVE = [
     GeneratorParameters(
         "Copula",
         CopulaDataSet,
@@ -354,11 +278,11 @@ OVERLAP_GENERATORS_COPULA_T_AUTO = [
 
 OVERLAP_GENERATORS = (
     OVERLAP_GENERATORS_INDEPENDENT_GIVEN_UNIVERSE_SIZE
-    + OVERLAP_GENERATORS_COPULA_GAUSSIAN_HOMO
-    + OVERLAP_GENERATORS_COPULA_GAUSSIAN_AUTO
-    + OVERLAP_GENERATORS_COPULA_GAUSSIAN_RAND
-    + OVERLAP_GENERATORS_COPULA_T_HOMO
-    + OVERLAP_GENERATORS_COPULA_T_AUTO
+    + OVERLAP_GENERATORS_COPULA_GAUSSIAN_HOMOGENEOUS
+    + OVERLAP_GENERATORS_COPULA_GAUSSIAN_AUTOREGRESSIVE
+    + OVERLAP_GENERATORS_COPULA_GAUSSIAN_RANDOM
+    + OVERLAP_GENERATORS_COPULA_T_HOMOGENEOUS
+    + OVERLAP_GENERATORS_COPULA_T_AUTOREGRESSIVE
 )
 
 # Key values should be field names of DataSetParameters

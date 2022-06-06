@@ -17,6 +17,7 @@
 import numpy as np
 from typing import List, Iterable, Dict
 from collections import Counter
+from scipy import linalg as splinalg
 from statsmodels.distributions.copula.copulas import (
     Copula,
     CopulaDistribution,
@@ -205,3 +206,79 @@ class CopulaDataSet(DataSet):
                 impressions[i] = impressions[i] + vids * freq_vec[i]
             num_vids += count
         return impressions
+
+
+class CopulaCorrelationMatrixGenerator:
+    @staticmethod
+    def homogeneous(p: int, rho: float) -> np.ndarray:
+        """Generate a homogeneous correlation matrix.
+
+        Args:
+            p:  Number of pubs.
+            rho:  Homogenous correlation.
+
+        Returns:
+            A p * p matrix with diagonals being 1 and all off-diagonals being rho.
+        """
+        return splinalg.toeplitz([1] + [rho] * (p - 1))
+
+    @staticmethod
+    def autoregressive(p: int, rho: float) -> np.ndarray:
+        """Generate a autoregressive correlation matrix.
+
+        Args:
+            p:  Number of pubs.
+            rho:  Homogenous correlation.
+
+        Returns:
+            A <p * p> matrix C where C[i, j] = rho^|i - j| for any i, j.
+        """
+        return splinalg.toeplitz(np.power(np.array([rho] * p), np.arange(p)))
+
+    @staticmethod
+    def random(
+        p: int, rng: np.random.Generator = np.random.default_rng(0)
+    ) -> np.ndarray:
+        """Randomly, uniformly draw a correlation matrix.
+
+        Given the dimension, all the possible correlation matrices form a space,
+        and there is a geometric measure on this space.  The geoemetric measure
+        defines a probability space.  This function uniformly draws a correlation
+        matrix from this natural probability space.
+
+        We implemented the uniform sampling algorithm in:
+            S. Ghosh, S. Henderson, "Behavior of the NORTA Method for
+            Correlated Random Vector Generation as the Dimension Increases,"
+            ACM Transactions on Modeling and Computer Simulation, Vol. 13,
+            Iss. 3, July 2003, pp. 276–294.
+
+        Args:
+            p:  Number of pubs.
+            rng:  A random number generator.
+
+        Returns:
+            A <p * p> random correlation matrix.
+        """
+        # Initliaze the correlation matrix.
+        corr = np.ones(shape=(1, 1))
+        # Increment the size of correlation matrix by one each time.
+        for k in range(2, p + 1):
+            # Sample y = r^2 from a beta distribution with alpha_1 = (k-1)/2
+            # and alpha_2 = (p + 1 - k)/2.
+            y = rng.beta((k - 1) / 2, (p + 1 - k) / 2)
+            r = np.sqrt(y)
+            # Sample a unit vector theta uniformly from the (k-1)-dimensional
+            # unit ball surface.
+            v = rng.normal(size=k - 1)
+            theta = v / np.linalg.norm(v)
+            # Set w = r * theta and set q = corr**(1/2) * w.
+            w = np.dot(r, theta)
+            q = np.dot(splinalg.sqrtm(corr), w)
+            # Incrementally create the next_corr.
+            next_corr = np.zeros((k, k))
+            next_corr[: (k - 1), : (k - 1)] = corr
+            next_corr[k - 1, k - 1] = 1
+            next_corr[k - 1, : (k - 1)] = q
+            next_corr[: (k - 1), k - 1] = q
+            corr = next_corr
+        return corr

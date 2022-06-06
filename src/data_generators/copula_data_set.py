@@ -101,6 +101,8 @@ class CopulaDataSet(DataSet):
                 possible choices:
                 https://github.com/statsmodels/statsmodels/tree/32dc52699f994acbf9dbdb9bd10d7eff04d860f5/statsmodels/distributions
             universe_size:  A cross-publisher universe size to construct the copula.
+                If not given, then specify the universe size as the maximum single
+                publisher reach times 2.
             pricing_generator:  A PricingGenerator object that annotates a list of
                 id's with randomly generated price information.  At this moment,
                 assume that all the publishers share the same PricingGenerator.
@@ -125,6 +127,9 @@ class CopulaDataSet(DataSet):
             nobs=universe_size,
             random_state=random_generator.integers(0, 1e9),
         ).astype("int32")
+        imps = self.to_impressions(self.sample)
+        for pub_imps in imps:
+            random_generator.shuffle(pub_imps)
         super().__init__(
             publisher_data_list=[
                 PublisherData(
@@ -132,7 +137,7 @@ class CopulaDataSet(DataSet):
                     name=original_pub_data.name,
                 )
                 for pub_imps, original_pub_data in zip(
-                    self.to_impressions(self.sample), unlabeled_publisher_data_list
+                    imps, unlabeled_publisher_data_list
                 )
             ],
             name=name,

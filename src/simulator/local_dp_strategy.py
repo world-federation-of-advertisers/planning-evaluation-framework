@@ -35,25 +35,8 @@ from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
 )
 
 
-class LocalDpStrategy(ModelingStrategy):
-    """Modeling strategy proposed for implementation in M3 milestone."""
-
-    def __init__(
-        self,
-        single_pub_model: Type[ReachCurve],
-        single_pub_model_kwargs: Dict,
-        multi_pub_model: Type[ReachSurface],
-        multi_pub_model_kwargs: Dict,
-        use_ground_truth_for_reach_curves: bool = False,
-    ):
-        """Initializes a modeling strategy object."""
-        super().__init__(
-            single_pub_model,
-            single_pub_model_kwargs,
-            multi_pub_model,
-            multi_pub_model_kwargs,
-        )
-        self._use_ground_truth_for_reach_curves = use_ground_truth_for_reach_curves
+class LocalDpLiquidlegionsStrategy(ModelingStrategy):
+    """Modeling strategy that predicts by unioning local sketches."""
 
     def fit(
         self, halo: HaloSimulator, params: SystemParameters, budget: PrivacyBudget
@@ -69,13 +52,12 @@ class LocalDpStrategy(ModelingStrategy):
             A differentially private ReachSurface model which can be queried
             for reach and frequency estimates for arbitrary spend allocations.
         """
-
         p = halo.publisher_count
 
-        # TODO: Compute total budget usage with advanced composition or PLD's
-        per_request_budget = PrivacyBudget(
-            budget.epsilon / (2 * p + 1), budget.delta / (2 * p + 1)
-        )
+        # Under the vid * EDP privacy definition, each EDP can use the whole budget
+        # as given, i.e., we don't have to further split the budget to each EDP.
+        
+        # TODO(jiayu): add local DP sketch builder and union to halo_simulator.
 
         total_reach = halo.simulated_reach_by_spend(
             halo.campaign_spends, per_request_budget

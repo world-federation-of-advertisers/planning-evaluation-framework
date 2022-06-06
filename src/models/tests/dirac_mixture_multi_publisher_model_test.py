@@ -63,7 +63,7 @@ class MultivariateMixedPoissonOptimizerTest(absltest.TestCase):
         np.testing.assert_almost_equal(res[1], [0.2, 0.8], decimal=3)
         np.testing.assert_almost_equal(res[2], [0.333, 0.667], decimal=3)
 
-    def test_in_bound_weighted_sampling(self):
+    def test_weighted_sampling_from_marginals(self):
         inst = MultivariateMixedPoissonOptimizer(
             observable_directions=np.array(
                 [[1, 0, 0], [1, 1, 1], [0, 1, 0], [1, 1, 0], [0, 0, 1]]
@@ -73,13 +73,13 @@ class MultivariateMixedPoissonOptimizerTest(absltest.TestCase):
             ),
             rng=FakeRandomGenerator(),
             ncomponents=1,
-            dilusion=0,
+            dilution=0,
         )
-        res = inst.in_bound_weighted_sampling()
+        res = inst.weighted_sampling_from_marginals()
         expected = np.array([[0, 0, 0], [1, 1, 1]])
         np.testing.assert_almost_equal(res, expected, decimal=3)
 
-    def test_in_bound_weighted_sampling_with_more_components(self):
+    def test_weighted_sampling_from_marginals_with_more_components(self):
         inst = MultivariateMixedPoissonOptimizer(
             observable_directions=np.array(
                 [[1, 0, 0], [1, 1, 1], [0, 1, 0], [1, 1, 0], [0, 0, 1]]
@@ -89,15 +89,15 @@ class MultivariateMixedPoissonOptimizerTest(absltest.TestCase):
             ),
             rng=FakeRandomGenerator(),
             ncomponents=5,
-            dilusion=0,
+            dilution=0,
         )
-        res = inst.in_bound_weighted_sampling()
+        res = inst.weighted_sampling_from_marginals()
         expected = np.array(
             [[0, 0, 0], [1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]]
         )
         np.testing.assert_almost_equal(res, expected, decimal=3)
-        inst.dilusion = 1
-        res = inst.in_bound_weighted_sampling()
+        inst.dilution = 1
+        res = inst.weighted_sampling_from_marginals()
         expected = np.array(
             [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1, 1, 1], [1, 1, 1], [1, 1, 1]]
         )
@@ -129,7 +129,7 @@ class MultivariateMixedPoissonOptimizerTest(absltest.TestCase):
                 [[1, 0], [1, 0], [1, 0]]
             ),
             ncomponents=1,
-            dilusion=1,
+            dilution=1,
             rng=FakeRandomGenerator(),
         )
         optimizer.fit()
@@ -347,7 +347,7 @@ class DiracMixtureMultiPublisherModelTest(parameterized.TestCase):
             reach_curves=[rc1, rc2],
             reach_points=[rp1, rp2, rp3],
             ncomponents=1,
-            dilusion=1,
+            dilution=1,
             rng=FakeRandomGenerator(),
         )
         model._fit()
@@ -394,7 +394,7 @@ class DiracMixtureMultiPublisherModelTest(parameterized.TestCase):
         model = DiracMixtureMultiPublisherModel(
             reach_points=[rp1, rp2, rp3],
             ncomponents=1,
-            dilusion=1,
+            dilution=1,
             rng=FakeRandomGenerator(),
         )
         model._fit()
@@ -438,7 +438,7 @@ class DiracMixtureMultiPublisherModelTest(parameterized.TestCase):
             reach_curves=[rc1, rc2],
             reach_points=[rp1, rp2, rp3],
             ncomponents=5,
-            dilusion=1,
+            dilution=1,
             rng=FakeRandomGenerator(),
         )
         model._fit()

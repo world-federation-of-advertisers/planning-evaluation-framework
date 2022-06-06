@@ -107,7 +107,7 @@ class MultivariateMixedPoissonOptimizer:
         self.rng = rng
         self.ncomponents = ncomponents
         self.dilution = dilution
-        self.components = self.in_bound_weighted_sampling()
+        self.components = self.weighted_sampling_from_marginals()
         self.fitted = False
 
     @classmethod
@@ -165,7 +165,7 @@ class MultivariateMixedPoissonOptimizer:
             self.observed_pmf_matrix[single_pub_direction_indices[i]] for i in range(p)
         ]
 
-    def in_bound_weighted_sampling(self) -> np.ndarray:
+    def weighted_sampling_from_marginals(self) -> np.ndarray:
         """Randomly sample components based on the given single pub points.
 
         Each component of the Dirac mixture model is a length <p> vector where
@@ -196,9 +196,9 @@ class MultivariateMixedPoissonOptimizer:
             Each row is a component, i.e., a vector of Poisson means at all pubs.
         """
         marginal_pmfs = self.find_single_pub_pmfs()
-        # The following 3 lines of codes follow the same "dilution" logic when
-        # sampling components in the single pub model.  See here:
-        # https://github.com/world-federation-of-advertisers/planning-evaluation-framework/blob/ad18cdce5959168b1620d814ba269d898c8bb117/src/models/dirac_mixture_single_publisher_model.py#L83
+        # We are sampling from a mixture of the independent combination of marginal
+        # pmfs and the uniform distribution, where the weight given to the uniform
+        # distribution is given by self.dilution.
         water = np.array([self.dilution / (self.max_freq + 1)] * (self.max_freq + 1))
         diluted_marginal_pmfs = [
             pmf * (1 - self.dilution) + water for pmf in marginal_pmfs
@@ -274,7 +274,7 @@ class MultivariateMixedPoissonOptimizer:
     def predict(
         self, hypothetical_direction: np.ndarray, customized_max_freq: int = None
     ) -> np.ndarray:
-        """Predict frequency histogram of a hyperthetical campaign.
+        """Predict frequency histogram of a hypothetical campaign.
 
         Args:
             hypothetical_direction:  A length <p> vector.

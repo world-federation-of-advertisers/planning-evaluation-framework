@@ -33,7 +33,7 @@ class MultivariateMixedPoissonOptimizer:
         observable_directions: np.ndarray,
         frequency_histograms_on_observable_directions: np.ndarray,
         ncomponents: int = 1000,
-        dilusion: float = 0,
+        dilution: float = 0,
         rng: np.random.Generator = np.random.default_rng(0),
     ):
         """Construct an optimizer for multivariate mixed Poisson distribution.
@@ -88,7 +88,7 @@ class MultivariateMixedPoissonOptimizer:
                 H[f] indicates the reach at frequency f for f = 1, ..., F - 1,
                 and H[F] indicates the F+ reach.
             ncomponents:  Number of components in the Poisson mixture.
-            dilusion:  An arg to control the weights when sampling components.
+            dilution:  An arg to control the weights when sampling components.
                 The same argument as in the in_bound_grid method of the
                 UnivariateMixedPoissonOptimizer class for single pub model.
             rng:  Random Generator for the random sampling of high dimensional
@@ -106,7 +106,7 @@ class MultivariateMixedPoissonOptimizer:
         self.max_freq = self.observed_pmf_matrix.shape[1] - 1
         self.rng = rng
         self.ncomponents = ncomponents
-        self.dilusion = dilusion
+        self.dilution = dilution
         self.components = self.in_bound_weighted_sampling()
         self.fitted = False
 
@@ -196,12 +196,12 @@ class MultivariateMixedPoissonOptimizer:
             Each row is a component, i.e., a vector of Poisson means at all pubs.
         """
         marginal_pmfs = self.find_single_pub_pmfs()
-        # The following 3 lines of codes follow the same "dilusion" logic when
+        # The following 3 lines of codes follow the same "dilution" logic when
         # sampling components in the single pub model.  See here:
         # https://github.com/world-federation-of-advertisers/planning-evaluation-framework/blob/ad18cdce5959168b1620d814ba269d898c8bb117/src/models/dirac_mixture_single_publisher_model.py#L83
-        water = np.array([self.dilusion / (self.max_freq + 1)] * (self.max_freq + 1))
+        water = np.array([self.dilution / (self.max_freq + 1)] * (self.max_freq + 1))
         diluted_marginal_pmfs = [
-            pmf * (1 - self.dilusion) + water for pmf in marginal_pmfs
+            pmf * (1 - self.dilution) + water for pmf in marginal_pmfs
         ]
         sample = np.array(
             [
@@ -323,7 +323,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
         reach_curves: List[ReachCurve] = None,
         single_publisher_reach_agreement: bool = True,
         ncomponents: int = None,
-        dilusion: float = 0,
+        dilution: float = 0,
         rng: np.random.Generator = np.random.default_rng(0),
     ):
         """Constructs a Dirac mixture multi publisher model.
@@ -350,7 +350,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
                 of "single_publisher_agreement".
             ncomponents:  Number of components in the Poisson mixture.  If not
                 specified, then follow the default choice min(5000, 200 * p**2).
-            dilusion:  An arg to control the weights when sampling components.
+            dilution:  An arg to control the weights when sampling components.
                 The same argument as in the in_bound_grid method of the
                 UnivariateMixedPoissonOptimizer class for single pub model.
             rng:  Random Generator for the random sampling of high dimensional
@@ -381,7 +381,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
         self.ncomponents = (
             min(5000, 200 * self.p ** 2) if ncomponents is None else ncomponents
         )
-        self.dilusion = dilusion
+        self.dilution = dilution
         self.rng = rng
         self._fit_computed = False
 
@@ -441,7 +441,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
                 observable_directions=observable_dirs,
                 frequency_histograms_on_observable_directions=hists_on_observable_dirs,
                 ncomponents=self.ncomponents,
-                dilusion=self.dilusion,
+                dilution=self.dilution,
                 rng=self.rng,
             )
             try:

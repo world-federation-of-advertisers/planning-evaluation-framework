@@ -37,21 +37,7 @@ from wfa_planning_evaluation_framework.data_generators.fixed_price_generator imp
 )
 
 
-<<<<<<< HEAD
-class AnyFrequencyDistributionTest(absltest.TestCase):
-    def test_ppf(self):
-        hist = np.array([5, 3, 2])
-        dist = AnyFrequencyDistribution(hist)
-        self.assertEqual(dist.ppf(0.9), 2)
-        self.assertEqual(dist.ppf(0.6), 1)
-        self.assertEqual(dist.ppf(0.5), 0)
-        self.assertEqual(dist.ppf(0.1), 0)
-
-
 class CopulaDataSetTest(parameterized.TestCase):
-=======
-class CopulaDataSetTest(absltest.TestCase):
->>>>>>> jiayu_copula_data_set
     def test_zero_included_pmf(self):
         pdf = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)])
         res = CopulaDataSet.zero_included_pmf(pdf, 10)

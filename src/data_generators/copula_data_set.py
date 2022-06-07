@@ -177,7 +177,7 @@ class CopulaDataSet(DataSet):
         return impressions
 
 
-class CopulaCorrelationMatrixGenerator:    AnyFrequencyDistribution,
+class CopulaCorrelationMatrixGenerator:
     @staticmethod
     def homogeneous(p: int, rho: float) -> np.ndarray:
         """Generate a homogeneous correlation matrix.

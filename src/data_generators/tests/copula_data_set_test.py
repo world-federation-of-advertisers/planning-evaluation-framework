@@ -26,7 +26,6 @@ from statsmodels.distributions.copula.elliptical import GaussianCopula, StudentT
 from statsmodels.distributions.copula.other_copulas import IndependenceCopula
 
 from wfa_planning_evaluation_framework.data_generators.copula_data_set import (
-    AnyFrequencyDistribution,
     CopulaDataSet,
     CopulaCorrelationMatrixGenerator,
 )
@@ -38,6 +37,7 @@ from wfa_planning_evaluation_framework.data_generators.fixed_price_generator imp
 )
 
 
+<<<<<<< HEAD
 class AnyFrequencyDistributionTest(absltest.TestCase):
     def test_ppf(self):
         hist = np.array([5, 3, 2])
@@ -49,6 +49,9 @@ class AnyFrequencyDistributionTest(absltest.TestCase):
 
 
 class CopulaDataSetTest(parameterized.TestCase):
+=======
+class CopulaDataSetTest(absltest.TestCase):
+>>>>>>> jiayu_copula_data_set
     def test_zero_included_pmf(self):
         pdf = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)])
         res = CopulaDataSet.zero_included_pmf(pdf, 10)

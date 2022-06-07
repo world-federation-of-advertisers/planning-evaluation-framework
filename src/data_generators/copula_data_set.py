@@ -218,7 +218,7 @@ class CopulaCorrelationMatrixGenerator:
         measure defines a natural probability space.  This function uniformly draws
         a correlation matrix from this natural probability space.
 
-        The uniformly sampling is realized by the algorithm of:
+        The uniform sampling is realized by the algorithm of:
             D. Lewandowski, D. Kurowickaa, H. Joe, "Generating random correlation
             matrices based on vines and extended onion method," Journal of
             Multivariate Analysis, Vol. 100, Iss. 9, October 2009, pp. 1989-2001.
@@ -228,8 +228,8 @@ class CopulaCorrelationMatrixGenerator:
             eta:  A non-negative a tuning parameter.  Default eta = 1 gives a uniform
                 distribution as described above.  (Other eta can give a non-uniform
                 sampling of which the density is function of the determinant of the
-                correlation matix, and eta.  In this way we can sample higher or lower
-                correlations.)
+                correlation matix, and eta.  In this way we can tune the weights of
+                sampling stronger or weaker correlations.)
             rng:  A random number generator.
 
         Returns:

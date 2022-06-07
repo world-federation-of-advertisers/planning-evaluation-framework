@@ -18,6 +18,7 @@ import numpy as np
 from typing import List, Iterable, Dict
 from collections import Counter
 from scipy import stats
+from scipy import linalg as splinalg
 from statsmodels.distributions.copula.copulas import (
     Copula,
     CopulaDistribution,
@@ -174,3 +175,83 @@ class CopulaDataSet(DataSet):
                 impressions[i] = impressions[i] + vids * freq_vec[i]
             num_vids += count
         return impressions
+
+
+class CopulaCorrelationMatrixGenerator:
+    @staticmethod
+    def homogeneous(p: int, rho: float) -> np.ndarray:
+        """Generate a homogeneous correlation matrix.
+
+        Args:
+            p:  Number of pubs.
+            rho:  Homogenous correlation.
+
+        Returns:
+            A p * p matrix with diagonals being 1 and all off-diagonals being rho.
+        """
+        return splinalg.toeplitz([1] + [rho] * (p - 1))
+
+    @staticmethod
+    def autoregressive(p: int, rho: float) -> np.ndarray:
+        """Generate a autoregressive correlation matrix.
+
+        Args:
+            p:  Number of pubs.
+            rho:  Homogenous correlation.
+
+        Returns:
+            A <p * p> matrix C where C[i, j] = rho^|i - j| for any i, j.
+        """
+        return splinalg.toeplitz(np.power(np.array([rho] * p), np.arange(p)))
+
+    @staticmethod
+    def random(
+        p: int,
+        eta: float = 1,
+        rng: np.random.Generator = np.random.default_rng(0),
+    ) -> np.ndarray:
+        """Randomly, uniformly draw a correlation matrix.
+
+        A p * p correlation matrix is in the (p * p) dimensional Euclidean space.
+        So, the geometric measure of (p * p) dimensional Euclidean space induces a
+        measure on the manifold of p * p correlation matrices. This geoemetric
+        measure defines a natural probability space.  This function uniformly draws
+        a correlation matrix from this natural probability space.
+
+        The uniform sampling is realized by the algorithm of:
+            D. Lewandowski, D. Kurowickaa, H. Joe, "Generating random correlation
+            matrices based on vines and extended onion method," Journal of
+            Multivariate Analysis, Vol. 100, Iss. 9, October 2009, pp. 1989-2001.
+
+        Args:
+            p:  Number of pubs.
+            eta:  A non-negative a tuning parameter.  Default eta = 1 gives a uniform
+                distribution as described above.  (Other eta can give a non-uniform
+                sampling of which the density is function of the determinant of the
+                correlation matix, and eta.  In this way we can tune the weights of
+                sampling stronger or weaker correlations.)
+            rng:  A random number generator.
+
+        Returns:
+            A <p * p> random correlation matrix.
+        """
+        # The following is a line-to-line translation of the algorithm in
+        # Section 3.2 of the paper.
+        b = (p - 2) / 2 + eta
+        u = rng.beta(b, b)
+        r12 = 2 * u - 1
+        r = np.array([[1, r12], [r12, 1]])
+        for k in range(2, p):
+            b -= 0.5
+            y = rng.beta(a=k / 2, b=b)
+            v = rng.normal(size=k)
+            theta = v / np.linalg.norm(v)
+            w = np.dot(np.sqrt(y), theta)
+            q = np.dot(splinalg.sqrtm(r), w)
+            next_r = np.zeros((k + 1, k + 1))
+            next_r[:k, :k] = r
+            next_r[k, k] = 1
+            next_r[k, :k] = q
+            next_r[:k, k] = q
+            r = next_r
+        return r

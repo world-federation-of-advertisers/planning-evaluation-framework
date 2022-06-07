@@ -106,12 +106,15 @@ class M3SubsetTestPointGenerator(TestPointGenerator):
             return
         if (2 ** p - 1) - (2 * p + 1) > self.max_num_points:
             n = 0
+            subset_collection = set()
             while n < self.max_num_points:
-                subset_indicator = np.random.choice([0, 1], p)
+                subset_indicator = self._rng.choice([0, 1], p)
                 num_involved_subsets = np.count_nonzero(subset_indicator)
                 if 1 < num_involved_subsets < p - 1:
-                    yield list(self._campaign_spends * subset_indicator)
-                    n += 1
+                    if tuple(subset_indicator) not in subset_collection:
+                        subset_collection.add(tuple(subset_indicator))
+                        yield list(self._campaign_spends * subset_indicator)
+                        n += 1
         else:
             for q in range(2, p - 1):
                 for subset_indicator in self.subset_layer(p, q):

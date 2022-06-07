@@ -75,6 +75,9 @@ class M3SubsetTestPointGeneratorTest(absltest.TestCase):
         self.assertLen(points, 3)
         for point in points:
             self.assertEqual(np.count_nonzero(point), 2)
+        self.assertTrue(any([x != y for x, y in zip(points[0], points[1])]))
+        self.assertTrue(any([x != y for x, y in zip(points[0], points[2])]))
+        self.assertTrue(any([x != y for x, y in zip(points[1], points[2])]))
 
 
 if __name__ == "__main__":

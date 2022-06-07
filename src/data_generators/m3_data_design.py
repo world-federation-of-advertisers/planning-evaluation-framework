@@ -99,6 +99,11 @@ OVERLAP_GENERATORS_INDEPENDENT_GIVEN_UNIVERSE_SIZE = [
         "Independent",
         IndependentOverlapDataSet,
         {
+            # Below, "largest_pub_to_universe_ratio" = largest_pub_reach / universe_size.
+            # In line 58, PUBLISHER_RATIOS = smallest_pub_reach / largest_pub_reach.
+            # Together with LARGEST_PUBLISHER in line 56 they determine all the sizes.
+            # Note that "largest_pub_to_universe_ratio" is used only when the universe
+            # size is needed.
             "largest_pub_to_universe_ratio": 0.9,
             "random_generator": np.random.default_rng(RNG.integers(1e9)),
         },

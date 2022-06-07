@@ -242,48 +242,52 @@ class CopulaCorrelationMatrixGenerator:
 
     @staticmethod
     def random(
-        p: int, rng: np.random.Generator = np.random.default_rng(0)
+        p: int,
+        eta: float = 1,
+        rng: np.random.Generator = np.random.default_rng(0),
     ) -> np.ndarray:
         """Randomly, uniformly draw a correlation matrix.
 
-        Given the dimension, all the possible correlation matrices form a space,
-        and there is a geometric measure on this space.  The geoemetric measure
-        defines a probability space.  This function uniformly draws a correlation
-        matrix from this natural probability space.
+        A p * p correlation matrix is in the (p * p) dimensional Euclidean space.
+        So, the geometric measure of (p * p) dimensional Euclidean space induces a
+        measure on the manifold of p * p correlation matrices. This geoemetric
+        measure defines a natural probability space.  This function uniformly draws
+        a correlation matrix from this natural probability space.
 
-        We implemented the uniform sampling algorithm in:
-            S. Ghosh, S. Henderson, "Behavior of the NORTA Method for
-            Correlated Random Vector Generation as the Dimension Increases,"
-            ACM Transactions on Modeling and Computer Simulation, Vol. 13,
-            Iss. 3, July 2003, pp. 276–294.
+        The uniformly sampling is realized by the algorithm of:
+            D. Lewandowski, D. Kurowickaa, H. Joe, "Generating random correlation
+            matrices based on vines and extended onion method," Journal of
+            Multivariate Analysis, Vol. 100, Iss. 9, October 2009, pp. 1989-2001.
 
         Args:
             p:  Number of pubs.
+            eta:  A non-negative a tuning parameter.  Default eta = 1 gives a uniform
+                distribution as described above.  (Other eta can give a non-uniform
+                sampling of which the density is function of the determinant of the
+                correlation matix, and eta.  In this way we can sample higher or lower
+                correlations.)
             rng:  A random number generator.
 
         Returns:
             A <p * p> random correlation matrix.
         """
-        # Initliaze the correlation matrix.
-        corr = np.ones(shape=(1, 1))
-        # Increment the size of correlation matrix by one each time.
-        for k in range(2, p + 1):
-            # Sample y = r^2 from a beta distribution with alpha_1 = (k-1)/2
-            # and alpha_2 = (p + 1 - k)/2.
-            y = rng.beta((k - 1) / 2, (p + 1 - k) / 2)
-            r = np.sqrt(y)
-            # Sample a unit vector theta uniformly from the (k-1)-dimensional
-            # unit ball surface.
-            v = rng.normal(size=k - 1)
+        # The following is a line-to-line translation of the algorithm in
+        # Section 3.2 of the paper.
+        b = (p - 2) / 2 + eta
+        u = rng.beta(b, b)
+        r12 = 2 * u - 1
+        r = np.array([[1, r12], [r12, 1]])
+        for k in range(2, p):
+            b -= 0.5
+            y = rng.beta(a=k / 2, b=b)
+            v = rng.normal(size=k)
             theta = v / np.linalg.norm(v)
-            # Set w = r * theta and set q = corr**(1/2) * w.
-            w = np.dot(r, theta)
-            q = np.dot(splinalg.sqrtm(corr), w)
-            # Incrementally create the next_corr.
-            next_corr = np.zeros((k, k))
-            next_corr[: (k - 1), : (k - 1)] = corr
-            next_corr[k - 1, k - 1] = 1
-            next_corr[k - 1, : (k - 1)] = q
-            next_corr[: (k - 1), k - 1] = q
-            corr = next_corr
-        return corr
+            w = np.dot(np.sqrt(y), theta)
+            q = np.dot(splinalg.sqrtm(r), w)
+            next_r = np.zeros((k + 1, k + 1))
+            next_r[:k, :k] = r
+            next_r[k, k] = 1
+            next_r[k, :k] = q
+            next_r[:k, k] = q
+            r = next_r
+        return r

@@ -14,7 +14,8 @@
 """Tests for copula_data_set.py."""
 
 from collections import Counter
-from typing import Dict
+from re import M
+from typing import Dict, Tuple
 from copy import deepcopy
 from itertools import product
 from absl.testing import absltest
@@ -277,12 +278,91 @@ class CopulaCorrelationMatrixGeneratorTest(absltest.TestCase):
     def test_random_uniformity_with_two_pubs(self):
         rng = np.random.default_rng(0)
         cor_mats = [
-            CopulaCorrelationMatrixGenerator.random(p=2, rng=rng)
-            for _ in range(400)
+            CopulaCorrelationMatrixGenerator.random(p=2, rng=rng) for _ in range(400)
         ]
         cors = [cor_mat[0, 1] for cor_mat in cor_mats]
-        dets = [np.linalg.det(cor_mat) for cor_mat in cor_mats]
-        # TODO(jiayu) decide the uniformity definition and complete the test.
+        correlation_frequencies = np.histogram(a=cors, bins=4, range=(-1, 1))[0] / 400
+        np.testing.assert_almost_equal(correlation_frequencies, [1 / 4] * 4, decimal=1)
+
+    def test_random_uniformity_with_three_pubs(self):
+        rng = np.random.default_rng(0)
+        cor_mats = [
+            CopulaCorrelationMatrixGenerator.random(p=3, rng=rng) for _ in range(1000)
+        ]
+
+        def to_polar_coordinates(
+            x: float, y: float, z: float
+        ) -> Tuple[float, float, float]:
+            """Find the polar coordinates of any 3D point.
+
+            Find (r, theta, phi) such that
+            - x = r cos(phi) sin(theta)
+            - y = r sin(phi) sin(theta)
+            - z = r cos(theta).
+            """
+            r = np.sqrt(x ** 2 + y ** 2 + z ** 2)
+            phi = np.arctan2(y, x)
+            theta = np.arctan2(np.sqrt(x ** 2 + y ** 2), z)
+            return (r, phi, theta)
+
+        correlation_tuples = [
+            (cor_mat[0, 1], cor_mat[0, 2], cor_mat[1, 2]) for cor_mat in cor_mats
+        ]
+        polar_tuples = [
+            to_polar_coordinates(*correlation_tuple)
+            for correlation_tuple in correlation_tuples
+        ]
+
+        # 1. Test the uniformity of the radius.  Because of the positive definitiveness
+        # constraint, not all values of the radius are possible.  It can be proved that
+        # When (x, y, z) has a radius no greater than 0.5, the correlation matrix of the
+        # correlations (x, y, z) is always positive definite.
+        # We then expect that the radius_cube = radius ** 3 of the (x, y, z) of
+        # the generated matrix is uniform at least in (0, 0.5).  This is mathematically
+        # proved to be a necessary condition for the uniformity of the whole correlation
+        # matrix.
+        radius_cube_frequencies = np.array(
+            np.histogram(
+                a=[polar_tuple[0] ** 3 for polar_tuple in polar_tuples],
+                bins=4,
+                range=(0, 0.5),
+            )[0],
+            dtype=float,
+        )
+        radius_cube_frequencies /= sum(radius_cube_frequencies)
+        np.testing.assert_almost_equal(radius_cube_frequencies, [1 / 4] * 4, decimal=1)
+
+        # 2. Test the uniformity of the phi angle.  Another necessary condition for the
+        # uniformity of the whole correlation matrix is that phi is uniform in [-pi, pi].
+        phi_frequencies = (
+            np.histogram(
+                a=[polar_tuple[1] for polar_tuple in polar_tuples],
+                bins=4,
+                range=(-np.pi, np.pi),
+            )[0]
+            / 1000
+        )
+        np.testing.assert_almost_equal(phi_frequencies, [1 / 4] * 4, decimal=1)
+
+        # 3. Test the uniformity of the theta angle.  Another necessary condition for the
+        # uniformity of the whole correlation matrix is that cos(theta) is uniform in
+        # [0, 1] in any unit ball contained in the region of which any (x, y, z) form
+        # a valid, i.e., positive definite correlation matrix.  This condition is not
+        # obvious but provable.
+        theta_frequencies = np.array(
+            np.histogram(
+                a=[
+                    np.cos(polar_tuple[2])
+                    for polar_tuple in polar_tuples
+                    if polar_tuple[0] ** 3 < 0.5
+                ],
+                bins=4,
+                range=(-1, 1),
+            )[0],
+            dtype=float,
+        )
+        theta_frequencies /= sum(theta_frequencies)
+        np.testing.assert_almost_equal(theta_frequencies, [1 / 4] * 4, decimal=1)
 
 
 if __name__ == "__main__":

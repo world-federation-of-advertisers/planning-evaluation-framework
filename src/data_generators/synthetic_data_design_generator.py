@@ -164,6 +164,12 @@ class SyntheticDataDesignGenerator:
         overlap_params = {**params.overlap_generator_params.params}
         if "random_generator" in overlap_params:
             overlap_params["random_generator"] = self._random_generator
+        if "pricing_generator" in overlap_params:
+            overlap_params[
+                "pricing_generator"
+            ] = params.pricing_generator_params.generator(
+                **params.pricing_generator_params.params
+            )
 
         return params.overlap_generator_params.generator(
             publishers, name=str(params), **overlap_params

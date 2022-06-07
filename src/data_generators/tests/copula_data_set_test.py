@@ -22,7 +22,6 @@ from statsmodels.distributions.copula.elliptical import GaussianCopula
 from statsmodels.distributions.copula.other_copulas import IndependenceCopula
 
 from wfa_planning_evaluation_framework.data_generators.copula_data_set import (
-    AnyFrequencyDistribution,
     CopulaDataSet,
 )
 from wfa_planning_evaluation_framework.data_generators.publisher_data import (
@@ -31,16 +30,6 @@ from wfa_planning_evaluation_framework.data_generators.publisher_data import (
 from wfa_planning_evaluation_framework.data_generators.fixed_price_generator import (
     FixedPriceGenerator,
 )
-
-
-class AnyFrequencyDistributionTest(absltest.TestCase):
-    def test_ppf(self):
-        hist = np.array([5, 3, 2])
-        dist = AnyFrequencyDistribution(hist)
-        self.assertEqual(dist.ppf(0.9), 2)
-        self.assertEqual(dist.ppf(0.6), 1)
-        self.assertEqual(dist.ppf(0.5), 0)
-        self.assertEqual(dist.ppf(0.1), 0)
 
 
 class CopulaDataSetTest(absltest.TestCase):

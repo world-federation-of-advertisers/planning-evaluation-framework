@@ -17,6 +17,7 @@
 import numpy as np
 from typing import List, Iterable, Dict
 from collections import Counter
+from scipy import stats
 from statsmodels.distributions.copula.copulas import (
     Copula,
     CopulaDistribution,
@@ -36,45 +37,6 @@ from wfa_planning_evaluation_framework.data_generators.pricing_generator import 
 from wfa_planning_evaluation_framework.data_generators.fixed_price_generator import (
     FixedPriceGenerator,
 )
-
-
-class AnyFrequencyDistribution:
-
-    """Instantiate any frequency distribution with the ppf method.
-
-    We will use `CopulaDistribution` later to construct a copula.
-    `CopulaDistribution` was designed for combining the distribution instances
-    in scipy.stats.  After examing its source codes, we found that any list
-    of instances with a `ppf` method can be a valid input of `CopulaDistribution`.
-    In order to combine any single publisher distributions (i.e., any
-    ImpressionGenerators), this AnyFrequencyDistribution class instantiate
-    any frequency histogram with a ppf method.
-    """
-
-    def __init__(self, histogram: np.ndarray):
-        """Constructs AnyFrequencyDistribution.
-
-        Args:
-            histogram: An array h of counts or probabilities. h[f] is the count
-                or probability of frequency f, for f = 0, ..., a maximum
-                frequency.
-        """
-        self.pmf = histogram / sum(histogram)
-        self.cdf = np.cumsum(self.pmf)
-
-    def ppf(self, p: float) -> int:
-        """Calculates ppf of the count distribution defined by the histogram.
-
-        ppf is the inverse of cdf as will be explained in "Returns".
-
-        Args:
-            p:  A probability.
-
-        Returns:
-            A count x for which cdf[x] <= p and cdf[x + 1] > p, where cdf is
-            the cumulative sum of self.hist.
-        """
-        return np.searchsorted(a=self.cdf, v=p)
 
 
 class CopulaDataSet(DataSet):
@@ -113,10 +75,12 @@ class CopulaDataSet(DataSet):
             universe_size = 2 * max(
                 [1] + [data.max_reach for data in unlabeled_publisher_data_list]
             )
-        self.marginal_distributions = [
-            AnyFrequencyDistribution(self.zero_included_pmf(pub, universe_size))
-            for pub in unlabeled_publisher_data_list
-        ]
+        self.marginal_distributions = []
+        for pub in unlabeled_publisher_data_list:
+            pmf = self.zero_included_pmf(pub, universe_size)
+            self.marginal_distributions.append(
+                stats.rv_discrete(values=(range(len(pmf)), pmf))
+            )
         self.copula_generator = copula_generator
         self.distribution = CopulaDistribution(
             copula=self.copula_generator,

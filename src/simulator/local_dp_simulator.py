@@ -33,8 +33,9 @@ approach.  And of course, the planning model is applicable to a wider range of
 use cases.
 """
 
-from typing import List
+from typing import List, Set, Union
 import numpy as np
+from absl import logging
 
 from wfa_cardinality_estimation_evaluation_framework.estimators.bloom_filters import (
     BlipNoiser,
@@ -42,7 +43,6 @@ from wfa_cardinality_estimation_evaluation_framework.estimators.bloom_filters im
     FirstMomentEstimator,
 )
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
-from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
     DP_NOISE_MECHANISM_BLIP,
@@ -54,9 +54,6 @@ from wfa_planning_evaluation_framework.simulator.publisher import Publisher
 from wfa_planning_evaluation_framework.simulator.system_parameters import (
     SystemParameters,
 )
-
-
-MAX_ACTIVE_PUBLISHERS = 20
 
 
 class LocalDpSimulator:
@@ -97,6 +94,38 @@ class LocalDpSimulator:
             max_spends.append(self._publishers[i].max_spend)
         self._campaign_spends = tuple(campaign_spends)
         self._max_spends = tuple(max_spends)
+        self.local_dp_sketches_obtained = False
+
+    def obtain_local_dp_sketches(self, budget: PrivacyBudget):
+        """Obtain Local DP sketches given a privacy budget."""
+        if self.local_dp_sketches_obtained:
+            logging.vlog(
+                2,
+                "Local DP sketches had been created. The new sketching request is ignored.",
+            )
+            return
+        # Under the vid * EDP prviacy definition, in a local DP approach we
+        # simply charge the given budget on each EDP.
+        self._privacy_tracker.append(
+            NoisingEvent(
+                budget=PrivacyBudget(budget.epsilon, budget.delta),
+                mechanism=DP_NOISE_MECHANISM_BLIP,
+                params={},
+            )
+        )
+        raw_sketches = [
+            pub.liquid_legions_sketch(spend).exponential_bloom_filter
+            for pub, spend in zip(self._publishers, self._campaign_spends)
+        ]
+        noiser = BlipNoiser(
+            epsilon=budget.epsilon,
+            random_state=np.random.RandomState(
+                seed=self._params.generator.integers(1e9)
+            ),
+        )
+        self.local_dp_sketches = [noiser(sketch) for sketch in raw_sketches]
+        self.denoiser = SurrealDenoiser(epsilon=budget.epsilon)
+        self.local_dp_sketches_obtained = True
 
     @property
     def publisher_count(self):
@@ -133,10 +162,36 @@ class LocalDpSimulator:
         """
         return self._data_set.reach_by_spend(spends, max_frequency)
 
+    def find_subset(self, spends: List[float]) -> Union[Set, None]:
+        """Find if a spend vector corresponds to a subset.
+
+        Args:
+            spends:  The hypothetical amount spend vector, equal in length to
+                the number of publishers.  spends[i] is the amount that is
+                spent with publisher i.
+
+        Returns:
+            A given spends corresponds to a subset if for each 1 <= i <= p,
+            spends[i] = 0 or self._campaign_spends[0].  If spends does
+            correspond to a subset, returns the subset.  Otherwise, returns
+            None.
+        """
+        subset = set()
+        for i in range(len(spends)):
+            if spends[i] == 0:
+                continue
+            if (
+                spends[i] >= (1 - 1e-3) * self._campaign_spends[i]
+                and spends[i] <= (1 + 1e-3) * self._campaign_spends[i]
+            ):
+                subset.add(i)
+                continue
+            return None
+        return subset
+
     def simulated_reach_by_spend(
         self,
         spends: List[float],
-        budget: PrivacyBudget,
     ) -> ReachPoint:
         """Returns a simulated differentially private reach estimate.
 
@@ -150,33 +205,22 @@ class LocalDpSimulator:
         Returns:
             A ReachPoint representing the differentially private estimate of
             the reach that would have been obtained for this spend allocation.
-            This estimate is obtained by simulating the construction of
-            Liquid Legions sketches, one per publisher, combining them, and
-            adding differentially private noise to the result.
+
+            To obtain this, we compare the given `spends` with
+            `self._campaign_spends`.  If `spends` align with
+            `self._campaign_spends` on all non-zero elements, then it corresponds
+            to a subset of publishers in the campaign, and we output the subset
+            reach estimated by the local DP sketches.  Otherwise, output reach
+            = np.nan.
         """
-        # Under the vid * EDP prviacy definition, in a local DP approach we
-        # simply charge the given budget on each EDP.
-        self._privacy_tracker.append(
-            NoisingEvent(
-                budget=PrivacyBudget(budget.epsilon, budget.delta),
-                mechanism=DP_NOISE_MECHANISM_BLIP,
-                params={},
-            )
-        )
-        raw_sketches = [
-            pub.liquid_legions_sketch(spend).exponential_bloom_filter
-            for pub, spend in zip(self._publishers, spends)
-        ]
-        noiser = BlipNoiser(
-            epsilon=budget.epsilon,
-            random_state=np.random.RandomState(
-                seed=self._params.generator.integers(1e9)
-            ),
-        )
-        local_dp_sketches = [noiser(sketch) for sketch in raw_sketches]
-        denoiser = SurrealDenoiser(epsilon=budget.epsilon)
-        estimator = FirstMomentEstimator(method="exp", denoiser=denoiser)
-        reach = estimator(local_dp_sketches)
+        if not self.local_dp_sketches_obtained:
+            raise RuntimeError("Create local DP sketches first.")
+        subset = self.find_subset(spends)
+        if subset is None:
+            reach = np.nan
+        else:
+            estimator = FirstMomentEstimator(method="exp", denoiser=self.denoiser)
+            reach = estimator([self.local_dp_sketches[i] for i in subset])[0]
         return ReachPoint(
             impressions=self._data_set.impressions_by_spend(spends),
             kplus_reaches=[reach],

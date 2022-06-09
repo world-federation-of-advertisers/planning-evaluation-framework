@@ -1,4 +1,4 @@
-# Copyright 2021 The Private Cardinality Estimation Framework Authors
+# Copyright 2022 The Private Cardinality Estimation Framework Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -58,11 +58,10 @@ social_grade, date), approximately cardinality many rows are generated
 in the output.  The distribution of impressions per viewer follows a
 negative binomial distribution with specified mean and standard
 deviation.  If multiple publishers are specified in the input, then
-the overlap is determined using a Gaussian copula where the data is
-assumed to be independent.  In this case, due to the way that data
-is sampled from the Gaussian copula, the cardinality of the users in
-the synthetically generated output may not exactly match the input
-values.
+the overlap is determined using an independent Gaussian copula.  In
+this case, due to the way that data is sampled from the Gaussian
+copula, the cardinality of the users in the synthetically generated
+output may not exactly match the input values.
 
 TODO: Extend this to include campaign_id's.
 TODO: Extend this to include watch times.
@@ -110,7 +109,7 @@ class EdpDataGenerator:
         data_design_config: str,
         random_seed: int = 1,
     ):
-        """Constructor for SyntheticDataGenerator.
+        """Constructor for EdpDataGenerator.
 
         Args:
           data_design_config:  pd.DataFrame, specifies the configuration of the
@@ -136,10 +135,10 @@ class EdpDataGenerator:
         mean = self._data_design_config["mean"].iloc[i]
         std = self._data_design_config["std"].iloc[i]
         n = self._data_design_config["cardinality"].iloc[i]
-        if mean > std:
+        if mean >= std**2+1:
             raise ValueError(
                 "Invalid values for mean and std. "
-                "Mean must be less than std. "
+                "Mean must be less than std**2+1. "
                 f"Got mean {mean}, std {std} at row {i}"
             )
 

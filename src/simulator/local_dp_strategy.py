@@ -16,13 +16,14 @@
 from typing import Dict
 from typing import Type
 
-from wfa_planning_evaluation_framework.models.ground_truth_reach_curve_model import (
-    GroundTruthReachCurveModel,
-)
-from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
-from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
+
 from wfa_planning_evaluation_framework.models.reach_surface import ReachSurface
-from wfa_planning_evaluation_framework.simulator.halo_simulator import HaloSimulator
+from wfa_planning_evaluation_framework.models.local_dp_reach_surface import (
+    LocalDpReachSurface,
+)
+from wfa_planning_evaluation_framework.simulator.local_dp_simulator import (
+    LocalDpSimulator,
+)
 from wfa_planning_evaluation_framework.simulator.modeling_strategy import (
     ModelingStrategy,
 )
@@ -39,74 +40,24 @@ class LocalDpLiquidlegionsStrategy(ModelingStrategy):
     """Modeling strategy that predicts by unioning local sketches."""
 
     def fit(
-        self, halo: HaloSimulator, params: SystemParameters, budget: PrivacyBudget
+        self, halo: LocalDpSimulator, params: SystemParameters, budget: PrivacyBudget
     ) -> ReachSurface:
-        """Returns the reach surface computed using the M3 proposal
+        """Returns the reach surface computed using the Local DP approach.
 
         Args:
-            halo: A Halo object for simulating the behavior of the Halo system.
+            halo:  A simulator of the Halo system. The simulator of this class should
+                be set as the LocalDpSimulator.  Note that it is a hypothetical
+                simulator, i.e., a simulator of a possible option of, instead of the
+                actual Halo system.
+                (I'm calling this arg as `halo` to be consistent with halo_simulator,
+                for interoperability with experimental_trial.)
             params:  Simulation parameters.
             budget:  A PrivacyBudget object specifying how much privacy budget
               is to be consumed for this operation.
+
         Returns:
             A differentially private ReachSurface model which can be queried
             for reach and frequency estimates for arbitrary spend allocations.
         """
-        p = halo.publisher_count
-
-        # Under the vid * EDP privacy definition, each EDP can use the whole budget
-        # as given, i.e., we don't have to further split the budget to each EDP.
-        
-        # TODO(jiayu): add local DP sketch builder and union to halo_simulator.
-
-        total_reach = halo.simulated_reach_by_spend(
-            halo.campaign_spends, per_request_budget
-        )
-
-        # Compute reach for each publisher
-        single_pub_reach_list = []
-        for i in range(p):
-            spend_vec = [0.0] * p
-            spend_vec[i] = halo.campaign_spends[i]
-            reach_point = halo.simulated_reach_by_spend(
-                spend_vec, per_request_budget, max_frequency=10
-            )
-            kplus_reaches = [
-                reach_point.reach(k) for k in range(1, reach_point.max_frequency + 1)
-            ]
-            single_pub_reach = ReachPoint(
-                [reach_point.impressions[i]], kplus_reaches, [reach_point.spends[i]]
-            )
-            single_pub_reach_list.append(single_pub_reach)
-
-        # Compute reach for all publishers but one
-        all_but_one_reach = []
-        if p > 2:
-            for i in range(p):
-                spend_vec = list(halo.campaign_spends)
-                spend_vec[i] = 0.0
-                reach = halo.simulated_reach_by_spend(spend_vec, per_request_budget)
-                all_but_one_reach.append(reach)
-
-        # Compute reach curve for each publisher
-        single_pub_curves = []
-        for i in range(p):
-            if self._use_ground_truth_for_reach_curves:
-                curve = GroundTruthReachCurveModel(halo._data_set, i)
-            else:
-                curve = self._single_pub_model(
-                    [single_pub_reach_list[i]], **self._single_pub_model_kwargs
-                )
-                curve._fit()
-            single_pub_curves.append(curve)
-
-        if p == 1:
-            return single_pub_curves[0]
-
-        training_points = all_but_one_reach + [total_reach]
-        reach_surface = self._multi_pub_model(
-            single_pub_curves, training_points, **self._multi_pub_model_kwargs
-        )
-        reach_surface._fit()
-
-        return reach_surface
+        halo.obtain_local_dp_sketches(budget)
+        return LocalDpReachSurface(halo)

@@ -192,6 +192,7 @@ class LocalDpSimulator:
     def simulated_reach_by_spend(
         self,
         spends: List[float],
+        max_frequency: int = 1,
     ) -> ReachPoint:
         """Returns a simulated differentially private reach estimate.
 
@@ -201,6 +202,12 @@ class LocalDpSimulator:
                 spent with publisher i.
             budget:  The amount of privacy budget that can be consumed while
                 satisfying the request.
+            max_frequency:  The maximum frequency in the output ReachPoint. This
+                is purely for the interoperability with modeling_strategy and
+                experimental_trial.  So far, local DP LiquidLegions can only be
+                used to estimated 1+  reach.  So, if the given max_frequency > 1,
+                we will set the k+ reach to be 0 for all k > 1 in the output
+                ReachPoint.
 
         Returns:
             A ReachPoint representing the differentially private estimate of
@@ -223,7 +230,7 @@ class LocalDpSimulator:
             reach = estimator([self.local_dp_sketches[i] for i in subset])[0]
         return ReachPoint(
             impressions=self._data_set.impressions_by_spend(spends),
-            kplus_reaches=[reach],
+            kplus_reaches=[reach] + [np.nan] * (max_frequency - 1),
             spends=spends,
             universe_size=self._data_set.universe_size,
         )

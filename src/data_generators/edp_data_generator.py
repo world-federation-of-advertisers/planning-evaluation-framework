@@ -231,7 +231,7 @@ class EdpDataGenerator:
 def main(argv):
     data_design = pd.read_csv(FLAGS.data_design_config)
     data = EdpDataGenerator(data_design, FLAGS.random_seed).generate_data()
-    data.to_csv(FLAGS.output)
+    data.to_csv(FLAGS.output, index=False)
 
 
 if __name__ == "__main__":

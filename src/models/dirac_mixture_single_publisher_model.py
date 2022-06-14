@@ -81,7 +81,7 @@ class UnivariateMixedPoissonOptimizer:
 
     @staticmethod
     def in_bound_grid(
-        ncomponents: int, pmf: np.ndarray, dilusion: float = 0
+        ncomponents: int, pmf: np.ndarray, dilution: float = 0
     ) -> np.ndarray:
         """Samples components from [0, max_freq] weighted by the observed pmf to an extent.
 
@@ -103,7 +103,7 @@ class UnivariateMixedPoissonOptimizer:
         actually be one.  As such, our sampling weights can be chosen between
         the observed pmf and the uniform pmf, in other words, we "dilute" the
         sampling weights to cover unobserved areas.  See the explanation of the
-        `dilusion` argument below.
+        `dilution` argument below.
 
         Note that this method is "in-bound": we do not draw any components beyond
         max_freq.  So, it does not have a great fit in outlier cases where the
@@ -114,17 +114,17 @@ class UnivariateMixedPoissonOptimizer:
         Args:
             ncomponents: Number of components to sample.
             pmf: A vector of probabilities that sum up to be 1.
-            dilusion:  The sampling weights are chosen as (1 - dilusion) *
-                observed_pmf + dilusion * uniform_pmf.  No significant impact of
+            dilution:  The sampling weights are chosen as (1 - dilution) *
+                observed_pmf + dilution * uniform_pmf.  No significant impact of
                 this parameter has been seen in initial simulations, but it is
                 worth further investigation.
 
         Returns:
             All components in the model.
         """
-        if dilusion > 0:
-            water = np.array([dilusion / len(pmf)] * len(pmf))
-            pmf = pmf * (1 - dilusion) + water
+        if dilution > 0:
+            water = np.array([dilution / len(pmf)] * len(pmf))
+            pmf = pmf * (1 - dilution) + water
         n_left = ncomponents
         components = np.array([])
         f = 0
@@ -152,7 +152,7 @@ class UnivariateMixedPoissonOptimizer:
 
         See the docstrings of the `in_bound_grid` method for more details.
         """
-        return cls.in_bound_grid(ncomponents, pmf, dilusion=0)
+        return cls.in_bound_grid(ncomponents, pmf, dilution=0)
 
     @classmethod
     def in_bound_uniform_grid(cls, ncomponents: int, pmf: np.ndarray) -> np.ndarray:
@@ -160,7 +160,7 @@ class UnivariateMixedPoissonOptimizer:
 
         See the docstrings of the `in_bound_grid` method for more details.
         """
-        return cls.in_bound_grid(ncomponents, pmf, dilusion=1)
+        return cls.in_bound_grid(ncomponents, pmf, dilution=1)
 
     @staticmethod
     def truncated_poisson_pmf_vec(poisson_mean: float, max_freq: int) -> np.ndarray:

@@ -27,11 +27,17 @@ from wfa_planning_evaluation_framework.models.goerg_model import (
 from wfa_planning_evaluation_framework.models.kinflated_gamma_poisson_model import (
     KInflatedGammaPoissonModel,
 )
+from wfa_planning_evaluation_framework.models.dirac_mixture_single_pub_model import (
+    DiracMixtureSinglePublisherModel,
+)
 from wfa_planning_evaluation_framework.models.pairwise_union_reach_surface import (
     PairwiseUnionReachSurface,
 )
 from wfa_planning_evaluation_framework.models.restricted_pairwise_union_reach_surface import (
     RestrictedPairwiseUnionReachSurface,
+)
+from wfa_planning_evaluation_framework.models.dirac_mixture_multi_pub_model import (
+    DiracMixtureMultiPublisherModel,
 )
 from wfa_planning_evaluation_framework.simulator.modeling_strategy import (
     ModelingStrategy,
@@ -49,6 +55,7 @@ SINGLE_PUB_MODELS = {
     "goerg": GoergModel,
     "gamma_poisson": GammaPoissonModel,
     "kinflated_gamma_poisson": KInflatedGammaPoissonModel,
+    "dirac_mixture_single": DiracMixtureSinglePublisherModel,
 }
 
 # A dictionary mapping names of multipublisher models to the
@@ -56,6 +63,7 @@ SINGLE_PUB_MODELS = {
 MULTI_PUB_MODELS = {
     "pairwise_union": PairwiseUnionReachSurface,
     "restricted_pairwise_union": RestrictedPairwiseUnionReachSurface,
+    "dirac_mixture_multi": DiracMixtureMultiPublisherModel,
     "none": None,
     # TODO: Uncomment the following after the Dirac Mixture model is implemented.
     # 'dirac_mixture': DiracMixtureReachSurface,

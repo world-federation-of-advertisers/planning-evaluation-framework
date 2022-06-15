@@ -46,16 +46,18 @@ MODELING_STRATEGIES = [
     ModelingStrategyDescriptor(
         "m3strategy",
         {"use_ground_truth_for_reach_curves": True},
-        "goerg",
-        {},
-        "restricted_pairwise_union",
-        {},
+        "dirac_mixture_single",
+        {"dilution": 0.3},
+        "dirac_mixture_multi",
+        {"dilution": 0.3},
     ),
     ModelingStrategyDescriptor(
-        "m3strategy", {}, "goerg", {}, "restricted_pairwise_union", {}
-    ),
-    ModelingStrategyDescriptor(
-        "m3strategy", {}, "gamma_poisson", {}, "restricted_pairwise_union", {}
+        "m3strategy",
+        {"use_ground_truth_for_reach_curves": False},
+        "dirac_mixture_single",
+        {"dilution": 0.3},
+        "dirac_mixture_multi",
+        {"dilution": 0.3},
     ),
 ]
 

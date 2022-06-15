@@ -206,12 +206,12 @@ class ExperimentalTrial:
             if hasattr(reach_surface, "evaluate_single_pub_kplus_reach_agreement"):
                 metrics[
                     "single_pub_kplus_reach_agreement"
-                ] = reach_surface.evaluate_single_pub_kplus_reach_agreement(
+                ] = [reach_surface.evaluate_single_pub_kplus_reach_agreement(
                     scaling_factor_choices=[0.5, 0.75, 1, 1.5, 2],
                     max_frequency=max_frequency,
-                )
+                )]
             else:
-                metrics["single_pub_kplus_reach_agreement"] = {}
+                metrics["single_pub_kplus_reach_agreement"] = [{}]
             if self._analysis_type == SINGLE_PUB_ANALYSIS:
                 single_publisher_dataframe = (
                     self._compute_single_publisher_fractions_dataframe(
@@ -225,7 +225,7 @@ class ExperimentalTrial:
             logging.vlog(1, f"Modeling failure: {inst}")
             logging.vlog(2, traceback.format_exc())
             metrics = aggregate_on_exception(traceback.format_exc())
-            metrics["single_pub_kplus_reach_agreement"] = {}
+            metrics["single_pub_kplus_reach_agreement"] = [{}]
             if self._analysis_type == SINGLE_PUB_ANALYSIS:
                 single_publisher_dataframe = (
                     self._single_publisher_fractions_dataframe_on_exception(

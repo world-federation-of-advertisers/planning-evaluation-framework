@@ -67,7 +67,7 @@ CAMPAIGN_SPEND_FRACTIONS_GENERATORS = [
 ]
 
 LIQUID_LEGIONS_PARAMS = [
-    LiquidLegionsParameters(12, 1e5),
+    LiquidLegionsParameters(7.75, 1e5),
 ]
 
 PRIVACY_BUDGETS = [
@@ -84,7 +84,8 @@ MAX_FREQUENCIES = [10]
 
 TEST_POINT_STRATEGIES = [
     ("latin_hypercube", {"npublishers": 1}),
-    ("uniformly_random", {"npublishers": 1}),
+    ("subset", {"campaign_spend_fractions": [1]}),
+    ("shareshift", {"campaign_spend_fractions": [1]}),
 ]
 
 LEVELS = {

@@ -1,4 +1,4 @@
-# Copyright 2021 The Private Cardinality Estimation Framework Authors
+# Copyright 2022 The Private Cardinality Estimation Framework Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -50,10 +50,16 @@ from wfa_planning_evaluation_framework.data_generators.sequentially_correlated_o
     CorrelatedSetsOptions,
 )
 
+
+
+# Number of samples that will be taken in the latin hypercube design
+NUM_SAMPLES_FOR_LHS = 200
+
 # The following are the parameter sets that are varied in this data design.
 # The latin hypercube design constructs a subset of the cartesian product
 # of these parameter settings.
-NUM_PUBLISHERS = [2, 5, 10, 20]
+# NUM_PUBLISHERS = [2, 3, 4, 5, 6, 7, 8, 9, 10]
+NUM_PUBLISHERS = [2, 3,]
 LARGEST_PUBLISHER = [int(1e5), int(2e5), int(3e5)]
 PUBLISHER_RATIOS = [1, 0.5, 0.3, 0.1]
 PRICING_GENERATORS = [
@@ -136,7 +142,7 @@ OVERLAP_GENERATORS_INDEPENDENT_GIVEN_UNIVERSE_SIZE = [
         "Sequential",
         SequentiallyCorrelatedOverlapDataSet,
         {
-            "order": OrderOptions.random,
+            "order": OrderOptions.original,
             "correlated_sets": CorrelatedSetsOptions.all,
             "shared_prop": 0.25,
             "random_generator": np.random.default_rng(RNG.integers(1e9)),
@@ -168,7 +174,7 @@ OVERLAP_GENERATORS_INDEPENDENT_GIVEN_UNIVERSE_SIZE = [
         "Sequential",
         SequentiallyCorrelatedOverlapDataSet,
         {
-            "order": OrderOptions.random,
+            "order": OrderOptions.original,
             "correlated_sets": CorrelatedSetsOptions.one,
             "shared_prop": 0.75,
             "random_generator": np.random.default_rng(RNG.integers(1e9)),
@@ -299,10 +305,6 @@ LEVELS = {
     "impression_generator_params": IMPRESSION_GENERATORS,
     "overlap_generator_params": OVERLAP_GENERATORS,
 }
-
-# Number of samples that will be taken in the latin hypercube design
-NUM_SAMPLES_FOR_LHS = 200
-
 
 def generate_data_design_config(
     random_generator: np.random.Generator,

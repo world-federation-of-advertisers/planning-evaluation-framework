@@ -379,7 +379,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
             self.ensure_compatible_num_publishers(reach_curves, reach_points)
             self.reach_curves = copy.deepcopy(reach_curves)
         self.ncomponents = (
-            min(5000, 200 * self.p ** 2) if ncomponents is None else ncomponents
+            min(5000, 200 * self.p**2) if ncomponents is None else ncomponents
         )
         self.dilution = dilution
         self.rng = rng
@@ -630,3 +630,42 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
         return self.by_impressions_no_single_pub_reach_agreement(
             impressions, max_frequency
         )
+
+    def evaluate_single_pub_kplus_reach_agreement(
+        self,
+        scaling_factor_choices: List[float] = [0.5, 0.75, 1, 1.5, 2],
+        max_frequency: int = 1,
+    ) -> Dict[float, Dict[str, List[float]]]:
+        if not self.single_publisher_reach_agreement:
+            return {}
+        metrics = {}
+        for scaling_factor in scaling_factor_choices:
+            metrics[scaling_factor] = {}
+            single_pub_model_predictions = [
+                curve.by_impressions(scaling_factor * imp, max_frequency)
+                for curve, imp in zip(self.reach_curves, self.baseline_imps)
+            ]
+            multi_pub_model_predictions = []
+            for i in range(self.p):
+                imps = [0] * self.p
+                imps[i] = scaling_factor * self.baseline_imps[i]
+                multi_pub_model_predictions.append(
+                    self.by_impressions_with_single_pub_reach_agreement(
+                        imps, max_frequency
+                    )
+                )
+            relative_differences = np.array(
+                [
+                    # if x = 0 but y != 0, treat the relative error as 100%
+                    [abs(y - x) / x if x > 0 else 1 for x, y in zip(a, b)]
+                    for a, b in zip(
+                        single_pub_model_predictions, multi_pub_model_predictions
+                    )
+                ]
+            )
+            metrics[scaling_factor]["mean"] = np.mean(relative_differences, axis=0)
+            metrics[scaling_factor]["q90"] = np.quantile(
+                relative_differences, 0.9, axis=0
+            )
+            metrics[scaling_factor]["max"] = np.max(relative_differences, axis=0)
+        return metrics

@@ -54,8 +54,12 @@ class TrialDescriptor(NamedTuple):
 
     def update_from_dataset(self, dataset: DataSet) -> "TrialDescriptor":
         """Uses the dataset to fill in various context-specific items."""
+        system_params = self.system_params.update_from_dataset(dataset)
+        experimental_params = self.experiment_params.update_from_dataset(
+            dataset, system_params
+        )
         return TrialDescriptor(
             copy.deepcopy(self.modeling_strategy),
-            self.system_params.update_from_dataset(dataset),
-            self.experiment_params.update_from_dataset(dataset),
+            system_params,
+            experimental_params,
         )

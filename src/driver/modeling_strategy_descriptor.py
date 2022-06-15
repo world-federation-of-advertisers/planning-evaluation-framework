@@ -27,7 +27,7 @@ from wfa_planning_evaluation_framework.models.goerg_model import (
 from wfa_planning_evaluation_framework.models.kinflated_gamma_poisson_model import (
     KInflatedGammaPoissonModel,
 )
-from wfa_planning_evaluation_framework.models.dirac_mixture_single_pub_model import (
+from wfa_planning_evaluation_framework.models.dirac_mixture_single_publisher_model import (
     DiracMixtureSinglePublisherModel,
 )
 from wfa_planning_evaluation_framework.models.pairwise_union_reach_surface import (
@@ -36,7 +36,7 @@ from wfa_planning_evaluation_framework.models.pairwise_union_reach_surface impor
 from wfa_planning_evaluation_framework.models.restricted_pairwise_union_reach_surface import (
     RestrictedPairwiseUnionReachSurface,
 )
-from wfa_planning_evaluation_framework.models.dirac_mixture_multi_pub_model import (
+from wfa_planning_evaluation_framework.models.dirac_mixture_multi_publisher_model import (
     DiracMixtureMultiPublisherModel,
 )
 from wfa_planning_evaluation_framework.simulator.modeling_strategy import (

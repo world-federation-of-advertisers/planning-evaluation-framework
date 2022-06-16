@@ -58,9 +58,11 @@ class TrialDescriptor(NamedTuple):
         experimental_params = self.experiment_params.update_from_dataset(
             dataset, system_params
         )
-        modeling_strategy = self.modeling_strategy.update_from_dataset(dataset)
+        modeling_strategy_descriptor = self.modeling_strategy.update_from_dataset(
+            dataset
+        )
         return TrialDescriptor(
-            modeling_strategy,
+            modeling_strategy_descriptor,
             system_params,
             experimental_params,
         )

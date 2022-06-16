@@ -113,7 +113,7 @@ class M3Strategy(ModelingStrategy):
                 curve = GroundTruthReachCurveModel(halo._data_set, i)
             else:
                 curve = self._single_pub_model(
-                    [single_pub_reach_list[i]], **self._single_pub_model_kwargs
+                    data=[single_pub_reach_list[i]], **self._single_pub_model_kwargs
                 )
                 curve._fit()
             single_pub_curves.append(curve)

@@ -17,6 +17,7 @@ from numpy.random import Generator
 from typing import Dict
 from typing import NamedTuple
 from typing import Type
+from copy import deepcopy
 
 from wfa_planning_evaluation_framework.models.gamma_poisson_model import (
     GammaPoissonModel,
@@ -51,6 +52,8 @@ from wfa_planning_evaluation_framework.simulator.m3_strategy import (
 from wfa_planning_evaluation_framework.simulator.single_publisher_strategy import (
     SinglePublisherStrategy,
 )
+from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
+
 
 # A dictionary mapping names of single publisher models to the
 # corresponding classes that implement them.
@@ -107,6 +110,26 @@ class ModelingStrategyDescriptor(NamedTuple):
     single_pub_model_kwargs: Dict
     multi_pub_model: str
     multi_pub_model_kwargs: Dict
+
+    def update_from_dataset(
+        self, data_set: DataSet = None
+    ) -> "ModelingStrategyDescriptor":
+        multi_pub_model_kwargs = deepcopy(self._multi_pub_model_kwargs)
+        if "largest_pub_to_universe_ratio" in self._multi_pub_model_kwargs:
+            largest_pub_size = max([pub.max_reach for pub in data_set._data])
+            multi_pub_model_kwargs["universe_size"] = int(
+                largest_pub_size
+                / multi_pub_model_kwargs["largest_pub_to_universe_ratio"]
+            )
+            del multi_pub_model_kwargs["largest_pub_to_universe_ratio"]
+        return ModelingStrategyDescriptor(
+            strategy=deepcopy(self.strategy),
+            strategy_kwargs=deepcopy(self.strategy_kwargs),
+            single_pub_model=deepcopy(self._single_pub_model),
+            single_pub_mode_kwargs=deepcopy(self._single_pub_model_kwargs),
+            multi_pub_model=deepcopy(self._multi_pub_model),
+            multi_pub_model_kwargs=multi_pub_model_kwargs,
+        )
 
     def instantiate_strategy(self):
         """Returns ModelingStrategy object defined by this descriptor."""

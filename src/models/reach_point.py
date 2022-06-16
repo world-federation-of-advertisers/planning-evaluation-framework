@@ -49,6 +49,9 @@ class ReachPoint:
             raise ValueError("impressions and spends must have same length")
         self._impressions = tuple(impressions)
         self._kplus_reaches = tuple(kplus_reaches)
+        # TODO: include the last frequency level into the following
+        # list, and modify other places (such as dirac mixture models)
+        # accordingly.
         self._frequencies = [
             kplus_reaches[i] - kplus_reaches[i + 1]
             for i in range(len(kplus_reaches) - 1)

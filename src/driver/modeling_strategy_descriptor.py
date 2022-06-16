@@ -39,6 +39,9 @@ from wfa_planning_evaluation_framework.models.restricted_pairwise_union_reach_su
 from wfa_planning_evaluation_framework.models.dirac_mixture_multi_publisher_model import (
     DiracMixtureMultiPublisherModel,
 )
+from wfa_planning_evaluation_framework.models.independent_model import (
+    IndependentModel,
+)
 from wfa_planning_evaluation_framework.simulator.modeling_strategy import (
     ModelingStrategy,
 )
@@ -64,6 +67,7 @@ MULTI_PUB_MODELS = {
     "pairwise_union": PairwiseUnionReachSurface,
     "restricted_pairwise_union": RestrictedPairwiseUnionReachSurface,
     "dirac_mixture_multi": DiracMixtureMultiPublisherModel,
+    "independent": IndependentModel,
     "none": None,
     # TODO: Uncomment the following after the Dirac Mixture model is implemented.
     # 'dirac_mixture': DiracMixtureReachSurface,

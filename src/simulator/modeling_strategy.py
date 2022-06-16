@@ -13,6 +13,7 @@
 # limitations under the License.
 """A modeling strategy estimates reach surfaces using Halo instances."""
 
+from copy import deepcopy
 from typing import Dict
 from typing import Type
 
@@ -26,6 +27,7 @@ from wfa_planning_evaluation_framework.simulator.system_parameters import (
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
     PrivacyBudget,
 )
+from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 
 
 class ModelingStrategy:
@@ -42,6 +44,22 @@ class ModelingStrategy:
         self._single_pub_model_kwargs = single_pub_model_kwargs
         self._multi_pub_model = multi_pub_model
         self._multi_pub_model_kwargs = multi_pub_model_kwargs
+
+    def update_from_dataset(self, data_set: DataSet = None) -> "ModelingStrategy":
+        multi_pub_model_kwargs = deepcopy(self._multi_pub_model_kwargs)
+        if "largest_pub_to_universe_ratio" in self._multi_pub_model_kwargs:
+            largest_pub_size = max([pub.max_reach for pub in data_set._data])
+            multi_pub_model_kwargs["universe_size"] = int(
+                largest_pub_size
+                / multi_pub_model_kwargs["largest_pub_to_universe_ratio"]
+            )
+            del multi_pub_model_kwargs["largest_pub_to_universe_ratio"]
+        return ModelingStrategy(
+            deepcopy(self._single_pub_model),
+            deepcopy(self._single_pub_model_kwargs),
+            deepcopy(self._multi_pub_model),
+            deepcopy(multi_pub_model_kwargs),
+        )
 
     def fit(
         self, halo: HaloSimulator, params: SystemParameters, budget: PrivacyBudget

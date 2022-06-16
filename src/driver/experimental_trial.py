@@ -204,12 +204,12 @@ class ExperimentalTrial:
             ]
             metrics = aggregate(true_reach, fitted_reach)
             if hasattr(reach_surface, "evaluate_single_pub_kplus_reach_agreement"):
-                metrics[
-                    "single_pub_kplus_reach_agreement"
-                ] = [reach_surface.evaluate_single_pub_kplus_reach_agreement(
-                    scaling_factor_choices=[0.5, 0.75, 1, 1.5, 2],
-                    max_frequency=max_frequency,
-                )]
+                metrics["single_pub_kplus_reach_agreement"] = [
+                    reach_surface.evaluate_single_pub_kplus_reach_agreement(
+                        scaling_factor_choices=[0.5, 0.75, 1, 1.5, 2],
+                        max_frequency=max_frequency,
+                    )
+                ]
             else:
                 metrics["single_pub_kplus_reach_agreement"] = [{}]
             if self._analysis_type == SINGLE_PUB_ANALYSIS:
@@ -258,9 +258,17 @@ class ExperimentalTrial:
 
     def _compute_trial_results_path(self) -> str:
         """Returns path of file where the results of this trial are stored."""
-        return (
-            f"{self._experiment_dir}/{self._data_set_name}/{self._trial_descriptor}.csv"
-        )
+        dir_name = self._experiment_dir
+        if len(dir_name) > 255:
+            dir_name = dir_name[:241] + str(np.random.randint(1e10))
+        dataset_name = self._data_set_name
+        if len(dataset_name) > 255:
+            dataset_name = dataset_name[:241] + str(np.random.randint(1e10))
+        descriptor_name = self._trial_descriptor
+        if len(descriptor_name) > 255:
+            descriptor_name = descriptor_name[:241] + str(np.random.randint(1e10))
+        name = f"{dir_name}/{dataset_name}/{descriptor_name}.csv"
+        return name
 
     def _make_independent_vars_dataframe(self) -> pd.DataFrame:
         """Returns a 1-row DataFrame of independent variables for this trial."""

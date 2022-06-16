@@ -48,7 +48,7 @@ MODELING_STRATEGIES = [
         "m3strategy",
         {"use_ground_truth_for_reach_curves": True},
         "dirac_mixture_single",
-        {"dilution": 0.3},
+        {},
         "dirac_mixture_multi",
         {"dilution": 0.3},
     ),
@@ -65,7 +65,7 @@ MODELING_STRATEGIES = [
         "m3strategy",
         {"use_ground_truth_for_reach_curves": True},
         "dirac_mixture_single",
-        {"dilution": 0.3},
+        {},
         "independent",
         {"largest_pub_to_universe_ratio": 0.25},
     ),
@@ -73,7 +73,7 @@ MODELING_STRATEGIES = [
         "m3strategy",
         {"use_ground_truth_for_reach_curves": True},
         "dirac_mixture_single",
-        {"dilution": 0.3},
+        {},
         "independent",
         {"largest_pub_to_universe_ratio": 0.75},
     ),
@@ -81,7 +81,7 @@ MODELING_STRATEGIES = [
         "m3strategy",
         {"use_ground_truth_for_reach_curves": True},
         "dirac_mixture_single",
-        {"dilution": 0.3},
+        {},
         "independent",
         {"largest_pub_to_universe_ratio": 0.5},
     ),
@@ -149,7 +149,7 @@ LEVELS = {
     "max_frequencies": MAX_FREQUENCIES,
     "test_point_strategies": TEST_POINT_STRATEGIES,
 }
-# A total of 9 * 4 * 5 * 3 * 3 = 1620 configs. Will evaluate all of them
+# A total of 8 * 4 * 5 * 3 * 3 = 1440 configs. Will evaluate all of them
 # per dataset.
 
 

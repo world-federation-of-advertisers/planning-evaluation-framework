@@ -327,6 +327,7 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
         self,
         data: List[ReachPoint],
         ncomponents: int = 200,
+        dilution: float = 0,
     ):
         """Constructs a Dirac mixture single publisher model.
 
@@ -358,6 +359,7 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
                 "please provide a ReachPoint with a known universe size instead."
             )
         self.ncomponents = ncomponents
+        self.dilution = dilution
         self._fit_computed = False
 
     def _fit(self):

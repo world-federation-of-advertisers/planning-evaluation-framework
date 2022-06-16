@@ -325,6 +325,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
         ncomponents: int = None,
         dilution: float = 0,
         rng: np.random.Generator = np.random.default_rng(0),
+        universe_size: int = None,
     ):
         """Constructs a Dirac mixture multi publisher model.
 
@@ -362,14 +363,17 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
         # We choose the common_universe_size to be the max universe size of the
         # given ReachPoints and reset each training point to have this common
         # universe size.
-        sizes = [
-            rp._universe_size for rp in self._data if rp._universe_size is not None
-        ]
-        if len(sizes) == 0:
-            raise ValueError(
-                "The model requires at least one ReachPoint to have universe size."
-            )
-        self.common_universe_size = max(sizes)
+        if universe_size is None:
+            sizes = [
+                rp._universe_size for rp in self._data if rp._universe_size is not None
+            ]
+            if len(sizes) == 0:
+                raise ValueError(
+                    "The model requires at least one ReachPoint to have universe size."
+                )
+            self.common_universe_size = max(sizes)
+        else:
+            self.common_universe_size = universe_size
         for rp in self._data:
             rp._universe_size = self.common_universe_size
         if reach_curves is None:

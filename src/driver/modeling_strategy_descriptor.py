@@ -114,9 +114,16 @@ class ModelingStrategyDescriptor(NamedTuple):
     def update_from_dataset(
         self, data_set: DataSet = None
     ) -> "ModelingStrategyDescriptor":
+        largest_pub_size = max([pub.max_reach for pub in data_set._data])
+        single_pub_model_kwargs = deepcopy(self.single_pub_model_kwargs)
+        if "largest_pub_to_universe_ratio" in self.single_pub_model_kwargs:
+            single_pub_model_kwargs["universe_size"] = int(
+                largest_pub_size
+                / single_pub_model_kwargs["largest_pub_to_universe_ratio"]
+            )
+            del multi_pub_model_kwargs["largest_pub_to_universe_ratio"]
         multi_pub_model_kwargs = deepcopy(self.multi_pub_model_kwargs)
         if "largest_pub_to_universe_ratio" in self.multi_pub_model_kwargs:
-            largest_pub_size = max([pub.max_reach for pub in data_set._data])
             multi_pub_model_kwargs["universe_size"] = int(
                 largest_pub_size
                 / multi_pub_model_kwargs["largest_pub_to_universe_ratio"]
@@ -126,7 +133,7 @@ class ModelingStrategyDescriptor(NamedTuple):
             strategy=deepcopy(self.strategy),
             strategy_kwargs=deepcopy(self.strategy_kwargs),
             single_pub_model=deepcopy(self.single_pub_model),
-            single_pub_model_kwargs=deepcopy(self.single_pub_model_kwargs),
+            single_pub_model_kwargs=single_pub_model_kwargs,
             multi_pub_model=deepcopy(self.multi_pub_model),
             multi_pub_model_kwargs=multi_pub_model_kwargs,
         )

@@ -56,9 +56,9 @@ MODELING_STRATEGIES = [
         "m3strategy",
         {"use_ground_truth_for_reach_curves": False},
         "dirac_mixture_single",
-        {"dilution": 0.3},
+        {"dilution": 0.3, "largest_pub_to_universe_ratio": 0.25},
         "dirac_mixture_multi",
-        {"dilution": 0.3},
+        {"dilution": 0.3, "largest_pub_to_universe_ratio": 0.25},
     ),
     # Independent multi pub
     ModelingStrategyDescriptor(
@@ -79,17 +79,9 @@ MODELING_STRATEGIES = [
     ),
     ModelingStrategyDescriptor(
         "m3strategy",
-        {"use_ground_truth_for_reach_curves": True},
-        "dirac_mixture_single",
-        {},
-        "independent",
-        {"largest_pub_to_universe_ratio": 0.5},
-    ),
-    ModelingStrategyDescriptor(
-        "m3strategy",
         {"use_ground_truth_for_reach_curves": False},
         "dirac_mixture_single",
-        {"dilution": 0.3},
+        {"dilution": 0.3, "largest_pub_to_universe_ratio": 0.25},
         "independent",
         {"largest_pub_to_universe_ratio": 0.25},
     ),
@@ -97,17 +89,9 @@ MODELING_STRATEGIES = [
         "m3strategy",
         {"use_ground_truth_for_reach_curves": False},
         "dirac_mixture_single",
-        {"dilution": 0.3},
+        {"dilution": 0.3, "largest_pub_to_universe_ratio": 0.25},
         "independent",
         {"largest_pub_to_universe_ratio": 0.75},
-    ),
-    ModelingStrategyDescriptor(
-        "m3strategy",
-        {"use_ground_truth_for_reach_curves": False},
-        "dirac_mixture_single",
-        {"dilution": 0.3},
-        "independent",
-        {"largest_pub_to_universe_ratio": 0.5},
     ),
 ]
 
@@ -149,7 +133,7 @@ LEVELS = {
     "max_frequencies": MAX_FREQUENCIES,
     "test_point_strategies": TEST_POINT_STRATEGIES,
 }
-# A total of 8 * 4 * 5 * 3 * 3 = 1440 configs. Will evaluate all of them
+# A total of 6 * 4 * 5 * 3 * 3 = 960 configs. Will evaluate all of them
 # per dataset.
 
 

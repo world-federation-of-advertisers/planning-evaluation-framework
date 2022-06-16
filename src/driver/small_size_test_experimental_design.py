@@ -47,18 +47,18 @@ MODELING_STRATEGIES = [
         "m3strategy",
         {"use_ground_truth_for_reach_curves": False},
         "dirac_mixture_single",
-        {"dilution": 0.3},
+        {"dilution": 0.3, "largest_pub_to_universe_ratio": 0.25},
         "dirac_mixture_multi",
-        {"dilution": 0.3},
+        {"dilution": 0.3, "largest_pub_to_universe_ratio": 0.25},
     ),
     # Independent multi pub
     ModelingStrategyDescriptor(
         "m3strategy",
         {"use_ground_truth_for_reach_curves": False},
         "dirac_mixture_single",
-        {"dilution": 0.3},
+        {"dilution": 0.3, "largest_pub_to_universe_ratio": 0.25},
         "independent",
-        {"largest_pub_to_universe_ratio": 0.25},
+        {"largest_pub_to_universe_ratio": 0.25, "largest_pub_to_universe_ratio": 0.25},
     ),
 ]
 

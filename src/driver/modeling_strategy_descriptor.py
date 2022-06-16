@@ -126,7 +126,7 @@ class ModelingStrategyDescriptor(NamedTuple):
             strategy=deepcopy(self.strategy),
             strategy_kwargs=deepcopy(self.strategy_kwargs),
             single_pub_model=deepcopy(self.single_pub_model),
-            single_pub_mode_kwargs=deepcopy(self.single_pub_model_kwargs),
+            single_pub_model_kwargs=deepcopy(self.single_pub_model_kwargs),
             multi_pub_model=deepcopy(self.multi_pub_model),
             multi_pub_model_kwargs=multi_pub_model_kwargs,
         )

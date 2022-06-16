@@ -264,7 +264,7 @@ class ExperimentalTrial:
         dataset_name = self._data_set_name
         if len(dataset_name) > 255:
             dataset_name = dataset_name[:241] + str(np.random.randint(1e10))
-        descriptor_name = self._trial_descriptor
+        descriptor_name = f"{self._trial_descriptor}"
         if len(descriptor_name) > 255:
             descriptor_name = descriptor_name[:241] + str(np.random.randint(1e10))
         name = f"{dir_name}/{dataset_name}/{descriptor_name}.csv"

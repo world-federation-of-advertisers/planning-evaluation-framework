@@ -42,6 +42,7 @@ class UnivariateMixedPoissonOptimizer:
         self,
         frequency_histogram: np.ndarray,
         ncomponents: int = 200,
+        dilution: float = 0,
     ):
         """Construct an optimizer for univariate mixed Poisson distribution.
 
@@ -58,9 +59,12 @@ class UnivariateMixedPoissonOptimizer:
         self.observed_pmf = frequency_histogram / sum(frequency_histogram)
         # Work with standardized histogram, i.e., pmf to avoid potential overflow.
         self.max_freq = len(frequency_histogram) - 1
-        self.components = self.in_bound_purely_weighted_grid(
-            ncomponents, self.observed_pmf
+        self.components = self.in_bound_grid(
+            ncomponents,
+            self.observed_pmf,
+            dilution,
         )
+        self.dilution = dilution
         self.fitted = False
 
     @staticmethod
@@ -362,7 +366,9 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
             return
         while self.ncomponents > 0:
             self.optimizer = UnivariateMixedPoissonOptimizer(
-                frequency_histogram=self.hist, ncomponents=self.ncomponents
+                frequency_histogram=self.hist,
+                ncomponents=self.ncomponents,
+                dilution=self.dilution,
             )
             try:
                 self.optimizer.fit()

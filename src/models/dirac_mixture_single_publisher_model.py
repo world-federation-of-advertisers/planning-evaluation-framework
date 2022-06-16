@@ -354,11 +354,14 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
             self._cpi = data[0].spends[0] / data[0].impressions[0]
         else:
             self._cpi = None
-        if self._reach_point.universe_size is None:
-            raise ValueError(
-                "A fit requires the universe size to be known, "
-                "please provide a ReachPoint with a known universe size instead."
-            )
+        if universe_size is None:
+            if self._reach_point.universe_size is None:
+                raise ValueError(
+                    "A fit requires the universe size to be known, "
+                    "please provide a ReachPoint with a known universe size instead."
+                )
+        else:
+            self._reach_point._universe_size = universe_size
         self.ncomponents = ncomponents
         self.dilution = dilution
         self._fit_computed = False

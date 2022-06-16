@@ -121,7 +121,7 @@ class ModelingStrategyDescriptor(NamedTuple):
                 largest_pub_size
                 / single_pub_model_kwargs["largest_pub_to_universe_ratio"]
             )
-            del multi_pub_model_kwargs["largest_pub_to_universe_ratio"]
+            del single_pub_model_kwargs["largest_pub_to_universe_ratio"]
         multi_pub_model_kwargs = deepcopy(self.multi_pub_model_kwargs)
         if "largest_pub_to_universe_ratio" in self.multi_pub_model_kwargs:
             multi_pub_model_kwargs["universe_size"] = int(

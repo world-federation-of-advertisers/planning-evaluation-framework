@@ -328,6 +328,7 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
         data: List[ReachPoint],
         ncomponents: int = 200,
         dilution: float = 0,
+        universe_size: int = None,
     ):
         """Constructs a Dirac mixture single publisher model.
 

@@ -378,6 +378,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
             rp._universe_size = self.common_universe_size
         if reach_curves is None:
             self.single_publisher_reach_agreement = False
+            self.reach_curves = None
         else:
             self.single_publisher_reach_agreement = single_publisher_reach_agreement
             self.ensure_compatible_num_publishers(reach_curves, reach_points)
@@ -440,6 +441,20 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
         hists_on_observable_dirs = np.array(
             [rp.zero_included_histogram for rp in self._data]
         )
+        # Add single pub training curves from reach curves
+        if self.reach_curves is not None:
+            for i in range(self.p):
+                direction = [0] * self.p
+                direction[i] = 1
+                observable_dirs = np.vstack((observable_dirs, direction))
+                rp = self.reach_curves[i].by_impressions(
+                    impressions=[self.baseline_imps[i]],
+                    max_frequency=self._data[0].max_frequency,
+                )
+                rp._universe_size = self.common_universe_size
+                hists_on_observable_dirs = np.vstack(
+                    (hists_on_observable_dirs, rp.zero_included_histogram)
+                )
         while self.ncomponents > 0:
             self.optimizer = MultivariateMixedPoissonOptimizer(
                 observable_directions=observable_dirs,

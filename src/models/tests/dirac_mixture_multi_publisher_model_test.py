@@ -314,7 +314,7 @@ class DiracMixtureMultiPublisherModelTest(parameterized.TestCase):
         {
             "testcase_name": "zero_reach",
             "reaches": [0, 0, 0],
-            "expected_weights": [1, 0],
+            "expected_weights": [0.789, 0.211],
         },
         {
             "testcase_name": "full_reach",
@@ -324,7 +324,7 @@ class DiracMixtureMultiPublisherModelTest(parameterized.TestCase):
         {
             "testcase_name": "practical_reach",
             "reaches": [7, 8, 9],
-            "expected_weights": [0.156, 0.844],
+            "expected_weights": [0.283, 0.717],
         },
     )
     def test_fit(self, reaches, expected_weights):
@@ -408,7 +408,7 @@ class DiracMixtureMultiPublisherModelTest(parameterized.TestCase):
         self.assertEqual(res.reach(2), expected_kplus_reaches[1])
 
     def test_backsolve_impression(self):
-        curve = lambda x: x ** 2
+        curve = lambda x: x**2
         target_reach = 26
         expected = 5
         starting_impression = 9

@@ -43,6 +43,7 @@ from wfa_planning_evaluation_framework.driver.trial_descriptor import (
 )
 
 MODELING_STRATEGIES = [
+    # Dirac mixture multi pub
     ModelingStrategyDescriptor(
         "m3strategy",
         {"use_ground_truth_for_reach_curves": False},
@@ -58,7 +59,7 @@ MODELING_STRATEGIES = [
         "dirac_mixture_single",
         {"dilution": 0.3, "largest_pub_to_universe_ratio": 0.25},
         "independent",
-        {"largest_pub_to_universe_ratio": 0.25, "largest_pub_to_universe_ratio": 0.25},
+        {"largest_pub_to_universe_ratio": 0.25},
     ),
 ]
 
@@ -74,7 +75,7 @@ PRIVACY_BUDGETS = [
     PrivacyBudget(1.0, 1e-9),
 ]
 
-REPLICA_IDS = [1, 2, 3]
+REPLICA_IDS = [1,]
 
 MAX_FREQUENCIES = [10]
 
@@ -99,6 +100,7 @@ LEVELS = {
 def generate_experimental_design_config(seed: int = 1) -> Iterable[TrialDescriptor]:
     """Generates a list of TrialDescriptors for the 1st round eval of M3."""
     for level_combination in itertools.product(*LEVELS.values()):
+        print('\n', level_combination)
         design_parameters = dict(zip(LEVELS.keys(), level_combination))
         mstrategy = design_parameters["modeling_strategies"]
         sparams = SystemParameters(

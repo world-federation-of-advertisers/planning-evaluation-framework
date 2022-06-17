@@ -190,28 +190,46 @@ class ExperimentalTrial:
                     dataset, rng
                 )
             )
-            true_reach = [
-                halo.true_reach_by_spend(
-                    t, self._trial_descriptor.experiment_params.max_frequency
-                )
-                for t in test_points
-            ]
-            fitted_reach = [
-                reach_surface.by_spend(
-                    t, self._trial_descriptor.experiment_params.max_frequency
-                )
-                for t in test_points
-            ]
-            metrics = aggregate(true_reach, fitted_reach)
-            if hasattr(reach_surface, "evaluate_single_pub_kplus_reach_agreement"):
-                metrics["single_pub_kplus_reach_agreement"] = [
-                    reach_surface.evaluate_single_pub_kplus_reach_agreement(
-                        scaling_factor_choices=[0.5, 0.75, 1, 1.5, 2],
-                        max_frequency=max_frequency,
-                    )
-                ]
-            else:
+            print(
+                '\n',
+                'Test points',
+                self._trial_descriptor.experiment_params.test_point_strategy,
+                self._trial_descriptor.experiment_params.test_point_strategy_kwargs,
+                '\n',
+                test_points,
+                '\n',
+                modeling_strategy._multi_pub_model,
+                '\n',
+            )
+            if len(test_points) == 0:
+                true_reach, fitted_reach = [], []
+                metrics = aggregate(true_reach, fitted_reach)
                 metrics["single_pub_kplus_reach_agreement"] = [{}]
+            else:
+                true_reach = [
+                    halo.true_reach_by_spend(
+                        t, self._trial_descriptor.experiment_params.max_frequency
+                    )
+                    for t in test_points
+                ]
+                print('True: ', true_reach, '\n')
+                fitted_reach = [
+                    reach_surface.by_spend(
+                        t, self._trial_descriptor.experiment_params.max_frequency
+                    )
+                    for t in test_points
+                ]
+                print('Fitted: ', fitted_reach, '\n\n')
+                metrics = aggregate(true_reach, fitted_reach)
+                if hasattr(reach_surface, "evaluate_single_pub_kplus_reach_agreement"):
+                    metrics["single_pub_kplus_reach_agreement"] = [
+                        reach_surface.evaluate_single_pub_kplus_reach_agreement(
+                            scaling_factor_choices=[0.5, 0.75, 1, 1.5, 2],
+                            max_frequency=max_frequency,
+                        )
+                    ]
+                else:
+                    metrics["single_pub_kplus_reach_agreement"] = [{}]
             if self._analysis_type == SINGLE_PUB_ANALYSIS:
                 single_publisher_dataframe = (
                     self._compute_single_publisher_fractions_dataframe(

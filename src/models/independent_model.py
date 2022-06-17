@@ -29,15 +29,18 @@ class IndependentModel(ReachSurface):
         reach_curves: List[ReachCurve] = None,
         universe_size: int = 0,
     ):
-        self.reach_curves = reach_curves
+        self._reach_curves = reach_curves
         self.universe_size = universe_size
+
+    def _fit(self):
+        return
 
     def by_impressions(
         self, impressions: List[int], max_frequency: int = 1
     ) -> ReachPoint:
         marginal_rps = [
             curve.by_impressions([imp], max_frequency)
-            for curve, imp in zip(self.reach_curves, impressions)
+            for curve, imp in zip(self._reach_curves, impressions)
         ]
         marginal_freq_hists = [
             rp._frequencies + [rp._kplus_reaches[-1]] for rp in marginal_rps

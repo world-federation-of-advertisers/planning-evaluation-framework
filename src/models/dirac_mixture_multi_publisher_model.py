@@ -16,6 +16,7 @@
 from absl import logging
 import numpy as np
 import copy
+from time import time
 from typing import Callable, List, Tuple, Union, Dict
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
@@ -378,11 +379,11 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
             rp._universe_size = self.common_universe_size
         if reach_curves is None:
             self.single_publisher_reach_agreement = False
-            self.reach_curves = None
+            self._reach_curves = None
         else:
             self.single_publisher_reach_agreement = single_publisher_reach_agreement
             self.ensure_compatible_num_publishers(reach_curves, reach_points)
-            self.reach_curves = copy.deepcopy(reach_curves)
+            self._reach_curves = copy.deepcopy(reach_curves)
         self.ncomponents = (
             min(5000, 200 * self.p**2) if ncomponents is None else ncomponents
         )
@@ -442,12 +443,12 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
             [rp.zero_included_histogram for rp in self._data]
         )
         # Add single pub training curves from reach curves
-        if self.reach_curves is not None:
+        if self._reach_curves is not None:
             for i in range(self.p):
                 direction = [0] * self.p
                 direction[i] = 1
                 observable_dirs = np.vstack((observable_dirs, direction))
-                rp = self.reach_curves[i].by_impressions(
+                rp = self._reach_curves[i].by_impressions(
                     impressions=[self.baseline_imps[i]],
                     max_frequency=self._data[0].max_frequency,
                 )
@@ -612,20 +613,29 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
         Returns:
             A ReachPoint specifying the predicted reach for this number of impressions.
         """
+        t1 = time()
         self._fit()
+        t2 = time()
+        print(f'1-2: {round(t2 - t1, 1)} seconds.')
         target_single_pub_reaches = [
-            self.reach_curves[i].by_impressions([impressions[i]]).reach(1)
+            self._reach_curves[i].by_impressions([impressions[i]]).reach(1)
             for i in range(self.p)
         ]
+        t3 = time()
+        print(f'2-3: {round(t3 - t2, 1)} seconds.')
         reach_surface = lambda x: self.by_impressions_no_single_pub_reach_agreement(
             x, max_frequency
         ).reach(1)
+        t4 = time()
+        print(f'3-4: {round(t4 - t3, 1)} seconds.')
         induced_single_pub_curves = [
             self.induced_single_pub_curve(
                 surface=reach_surface, num_pubs=self.p, pub_index=i
             )
             for i in range(self.p)
         ]
+        t5 = time()
+        print(f'4-5: {round(t5 - t4, 1)} seconds.')
         adjusted_impressions = [
             self.backsolve_impression(
                 curve=induced_single_pub_curves[i],
@@ -634,9 +644,14 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
             )
             for i in range(self.p)
         ]
-        return self.by_impressions_no_single_pub_reach_agreement(
+        t6 = time()
+        print(f'5-6: {round(t6 - t5, 1)} seconds.')
+        surface = self.by_impressions_no_single_pub_reach_agreement(
             impressions=adjusted_impressions, max_frequency=max_frequency
         )
+        t7 = time()
+        print(f'6-7: {round(t7 - t6, 1)} seconds.')
+        return surface
 
     def by_impressions(
         self, impressions: List[int], max_frequency: int = 1
@@ -662,7 +677,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
             metrics[scaling_factor] = {}
             single_pub_model_predictions = [
                 curve.by_impressions(scaling_factor * imp, max_frequency)
-                for curve, imp in zip(self.reach_curves, self.baseline_imps)
+                for curve, imp in zip(self._reach_curves, self.baseline_imps)
             ]
             multi_pub_model_predictions = []
             for i in range(self.p):

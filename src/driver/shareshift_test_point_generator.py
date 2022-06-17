@@ -29,6 +29,7 @@ class ShareShiftTestPointGenerator(TestPointGenerator):
         dataset: DataSet,
         campaign_spend_fractions: np.ndarray,
         shift_fraction_choices: List[float] = [-1.0, -0.5, 0.5, 1.0],
+        rng: np.random.Generator = np.random.default_rng(0),
     ):
         """Constructs a ShareShiftTestPointGenerator.
 

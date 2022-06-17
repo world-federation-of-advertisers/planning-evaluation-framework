@@ -36,11 +36,22 @@ from wfa_planning_evaluation_framework.driver.latin_hypercube_random_test_point_
 from wfa_planning_evaluation_framework.driver.uniformly_random_test_point_generator import (
     UniformlyRandomTestPointGenerator,
 )
+from wfa_planning_evaluation_framework.driver.m3_subset_test_point_generator import (
+    M3SubsetTestPointGenerator,
+)
+from wfa_planning_evaluation_framework.driver.shareshift_test_point_generator import (
+    ShareShiftTestPointGenerator,
+)
+from wfa_planning_evaluation_framework.simulator.system_parameters import (
+    SystemParameters,
+)
 
 TEST_POINT_STRATEGIES = {
     "latin_hypercube": LatinHypercubeRandomTestPointGenerator,
     "uniformly_random": UniformlyRandomTestPointGenerator,
     "grid": GridTestPointGenerator,
+    "subset": M3SubsetTestPointGenerator,
+    "shareshift": ShareShiftTestPointGenerator,
 }
 
 
@@ -92,11 +103,19 @@ class ExperimentParameters(NamedTuple):
             f"{self._kwargs_string(self.test_point_strategy_kwargs)}"
         )
 
-    def update_from_dataset(self, dataset: DataSet) -> "ExperimentParameters":
+    def update_from_dataset(
+        self,
+        dataset: DataSet,
+        system_params: SystemParameters = None,
+    ) -> "ExperimentParameters":
         """Uses the dataset to fill in various context-specific items."""
         test_point_strategy_kwargs = copy.deepcopy(self.test_point_strategy_kwargs)
         if "npublishers" in test_point_strategy_kwargs:
             test_point_strategy_kwargs["npublishers"] = dataset.publisher_count
+        if "campaign_spend_fractions" in test_point_strategy_kwargs:
+            test_point_strategy_kwargs[
+                "campaign_spend_fractions"
+            ] = system_params.campaign_spend_fractions
         return ExperimentParameters(
             copy.deepcopy(self.privacy_budget),
             copy.deepcopy(self.replica_id),

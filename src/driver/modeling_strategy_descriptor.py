@@ -17,6 +17,7 @@ from numpy.random import Generator
 from typing import Dict
 from typing import NamedTuple
 from typing import Type
+from copy import deepcopy
 
 from wfa_planning_evaluation_framework.models.gamma_poisson_model import (
     GammaPoissonModel,
@@ -27,11 +28,20 @@ from wfa_planning_evaluation_framework.models.goerg_model import (
 from wfa_planning_evaluation_framework.models.kinflated_gamma_poisson_model import (
     KInflatedGammaPoissonModel,
 )
+from wfa_planning_evaluation_framework.models.dirac_mixture_single_publisher_model import (
+    DiracMixtureSinglePublisherModel,
+)
 from wfa_planning_evaluation_framework.models.pairwise_union_reach_surface import (
     PairwiseUnionReachSurface,
 )
 from wfa_planning_evaluation_framework.models.restricted_pairwise_union_reach_surface import (
     RestrictedPairwiseUnionReachSurface,
+)
+from wfa_planning_evaluation_framework.models.dirac_mixture_multi_publisher_model import (
+    DiracMixtureMultiPublisherModel,
+)
+from wfa_planning_evaluation_framework.models.independent_model import (
+    IndependentModel,
 )
 from wfa_planning_evaluation_framework.simulator.modeling_strategy import (
     ModelingStrategy,
@@ -42,6 +52,8 @@ from wfa_planning_evaluation_framework.simulator.m3_strategy import (
 from wfa_planning_evaluation_framework.simulator.single_publisher_strategy import (
     SinglePublisherStrategy,
 )
+from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
+
 
 # A dictionary mapping names of single publisher models to the
 # corresponding classes that implement them.
@@ -49,6 +61,7 @@ SINGLE_PUB_MODELS = {
     "goerg": GoergModel,
     "gamma_poisson": GammaPoissonModel,
     "kinflated_gamma_poisson": KInflatedGammaPoissonModel,
+    "dirac_mixture_single": DiracMixtureSinglePublisherModel,
 }
 
 # A dictionary mapping names of multipublisher models to the
@@ -56,6 +69,8 @@ SINGLE_PUB_MODELS = {
 MULTI_PUB_MODELS = {
     "pairwise_union": PairwiseUnionReachSurface,
     "restricted_pairwise_union": RestrictedPairwiseUnionReachSurface,
+    "dirac_mixture_multi": DiracMixtureMultiPublisherModel,
+    "independent": IndependentModel,
     "none": None,
     # TODO: Uncomment the following after the Dirac Mixture model is implemented.
     # 'dirac_mixture': DiracMixtureReachSurface,
@@ -95,6 +110,33 @@ class ModelingStrategyDescriptor(NamedTuple):
     single_pub_model_kwargs: Dict
     multi_pub_model: str
     multi_pub_model_kwargs: Dict
+
+    def update_from_dataset(
+        self, data_set: DataSet = None
+    ) -> "ModelingStrategyDescriptor":
+        largest_pub_size = max([pub.max_reach for pub in data_set._data])
+        single_pub_model_kwargs = deepcopy(self.single_pub_model_kwargs)
+        if "largest_pub_to_universe_ratio" in self.single_pub_model_kwargs:
+            single_pub_model_kwargs["universe_size"] = int(
+                largest_pub_size
+                / single_pub_model_kwargs["largest_pub_to_universe_ratio"]
+            )
+            del single_pub_model_kwargs["largest_pub_to_universe_ratio"]
+        multi_pub_model_kwargs = deepcopy(self.multi_pub_model_kwargs)
+        if "largest_pub_to_universe_ratio" in self.multi_pub_model_kwargs:
+            multi_pub_model_kwargs["universe_size"] = int(
+                largest_pub_size
+                / multi_pub_model_kwargs["largest_pub_to_universe_ratio"]
+            )
+            del multi_pub_model_kwargs["largest_pub_to_universe_ratio"]
+        return ModelingStrategyDescriptor(
+            strategy=deepcopy(self.strategy),
+            strategy_kwargs=deepcopy(self.strategy_kwargs),
+            single_pub_model=deepcopy(self.single_pub_model),
+            single_pub_model_kwargs=single_pub_model_kwargs,
+            multi_pub_model=deepcopy(self.multi_pub_model),
+            multi_pub_model_kwargs=multi_pub_model_kwargs,
+        )
 
     def instantiate_strategy(self):
         """Returns ModelingStrategy object defined by this descriptor."""

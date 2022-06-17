@@ -30,11 +30,15 @@ from wfa_planning_evaluation_framework.data_generators.publisher_data import (
 
 
 class OverlapDataSet(DataSet):
-    """Construct a multi-pub DataSet from a list of single-pub PublisherData.
+    """A DataSet constructed from a list of PublisherData by overlapping their reached sets.
 
     Once we have a list of PublisherData for each publisher, this class
     generates the cross-publisher reach overlap, relabels the reached ids to
     reflect the overlap, and finally includes these labeled ids to a DataSet.
+
+    In other words, the universes are overlapped while for each user, their
+    frequencies at different publishers are indepednent conditional on the
+    overlap of universe.
     """
 
     def __init__(

@@ -22,6 +22,7 @@ from copy import deepcopy
 from os import listdir
 from os.path import isfile, join
 from functools import lru_cache
+import numpy as np
 
 from wfa_planning_evaluation_framework.filesystem_wrappers import (
     filesystem_wrapper_base,
@@ -238,8 +239,13 @@ class DataSet:
         """
         if not dataset_dir:
             dataset_dir = self._name
-
-        full_dir_path = filesystem.joinpath(parent_dir, dataset_dir)
+        ##chenwei##
+        if len(dataset_dir) > 255:
+            new_dataset_dir = dataset_dir[:245] + str(np.random.randint(1e10))
+        else:
+            new_dataset_dir = dataset_dir
+        full_dir_path = filesystem.joinpath(parent_dir, new_dataset_dir)
+        ###########
         filesystem.mkdir(full_dir_path, parents=True, exist_ok=True)
         for pdf in self._data:
             pdf_path = filesystem.joinpath(full_dir_path, pdf.name)

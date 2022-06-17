@@ -113,7 +113,7 @@ class M3Strategy(ModelingStrategy):
                 curve = GroundTruthReachCurveModel(halo._data_set, i)
             else:
                 curve = self._single_pub_model(
-                    [single_pub_reach_list[i]], **self._single_pub_model_kwargs
+                    data=[single_pub_reach_list[i]], **self._single_pub_model_kwargs
                 )
                 curve._fit()
             single_pub_curves.append(curve)
@@ -123,7 +123,9 @@ class M3Strategy(ModelingStrategy):
 
         training_points = all_but_one_reach + [total_reach]
         reach_surface = self._multi_pub_model(
-            single_pub_curves, training_points, **self._multi_pub_model_kwargs
+            reach_curves=single_pub_curves,
+            reach_points=training_points,
+            **self._multi_pub_model_kwargs
         )
         reach_surface._fit()
 

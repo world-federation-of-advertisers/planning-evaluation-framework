@@ -349,7 +349,6 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
             )
         self._data = data
         self._reach_point = data[0]
-        self.hist = np.array(self._reach_point.zero_included_histogram)
         if data[0].spends:
             self._cpi = data[0].spends[0] / data[0].impressions[0]
         else:
@@ -362,6 +361,7 @@ class DiracMixtureSinglePublisherModel(ReachCurve):
                 )
         else:
             self._reach_point._universe_size = universe_size
+        self.hist = np.array(self._reach_point.zero_included_histogram)
         self.ncomponents = ncomponents
         self.dilution = dilution
         self._fit_computed = False

@@ -357,7 +357,7 @@ class DiracMixtureMultiPublisherModelTest(parameterized.TestCase):
         # environment.  However, the github tests are set in a Python 3.8 environment
         # which introduces some discrepancy.  So, we set the torelance of tesing
         # almost equal to be 0.03.
-        self.assertSequenceAlmostEqual(model.optimizer.ws, expected_weights, delt=0.03)
+        self.assertSequenceAlmostEqual(model.optimizer.ws, expected_weights, delta=0.03)
 
     @parameterized.named_parameters(
         {

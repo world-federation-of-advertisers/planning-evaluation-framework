@@ -378,6 +378,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
             rp._universe_size = self.common_universe_size
         if reach_curves is None:
             self.single_publisher_reach_agreement = False
+            self.reach_curves = None
         else:
             self.single_publisher_reach_agreement = single_publisher_reach_agreement
             self.ensure_compatible_num_publishers(reach_curves, reach_points)

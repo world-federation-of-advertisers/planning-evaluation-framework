@@ -558,18 +558,13 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
             return left
         return right
 
-    @staticmethod
-    def induced_single_pub_curve(
-        surface: Callable[[List[int]], int], num_pubs: int, pub_index: int
-    ) -> Callable[[int], int]:
+    def induced_single_pub_curve(self, pub_index: int) -> Callable[[int], int]:
         """Returns a induced single pub reach curve from a multi pub reach surface.
 
         This is another method to be used in the later
         `by_impressions_with_single_pub_reach_agreement` method.
 
         Args:
-            surface:  A function from a multi pub impression vector to reach.
-            num_pubs:  Number of publishers.
             pub_index:  We want the induced reach curve on this pub.
 
         Returns:
@@ -579,9 +574,19 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
         """
 
         def curve(num_impressions: int) -> int:
-            impressions = [0] * num_pubs
-            impressions[pub_index] = num_impressions
-            return surface(impressions)
+            scaling_factor = num_impressions / self.baseline_imps[pub_index]
+            return round(
+                self.common_universe_size
+                * (
+                    1
+                    - sum(
+                        self.optimizer.ws
+                        * np.exp(
+                            -self.optimizer.components[:, pub_index] * scaling_factor
+                        )
+                    )
+                )
+            )
 
         return curve
 
@@ -613,29 +618,20 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
         Returns:
             A ReachPoint specifying the predicted reach for this number of impressions.
         """
-        t1 = time()
         self._fit()
-        t2 = time()
-        print(f'1-2: {round(t2 - t1, 1)} seconds.')
         target_single_pub_reaches = [
             self._reach_curves[i].by_impressions([impressions[i]]).reach(1)
             for i in range(self.p)
         ]
-        t3 = time()
-        print(f'2-3: {round(t3 - t2, 1)} seconds.')
-        reach_surface = lambda x: self.by_impressions_no_single_pub_reach_agreement(
-            x, max_frequency
-        ).reach(1)
+        # reach_surface = lambda x: self.by_impressions_no_single_pub_reach_agreement(
+        #     x, max_frequency
+        # ).reach(1)
         t4 = time()
-        print(f'3-4: {round(t4 - t3, 1)} seconds.')
         induced_single_pub_curves = [
-            self.induced_single_pub_curve(
-                surface=reach_surface, num_pubs=self.p, pub_index=i
-            )
-            for i in range(self.p)
+            self.induced_single_pub_curve(pub_index=i) for i in range(self.p)
         ]
         t5 = time()
-        print(f'4-5: {round(t5 - t4, 1)} seconds.')
+        print(f"4-5: {round(t5 - t4, 1)} seconds.")
         adjusted_impressions = [
             self.backsolve_impression(
                 curve=induced_single_pub_curves[i],
@@ -645,13 +641,10 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
             for i in range(self.p)
         ]
         t6 = time()
-        print(f'5-6: {round(t6 - t5, 1)} seconds.')
-        surface = self.by_impressions_no_single_pub_reach_agreement(
+        print(f"5-6: {round(t6 - t5, 1)} seconds.")
+        return self.by_impressions_no_single_pub_reach_agreement(
             impressions=adjusted_impressions, max_frequency=max_frequency
         )
-        t7 = time()
-        print(f'6-7: {round(t7 - t6, 1)} seconds.')
-        return surface
 
     def by_impressions(
         self, impressions: List[int], max_frequency: int = 1
@@ -667,16 +660,16 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
 
     def evaluate_single_pub_kplus_reach_agreement(
         self,
-        scaling_factor_choices: List[float] = [0.5, 0.75, 1, 1.5, 2],
+        scaling_factor_choices: List[float] = [0.5, 1, 2],
         max_frequency: int = 1,
     ) -> Dict[float, Dict[str, List[float]]]:
-        if not self.single_publisher_reach_agreement:
-            return {}
         metrics = {}
         for scaling_factor in scaling_factor_choices:
             metrics[scaling_factor] = {}
             single_pub_model_predictions = [
-                curve.by_impressions(scaling_factor * imp, max_frequency)
+                curve.by_impressions(
+                    impressions=[scaling_factor * imp], max_frequency=max_frequency
+                )._kplus_reaches
                 for curve, imp in zip(self._reach_curves, self.baseline_imps)
             ]
             multi_pub_model_predictions = []
@@ -684,9 +677,9 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
                 imps = [0] * self.p
                 imps[i] = scaling_factor * self.baseline_imps[i]
                 multi_pub_model_predictions.append(
-                    self.by_impressions_with_single_pub_reach_agreement(
+                    self.by_impressions(
                         imps, max_frequency
-                    )
+                    )._kplus_reaches
                 )
             relative_differences = np.array(
                 [

@@ -224,7 +224,7 @@ class ExperimentalTrial:
                 if hasattr(reach_surface, "evaluate_single_pub_kplus_reach_agreement"):
                     metrics["single_pub_kplus_reach_agreement"] = [
                         reach_surface.evaluate_single_pub_kplus_reach_agreement(
-                            scaling_factor_choices=[0.5, 0.75, 1, 1.5, 2],
+                            scaling_factor_choices=[0.5, 1, 2],
                             max_frequency=max_frequency,
                         )
                     ]

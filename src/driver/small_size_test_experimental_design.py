@@ -50,7 +50,8 @@ MODELING_STRATEGIES = [
         "dirac_mixture_single",
         {"dilution": 0.3, "largest_pub_to_universe_ratio": 0.25},
         "dirac_mixture_multi",
-        {"dilution": 0.3, "largest_pub_to_universe_ratio": 0.25},
+        {"dilution": 0.3, "largest_pub_to_universe_ratio": 0.25, 
+        "single_publisher_reach_agreement": False},
     ),
     # Independent multi pub
     ModelingStrategyDescriptor(

@@ -50,7 +50,9 @@ MODELING_STRATEGIES = [
         "dirac_mixture_single",
         {},
         "dirac_mixture_multi",
-        {"dilution": 0.3},
+        {"dilution": 0.3, 
+        "largest_pub_to_universe_ratio": 0.25, 
+        "single_publisher_reach_agreement": False},
     ),
     ModelingStrategyDescriptor(
         "m3strategy",
@@ -58,7 +60,8 @@ MODELING_STRATEGIES = [
         "dirac_mixture_single",
         {"dilution": 0.3, "largest_pub_to_universe_ratio": 0.25},
         "dirac_mixture_multi",
-        {"dilution": 0.3, "largest_pub_to_universe_ratio": 0.25},
+        {"dilution": 0.3, "largest_pub_to_universe_ratio": 0.25,
+        "single_publisher_reach_agreement": False},
     ),
     # Independent multi pub
     ModelingStrategyDescriptor(
@@ -71,27 +74,11 @@ MODELING_STRATEGIES = [
     ),
     ModelingStrategyDescriptor(
         "m3strategy",
-        {"use_ground_truth_for_reach_curves": True},
-        "dirac_mixture_single",
-        {},
-        "independent",
-        {"largest_pub_to_universe_ratio": 0.75},
-    ),
-    ModelingStrategyDescriptor(
-        "m3strategy",
         {"use_ground_truth_for_reach_curves": False},
         "dirac_mixture_single",
         {"dilution": 0.3, "largest_pub_to_universe_ratio": 0.25},
         "independent",
         {"largest_pub_to_universe_ratio": 0.25},
-    ),
-    ModelingStrategyDescriptor(
-        "m3strategy",
-        {"use_ground_truth_for_reach_curves": False},
-        "dirac_mixture_single",
-        {"dilution": 0.3, "largest_pub_to_universe_ratio": 0.25},
-        "independent",
-        {"largest_pub_to_universe_ratio": 0.75},
     ),
 ]
 

@@ -95,9 +95,7 @@ LIQUID_LEGIONS_PARAMS = [
 
 PRIVACY_BUDGETS = [
     PrivacyBudget(1.0, 1e-9),
-    PrivacyBudget(0.33, 1e-9),
     PrivacyBudget(0.1, 1e-9),
-    PrivacyBudget(0.033, 1e-9),
     PrivacyBudget(0.01, 1e-9),
 ]
 

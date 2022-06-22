@@ -675,7 +675,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
             multi_pub_model_predictions = []
             for i in range(self.p):
                 imps = [0] * self.p
-                imps[i] = scaling_factor * self.baseline_imps[i]
+                imps[i] = round(scaling_factor * self.baseline_imps[i])
                 multi_pub_model_predictions.append(
                     self.by_impressions(
                         imps, max_frequency

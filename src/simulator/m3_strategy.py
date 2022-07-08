@@ -81,21 +81,23 @@ class M3Strategy(ModelingStrategy):
             halo.campaign_spends, per_request_budget, max_frequency=10
         )
 
-        # Compute reach for each publisher
-        single_pub_reach_list = []
+        # Compute reach point for each publisher
+        single_pub_reach_for_surface = []
+        single_pub_reach_for_curve = []
+
         for i in range(p):
             spend_vec = [0.0] * p
             spend_vec[i] = halo.campaign_spends[i]
-            reach_point = halo.simulated_reach_by_spend(
+            point_for_surface = halo.simulated_reach_by_spend(
                 spend_vec, per_request_budget, max_frequency=10
             )
-            kplus_reaches = [
-                reach_point.reach(k) for k in range(1, reach_point.max_frequency + 1)
-            ]
-            single_pub_reach = ReachPoint(
-                [reach_point.impressions[i]], kplus_reaches, [reach_point.spends[i]]
+            point_for_curve = ReachPoint(
+                [point_for_surface.impressions[i]],
+                point_for_surface._kplus_reaches,
+                [point_for_surface.spends[i]],
             )
-            single_pub_reach_list.append(single_pub_reach)
+            single_pub_reach_for_curve.append(point_for_curve)
+            single_pub_reach_for_surface.append(point_for_surface)
 
         # Compute reach for all publishers but one
         all_but_one_reach = []
@@ -115,7 +117,8 @@ class M3Strategy(ModelingStrategy):
                 curve = GroundTruthReachCurveModel(halo._data_set, i)
             else:
                 curve = self._single_pub_model(
-                    data=[single_pub_reach_list[i]], **self._single_pub_model_kwargs
+                    data=[single_pub_reach_for_curve[i]],
+                    **self._single_pub_model_kwargs
                 )
                 curve._fit()
             single_pub_curves.append(curve)
@@ -123,7 +126,9 @@ class M3Strategy(ModelingStrategy):
         if p == 1:
             return single_pub_curves[0]
 
-        training_points = all_but_one_reach + single_pub_reach_list + [total_reach]
+        training_points = (
+            all_but_one_reach + single_pub_reach_for_surface + [total_reach]
+        )
         reach_surface = self._multi_pub_model(
             reach_curves=single_pub_curves,
             reach_points=training_points,

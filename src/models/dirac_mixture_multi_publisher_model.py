@@ -327,6 +327,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
         dilution: float = 0,
         rng: np.random.Generator = np.random.default_rng(0),
         universe_size: int = None,
+        scalars_on_curves_for_training: List = [],
     ):
         """Constructs a Dirac mixture multi publisher model.
 
@@ -389,6 +390,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
         )
         self.dilution = dilution
         self.rng = rng
+        self.scalars_on_curves_for_training = scalars_on_curves_for_training
         self._fit_computed = False
 
     @staticmethod
@@ -444,18 +446,19 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
         )
         # Add single pub training curves from reach curves
         if self._reach_curves is not None:
-            for i in range(self.p):
-                direction = [0] * self.p
-                direction[i] = 1
-                observable_dirs = np.vstack((observable_dirs, direction))
-                rp = self._reach_curves[i].by_impressions(
-                    impressions=[self.baseline_imps[i]],
-                    max_frequency=self._data[0].max_frequency,
-                )
-                rp._universe_size = self.common_universe_size
-                hists_on_observable_dirs = np.vstack(
-                    (hists_on_observable_dirs, rp.zero_included_histogram)
-                )
+            for scalar in self.scalars_on_curves_for_training:
+                for i in range(self.p):
+                    direction = [0] * self.p
+                    direction[i] = scalar
+                    observable_dirs = np.vstack((observable_dirs, direction))
+                    rp = self._reach_curves[i].by_impressions(
+                        impressions=[round(self.baseline_imps[i] * scalar)],
+                        max_frequency=self._data[0].max_frequency,
+                    )
+                    rp._universe_size = self.common_universe_size
+                    hists_on_observable_dirs = np.vstack(
+                        (hists_on_observable_dirs, rp.zero_included_histogram)
+                    )
         while self.ncomponents > 0:
             self.optimizer = MultivariateMixedPoissonOptimizer(
                 observable_directions=observable_dirs,
@@ -677,9 +680,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
                 imps = [0] * self.p
                 imps[i] = round(scaling_factor * self.baseline_imps[i])
                 multi_pub_model_predictions.append(
-                    self.by_impressions(
-                        imps, max_frequency
-                    )._kplus_reaches
+                    self.by_impressions(imps, max_frequency)._kplus_reaches
                 )
             relative_differences = np.array(
                 [

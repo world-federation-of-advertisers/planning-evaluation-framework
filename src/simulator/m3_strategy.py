@@ -123,7 +123,7 @@ class M3Strategy(ModelingStrategy):
         if p == 1:
             return single_pub_curves[0]
 
-        training_points = all_but_one_reach + [total_reach]
+        training_points = all_but_one_reach + single_pub_reach_list + [total_reach]
         reach_surface = self._multi_pub_model(
             reach_curves=single_pub_curves,
             reach_points=training_points,

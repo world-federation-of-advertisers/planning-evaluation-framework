@@ -78,7 +78,7 @@ class M3Strategy(ModelingStrategy):
         )
 
         total_reach = halo.simulated_reach_by_spend(
-            halo.campaign_spends, per_request_budget
+            halo.campaign_spends, per_request_budget, max_frequency=10
         )
 
         # Compute reach for each publisher
@@ -103,7 +103,9 @@ class M3Strategy(ModelingStrategy):
             for i in range(p):
                 spend_vec = list(halo.campaign_spends)
                 spend_vec[i] = 0.0
-                reach = halo.simulated_reach_by_spend(spend_vec, per_request_budget)
+                reach = halo.simulated_reach_by_spend(
+                    spend_vec, per_request_budget, max_frequency=10
+                )
                 all_but_one_reach.append(reach)
 
         # Compute reach curve for each publisher

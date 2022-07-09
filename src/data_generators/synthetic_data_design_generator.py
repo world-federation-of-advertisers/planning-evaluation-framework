@@ -135,44 +135,55 @@ class SyntheticDataDesignGenerator:
     def _generate_data_set(self, params: DataSetParameters) -> DataSet:
         if self._verbose:
             print(params)
-        publishers = []
-        publisher_size = params.largest_publisher_size
-        publisher_size_decay_rate = (
-            1
-            if params.num_publishers == 1
-            else params.largest_to_smallest_publisher_ratio
-            ** (1 / float(params.num_publishers - 1))
-        )
-        for publisher in range(params.num_publishers):
-            publishers.append(
-                PublisherData.generate_publisher_data(
-                    params.impression_generator_params.generator(
-                        **{
-                            "n": publisher_size,
-                            "random_generator": self._random_generator,
-                            **params.impression_generator_params.params,
-                        }
-                    ),
-                    params.pricing_generator_params.generator(
-                        **params.pricing_generator_params.params
-                    ),
-                    str(publisher + 1),
-                )
-            )
-            publisher_size = math.floor(publisher_size * publisher_size_decay_rate)
+        # publishers = []
+        # publisher_size = params.largest_publisher_size
+        # publisher_size_decay_rate = (
+        #     1
+        #     if params.num_publishers == 1
+        #     else params.largest_to_smallest_publisher_ratio
+        #     ** (1 / float(params.num_publishers - 1))
+        # )
+        # for publisher in range(params.num_publishers):
+        #     publishers.append(
+        #         PublisherData.generate_publisher_data(
+        #             params.impression_generator_params.generator(
+        #                 **{
+        #                     "n": publisher_size,
+        #                     "random_generator": self._random_generator,
+        #                     **params.impression_generator_params.params,
+        #                 }
+        #             ),
+        #             params.pricing_generator_params.generator(
+        #                 **params.pricing_generator_params.params
+        #             ),
+        #             str(publisher + 1),
+        #         )
+        #     )
+        #     publisher_size = math.floor(publisher_size * publisher_size_decay_rate)
 
-        overlap_params = {**params.overlap_generator_params.params}
-        if "random_generator" in overlap_params:
-            overlap_params["random_generator"] = self._random_generator
-        if "pricing_generator" in overlap_params:
-            overlap_params[
-                "pricing_generator"
-            ] = params.pricing_generator_params.generator(
-                **params.pricing_generator_params.params
-            )
+        # overlap_params = {**params.overlap_generator_params.params}
+        # if "random_generator" in overlap_params:
+        #     overlap_params["random_generator"] = self._random_generator
+        # if "pricing_generator" in overlap_params:
+        #     overlap_params[
+        #         "pricing_generator"
+        #     ] = params.pricing_generator_params.generator(
+        #         **params.pricing_generator_params.params
+        #     )
 
-        return params.overlap_generator_params.generator(
-            publishers, name=str(params), **overlap_params
+        # return params.overlap_generator_params.generator(
+        #     publishers, name=str(params), **overlap_params
+        # )
+        name=str(params)
+        if 'copula_generator' in params.overlap_generator_params.params:
+            gen = params.overlap_generator_params.params['copula_generator']
+            if hasattr(gen, 'corr'):
+                name += f',corr={gen.corr}'
+            if hasattr(gen, 'df'):
+                name += f',df={gen.df}'
+            print(dir(gen), '\n\n')
+        return DataSet(
+            publisher_data_list=[], name=name
         )
 
 

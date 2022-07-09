@@ -247,10 +247,14 @@ class DataSet:
         full_dir_path = filesystem.joinpath(parent_dir, new_dataset_dir)
         ###########
         filesystem.mkdir(full_dir_path, parents=True, exist_ok=True)
-        for pdf in self._data:
-            pdf_path = filesystem.joinpath(full_dir_path, pdf.name)
-            with filesystem.open(pdf_path, "w") as file:
-                pdf.write_publisher_data(file)
+        path = filesystem.joinpath(full_dir_path, 'full_data_name')
+        with filesystem.open(path, "w") as file:
+            file.write(dataset_dir)
+
+        # for pdf in self._data:
+        #     pdf_path = filesystem.joinpath(full_dir_path, pdf.name)
+        #     with filesystem.open(pdf_path, "w") as file:
+        #         pdf.write_publisher_data(file)
 
     @classmethod
     @lru_cache(maxsize=128)

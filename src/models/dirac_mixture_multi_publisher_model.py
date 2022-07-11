@@ -105,9 +105,11 @@ class MultivariateMixedPoissonOptimizer:
         if self.observable_directions.shape[0] != self.observed_pmf_matrix.shape[0]:
             raise ValueError("Inconsistent number of directions")
         print(
-            '\nObservable directions and pmfs:\n',
-            self.observable_directions, '\n',
-            self.observed_pmf_matrix, '\n\n',
+            "\nObservable directions and pmfs:\n",
+            self.observable_directions,
+            "\n",
+            self.observed_pmf_matrix,
+            "\n\n",
         )
         self.max_freq = self.observed_pmf_matrix.shape[1] - 1
         self.rng = rng
@@ -676,7 +678,8 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
             metrics[scaling_factor] = {}
             single_pub_model_predictions = [
                 curve.by_impressions(
-                    impressions=[round(scaling_factor * imp)], max_frequency=max_frequency
+                    impressions=[round(scaling_factor * imp)],
+                    max_frequency=max_frequency,
                 )._kplus_reaches
                 for curve, imp in zip(self._reach_curves, self.baseline_imps)
             ]
@@ -685,10 +688,13 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
                 imps = [0] * self.p
                 imps[i] = round(scaling_factor * self.baseline_imps[i])
                 multi_pub_model_predictions.append(
-                    self.by_impressions(
-                        imps, max_frequency
-                    )._kplus_reaches
+                    self.by_impressions(imps, max_frequency)._kplus_reaches
                 )
+            max_rp = copy.deepcopy(self._data[0])
+            for rp in self._data:
+                if sum(rp.impressions) > sum(max_rp.impressions):
+                    max_rp = copy.deepcopy(rp)
+            baseline_kplus_reaches = max_rp._kplus_reaches
             relative_differences = np.array(
                 [
                     # if x = 0 but y != 0, treat the relative error as 100%
@@ -698,9 +704,34 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
                     )
                 ]
             )
-            metrics[scaling_factor]["mean"] = np.mean(relative_differences, axis=0)
-            metrics[scaling_factor]["q90"] = np.quantile(
+            standardized_differences = np.array(
+                [
+                    # if x = 0 but y != 0, treat the relative error as 100%
+                    [
+                        abs(y - x) / z if z > 0 else 1
+                        for x, y, z in zip(a, b, baseline_kplus_reaches)
+                    ]
+                    for a, b in zip(
+                        single_pub_model_predictions, multi_pub_model_predictions
+                    )
+                ]
+            )
+            metrics[scaling_factor]["mean_relative"] = np.mean(
+                relative_differences, axis=0
+            )
+            metrics[scaling_factor]["q90_relative"] = np.quantile(
                 relative_differences, 0.9, axis=0
             )
-            metrics[scaling_factor]["max"] = np.max(relative_differences, axis=0)
+            metrics[scaling_factor]["max_relative"] = np.max(
+                relative_differences, axis=0
+            )
+            metrics[scaling_factor]["mean_relative"] = np.mean(
+                standardized_differences, axis=0
+            )
+            metrics[scaling_factor]["q90_standardized"] = np.quantile(
+                standardized_differences, 0.9, axis=0
+            )
+            metrics[scaling_factor]["max_standardized"] = np.max(
+                standardized_differences, axis=0
+            )
         return metrics

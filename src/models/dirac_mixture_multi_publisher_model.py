@@ -104,6 +104,11 @@ class MultivariateMixedPoissonOptimizer:
         )
         if self.observable_directions.shape[0] != self.observed_pmf_matrix.shape[0]:
             raise ValueError("Inconsistent number of directions")
+        print(
+            '\nObservable directions and pmfs:\n',
+            self.observable_directions, '\n',
+            self.observed_pmf_matrix, '\n\n',
+        )
         self.max_freq = self.observed_pmf_matrix.shape[1] - 1
         self.rng = rng
         self.ncomponents = ncomponents
@@ -671,7 +676,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
             metrics[scaling_factor] = {}
             single_pub_model_predictions = [
                 curve.by_impressions(
-                    impressions=[scaling_factor * imp], max_frequency=max_frequency
+                    impressions=[round(scaling_factor * imp)], max_frequency=max_frequency
                 )._kplus_reaches
                 for curve, imp in zip(self._reach_curves, self.baseline_imps)
             ]
@@ -680,7 +685,9 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
                 imps = [0] * self.p
                 imps[i] = round(scaling_factor * self.baseline_imps[i])
                 multi_pub_model_predictions.append(
-                    self.by_impressions(imps, max_frequency)._kplus_reaches
+                    self.by_impressions(
+                        imps, max_frequency
+                    )._kplus_reaches
                 )
             relative_differences = np.array(
                 [

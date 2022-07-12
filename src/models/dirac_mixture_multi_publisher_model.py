@@ -97,6 +97,9 @@ class MultivariateMixedPoissonOptimizer:
         """
         self.observable_directions = observable_directions
         self.p = observable_directions.shape[1]
+        frequency_histograms_on_observable_directions = np.maximum(
+            0, frequency_histograms_on_observable_directions
+        )
         for hist in frequency_histograms_on_observable_directions:
             UnivariateMixedPoissonOptimizer.validate_frequency_histogram(hist)
         self.observed_pmf_matrix = self.normalize_rows(

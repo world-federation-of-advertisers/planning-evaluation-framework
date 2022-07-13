@@ -242,7 +242,7 @@ class DataSet:
         ##chenwei##
         if len(dataset_dir) > 255:
             rng = np.random.default_rng(0)
-            new_dataset_dir = dataset_dir[:245] + str(rng.randint(1e10))
+            new_dataset_dir = dataset_dir[:245] + str(rng.integers(1e10))
         else:
             new_dataset_dir = dataset_dir
         full_dir_path = filesystem.joinpath(parent_dir, new_dataset_dir)

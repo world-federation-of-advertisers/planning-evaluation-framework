@@ -239,10 +239,11 @@ class DataSet:
         """
         if not dataset_dir:
             dataset_dir = self._name
+        
         ##chenwei##
         if len(dataset_dir) > 255:
-            rng = np.random.default_rng(0)
-            new_dataset_dir = dataset_dir[:245] + str(rng.integers(1e10))
+            id = self._name.split('id=')[1].split(',')[0]
+            new_dataset_dir = dataset_dir[:245] + f'...,id={id}'
         else:
             new_dataset_dir = dataset_dir
         full_dir_path = filesystem.joinpath(parent_dir, new_dataset_dir)

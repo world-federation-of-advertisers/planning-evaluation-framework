@@ -51,6 +51,30 @@ class ReachSurface:
         raise NotImplementedError()
 
     def by_spend(self, spend: Iterable[float], max_frequency: int = 1) -> ReachPoint:
+        # print(
+        #     "\n",
+        #     "SPEND\n",
+        #     spend,
+        #     self._reach_curves,
+        #     '\n',
+        #     [
+        #         curve.impressions_for_spend(pub_spend)
+        #         for curve, pub_spend in zip(self._reach_curves, spend)
+        #     ],
+        #     "\n"
+        # )
+        # try:
+        #     print(
+        #         self.by_impressions(
+        #         [
+        #             curve.impressions_for_spend(pub_spend)
+        #             for curve, pub_spend in zip(self._reach_curves, spend)
+        #         ],
+        #         max_frequency,
+        #     ), '\nSPEND\n'
+        #     )
+        # except Exception as e:
+        #     print(e)
         return self.by_impressions(
             [
                 curve.impressions_for_spend(pub_spend)

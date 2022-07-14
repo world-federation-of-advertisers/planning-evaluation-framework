@@ -71,7 +71,7 @@ class M3SubsetTestPointGenerator(TestPointGenerator):
         For example, when p = 3, and q = 2, returns
         [[1, 1, 0],  # indicating subset {A, B}
          [1, 0, 1],  # indicating subset {A, C}
-         [0, 0, 1]]   # indicating subset {A, C}
+         [0, 1, 1]]   # indicating subset {B, C}
         In general, a subset indicator is a binary vector v where v[i] = 1
         if and only if pub i is in the subset.
         A layer of subsets means the collection of subsets with the same
@@ -104,7 +104,7 @@ class M3SubsetTestPointGenerator(TestPointGenerator):
         p = self._npublishers
         if p < 4:
             return
-        if (2 ** p - 1) - (2 * p + 1) > self.max_num_points:
+        if (2**p - 1) - (2 * p + 1) > self.max_num_points:
             n = 0
             subset_collection = set()
             while n < self.max_num_points:

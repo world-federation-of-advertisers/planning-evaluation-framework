@@ -16,6 +16,7 @@
 from absl import logging
 import numpy as np
 import copy
+from time import time
 from typing import Callable, List, Tuple, Union, Dict
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
@@ -96,6 +97,9 @@ class MultivariateMixedPoissonOptimizer:
         """
         self.observable_directions = observable_directions
         self.p = observable_directions.shape[1]
+        frequency_histograms_on_observable_directions = np.maximum(
+            0, frequency_histograms_on_observable_directions
+        )
         for hist in frequency_histograms_on_observable_directions:
             UnivariateMixedPoissonOptimizer.validate_frequency_histogram(hist)
         self.observed_pmf_matrix = self.normalize_rows(
@@ -103,6 +107,13 @@ class MultivariateMixedPoissonOptimizer:
         )
         if self.observable_directions.shape[0] != self.observed_pmf_matrix.shape[0]:
             raise ValueError("Inconsistent number of directions")
+        print(
+            "\nObservable directions and pmfs:\n",
+            self.observable_directions,
+            "\n",
+            self.observed_pmf_matrix,
+            "\n\n",
+        )
         self.max_freq = self.observed_pmf_matrix.shape[1] - 1
         self.rng = rng
         self.ncomponents = ncomponents
@@ -326,6 +337,7 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
         dilution: float = 0,
         rng: np.random.Generator = np.random.default_rng(0),
         universe_size: int = None,
+        scalars_on_curves_for_training: List = [],
     ):
         """Constructs a Dirac mixture multi publisher model.
 
@@ -378,16 +390,17 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
             rp._universe_size = self.common_universe_size
         if reach_curves is None:
             self.single_publisher_reach_agreement = False
-            self.reach_curves = None
+            self._reach_curves = None
         else:
             self.single_publisher_reach_agreement = single_publisher_reach_agreement
             self.ensure_compatible_num_publishers(reach_curves, reach_points)
-            self.reach_curves = copy.deepcopy(reach_curves)
+            self._reach_curves = copy.deepcopy(reach_curves)
         self.ncomponents = (
             min(5000, 200 * self.p**2) if ncomponents is None else ncomponents
         )
         self.dilution = dilution
         self.rng = rng
+        self.scalars_on_curves_for_training = scalars_on_curves_for_training
         self._fit_computed = False
 
     @staticmethod
@@ -442,19 +455,20 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
             [rp.zero_included_histogram for rp in self._data]
         )
         # Add single pub training curves from reach curves
-        if self.reach_curves is not None:
-            for i in range(self.p):
-                direction = [0] * self.p
-                direction[i] = 1
-                observable_dirs = np.vstack((observable_dirs, direction))
-                rp = self.reach_curves[i].by_impressions(
-                    impressions=[self.baseline_imps[i]],
-                    max_frequency=self._data[0].max_frequency,
-                )
-                rp._universe_size = self.common_universe_size
-                hists_on_observable_dirs = np.vstack(
-                    (hists_on_observable_dirs, rp.zero_included_histogram)
-                )
+        if self._reach_curves is not None:
+            for scalar in self.scalars_on_curves_for_training:
+                for i in range(self.p):
+                    direction = [0] * self.p
+                    direction[i] = scalar
+                    observable_dirs = np.vstack((observable_dirs, direction))
+                    rp = self._reach_curves[i].by_impressions(
+                        impressions=[round(self.baseline_imps[i] * scalar)],
+                        max_frequency=self._data[0].max_frequency,
+                    )
+                    rp._universe_size = self.common_universe_size
+                    hists_on_observable_dirs = np.vstack(
+                        (hists_on_observable_dirs, rp.zero_included_histogram)
+                    )
         while self.ncomponents > 0:
             self.optimizer = MultivariateMixedPoissonOptimizer(
                 observable_directions=observable_dirs,
@@ -557,18 +571,13 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
             return left
         return right
 
-    @staticmethod
-    def induced_single_pub_curve(
-        surface: Callable[[List[int]], int], num_pubs: int, pub_index: int
-    ) -> Callable[[int], int]:
+    def induced_single_pub_curve(self, pub_index: int) -> Callable[[int], int]:
         """Returns a induced single pub reach curve from a multi pub reach surface.
 
         This is another method to be used in the later
         `by_impressions_with_single_pub_reach_agreement` method.
 
         Args:
-            surface:  A function from a multi pub impression vector to reach.
-            num_pubs:  Number of publishers.
             pub_index:  We want the induced reach curve on this pub.
 
         Returns:
@@ -578,9 +587,19 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
         """
 
         def curve(num_impressions: int) -> int:
-            impressions = [0] * num_pubs
-            impressions[pub_index] = num_impressions
-            return surface(impressions)
+            scaling_factor = num_impressions / self.baseline_imps[pub_index]
+            return round(
+                self.common_universe_size
+                * (
+                    1
+                    - sum(
+                        self.optimizer.ws
+                        * np.exp(
+                            -self.optimizer.components[:, pub_index] * scaling_factor
+                        )
+                    )
+                )
+            )
 
         return curve
 
@@ -614,18 +633,18 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
         """
         self._fit()
         target_single_pub_reaches = [
-            self.reach_curves[i].by_impressions([impressions[i]]).reach(1)
+            self._reach_curves[i].by_impressions([impressions[i]]).reach(1)
             for i in range(self.p)
         ]
-        reach_surface = lambda x: self.by_impressions_no_single_pub_reach_agreement(
-            x, max_frequency
-        ).reach(1)
+        # reach_surface = lambda x: self.by_impressions_no_single_pub_reach_agreement(
+        #     x, max_frequency
+        # ).reach(1)
+        t4 = time()
         induced_single_pub_curves = [
-            self.induced_single_pub_curve(
-                surface=reach_surface, num_pubs=self.p, pub_index=i
-            )
-            for i in range(self.p)
+            self.induced_single_pub_curve(pub_index=i) for i in range(self.p)
         ]
+        t5 = time()
+        print(f"4-5: {round(t5 - t4, 1)} seconds.")
         adjusted_impressions = [
             self.backsolve_impression(
                 curve=induced_single_pub_curves[i],
@@ -634,6 +653,8 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
             )
             for i in range(self.p)
         ]
+        t6 = time()
+        print(f"5-6: {round(t6 - t5, 1)} seconds.")
         return self.by_impressions_no_single_pub_reach_agreement(
             impressions=adjusted_impressions, max_frequency=max_frequency
         )
@@ -652,27 +673,31 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
 
     def evaluate_single_pub_kplus_reach_agreement(
         self,
-        scaling_factor_choices: List[float] = [0.5, 0.75, 1, 1.5, 2],
+        scaling_factor_choices: List[float] = [0.5, 1, 2],
         max_frequency: int = 1,
     ) -> Dict[float, Dict[str, List[float]]]:
-        if not self.single_publisher_reach_agreement:
-            return {}
         metrics = {}
         for scaling_factor in scaling_factor_choices:
             metrics[scaling_factor] = {}
             single_pub_model_predictions = [
-                curve.by_impressions(scaling_factor * imp, max_frequency)
-                for curve, imp in zip(self.reach_curves, self.baseline_imps)
+                curve.by_impressions(
+                    impressions=[round(scaling_factor * imp)],
+                    max_frequency=max_frequency,
+                )._kplus_reaches
+                for curve, imp in zip(self._reach_curves, self.baseline_imps)
             ]
             multi_pub_model_predictions = []
             for i in range(self.p):
                 imps = [0] * self.p
-                imps[i] = scaling_factor * self.baseline_imps[i]
+                imps[i] = round(scaling_factor * self.baseline_imps[i])
                 multi_pub_model_predictions.append(
-                    self.by_impressions_with_single_pub_reach_agreement(
-                        imps, max_frequency
-                    )
+                    self.by_impressions(imps, max_frequency)._kplus_reaches
                 )
+            max_rp = copy.deepcopy(self._data[0])
+            for rp in self._data:
+                if sum(rp.impressions) > sum(max_rp.impressions):
+                    max_rp = copy.deepcopy(rp)
+            baseline_kplus_reaches = max_rp._kplus_reaches
             relative_differences = np.array(
                 [
                     # if x = 0 but y != 0, treat the relative error as 100%
@@ -682,9 +707,34 @@ class DiracMixtureMultiPublisherModel(ReachSurface):
                     )
                 ]
             )
-            metrics[scaling_factor]["mean"] = np.mean(relative_differences, axis=0)
-            metrics[scaling_factor]["q90"] = np.quantile(
+            standardized_differences = np.array(
+                [
+                    # if x = 0 but y != 0, treat the relative error as 100%
+                    [
+                        abs(y - x) / z if z > 0 else 1
+                        for x, y, z in zip(a, b, baseline_kplus_reaches)
+                    ]
+                    for a, b in zip(
+                        single_pub_model_predictions, multi_pub_model_predictions
+                    )
+                ]
+            )
+            metrics[scaling_factor]["mean_relative"] = np.mean(
+                relative_differences, axis=0
+            )
+            metrics[scaling_factor]["q90_relative"] = np.quantile(
                 relative_differences, 0.9, axis=0
             )
-            metrics[scaling_factor]["max"] = np.max(relative_differences, axis=0)
+            metrics[scaling_factor]["max_relative"] = np.max(
+                relative_differences, axis=0
+            )
+            metrics[scaling_factor]["mean_relative"] = np.mean(
+                standardized_differences, axis=0
+            )
+            metrics[scaling_factor]["q90_standardized"] = np.quantile(
+                standardized_differences, 0.9, axis=0
+            )
+            metrics[scaling_factor]["max_standardized"] = np.max(
+                standardized_differences, axis=0
+            )
         return metrics

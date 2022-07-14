@@ -1,4 +1,4 @@
-# Copyright 2021 The Private Cardinality Estimation Framework Authors
+# Copyright 2022 The Private Cardinality Estimation Framework Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -46,18 +46,6 @@ MODELING_STRATEGIES = [
     # Dirac mixture multi pub
     ModelingStrategyDescriptor(
         "m3strategy",
-        {"use_ground_truth_for_reach_curves": True},
-        "dirac_mixture_single",
-        {},
-        "dirac_mixture_multi",
-        {
-            "dilution": 0.3,
-            "largest_pub_to_universe_ratio": 0.25,
-            "single_publisher_reach_agreement": False,
-        },
-    ),
-    ModelingStrategyDescriptor(
-        "m3strategy",
         {"use_ground_truth_for_reach_curves": False},
         "dirac_mixture_single",
         {"dilution": 0.3, "largest_pub_to_universe_ratio": 0.25},
@@ -71,14 +59,6 @@ MODELING_STRATEGIES = [
     # Independent multi pub
     ModelingStrategyDescriptor(
         "m3strategy",
-        {"use_ground_truth_for_reach_curves": True},
-        "dirac_mixture_single",
-        {},
-        "independent",
-        {"largest_pub_to_universe_ratio": 0.25},
-    ),
-    ModelingStrategyDescriptor(
-        "m3strategy",
         {"use_ground_truth_for_reach_curves": False},
         "dirac_mixture_single",
         {"dilution": 0.3, "largest_pub_to_universe_ratio": 0.25},
@@ -89,9 +69,6 @@ MODELING_STRATEGIES = [
 
 CAMPAIGN_SPEND_FRACTIONS_GENERATORS = [
     lambda dataset: [0.1] * dataset.publisher_count,
-    lambda dataset: [0.5] * dataset.publisher_count,
-    lambda dataset: [0.9] * dataset.publisher_count,
-    lambda dataset: list(islice(cycle([0.1, 0.9]), dataset.publisher_count)),
 ]
 
 LIQUID_LEGIONS_PARAMS = [
@@ -101,17 +78,17 @@ LIQUID_LEGIONS_PARAMS = [
 PRIVACY_BUDGETS = [
     PrivacyBudget(1.0, 1e-9),
     PrivacyBudget(0.1, 1e-9),
-    PrivacyBudget(0.01, 1e-9),
 ]
 
-REPLICA_IDS = [1, 2, 3]
+REPLICA_IDS = [
+    1,
+]
 
 MAX_FREQUENCIES = [10]
 
 TEST_POINT_STRATEGIES = [
-    ("latin_hypercube", {"npublishers": 1}),
     ("subset", {"campaign_spend_fractions": [1]}),
-    ("shareshift", {"campaign_spend_fractions": [1]}),
+    # ("shareshift", {"campaign_spend_fractions": [1]}),
 ]
 
 LEVELS = {
@@ -123,15 +100,13 @@ LEVELS = {
     "max_frequencies": MAX_FREQUENCIES,
     "test_point_strategies": TEST_POINT_STRATEGIES,
 }
-# A total of 4 * 4 * 3 * 3 * 3 = 432 configs. Will evaluate all of them
+# A total of 9 * 4 * 5 * 3 * 3 = 1620 configs. Will evaluate all of them
 # per dataset.
 
 
 def generate_experimental_design_config(seed: int = 1) -> Iterable[TrialDescriptor]:
     """Generates a list of TrialDescriptors for the 1st round eval of M3."""
     for id, level_combination in enumerate(itertools.product(*LEVELS.values())):
-        print("\n", id, "\n", level_combination)
-
         design_parameters = dict(zip(LEVELS.keys(), level_combination))
         mstrategy = design_parameters["modeling_strategies"]
         sparams = SystemParameters(

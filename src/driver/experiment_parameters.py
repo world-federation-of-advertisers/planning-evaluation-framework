@@ -82,7 +82,7 @@ class ExperimentParameters(NamedTuple):
                 "Invalid test point strategy: {}".format(self.test_point_strategy)
             )
         test_point_generator = TEST_POINT_STRATEGIES[self.test_point_strategy](
-            data_set, rng, **self.test_point_strategy_kwargs
+            dataset=data_set, rng=rng, **self.test_point_strategy_kwargs
         )
 
         return test_point_generator.test_points()

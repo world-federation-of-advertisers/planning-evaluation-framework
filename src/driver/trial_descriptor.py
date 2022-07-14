@@ -43,13 +43,15 @@ class TrialDescriptor(NamedTuple):
     modeling_strategy: ModelingStrategyDescriptor
     system_params: SystemParameters
     experiment_params: ExperimentParameters
+    id: int = None
 
     def __str__(self) -> str:
         """Returns string representing this trial."""
         return (
             f"{self.modeling_strategy},"
             f"{self.system_params},"
-            f"{self.experiment_params}"
+            f"{self.experiment_params},"
+            f"id={-1 if self.id is None else self.id}"
         )
 
     def update_from_dataset(self, dataset: DataSet) -> "TrialDescriptor":
@@ -65,4 +67,5 @@ class TrialDescriptor(NamedTuple):
             modeling_strategy_descriptor,
             system_params,
             experimental_params,
+            self.id,
         )

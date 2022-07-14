@@ -49,6 +49,9 @@ from wfa_planning_evaluation_framework.simulator.modeling_strategy import (
 from wfa_planning_evaluation_framework.simulator.m3_strategy import (
     M3Strategy,
 )
+from wfa_planning_evaluation_framework.simulator.local_dp_strategy import (
+    LocalDpLiquidlegionsStrategy,
+)
 from wfa_planning_evaluation_framework.simulator.single_publisher_strategy import (
     SinglePublisherStrategy,
 )
@@ -83,6 +86,7 @@ MULTI_PUB_MODELS = {
 MODELING_STRATEGIES = {
     "m3strategy": M3Strategy,
     "single_publisher": SinglePublisherStrategy,
+    "local_dp": LocalDpLiquidlegionsStrategy,
 }
 
 
@@ -114,6 +118,9 @@ class ModelingStrategyDescriptor(NamedTuple):
     def update_from_dataset(
         self, data_set: DataSet = None
     ) -> "ModelingStrategyDescriptor":
+        if self.strategy == "local_dp":
+            return self
+
         largest_pub_size = max([pub.max_reach for pub in data_set._data])
         single_pub_model_kwargs = deepcopy(self.single_pub_model_kwargs)
         if "largest_pub_to_universe_ratio" in self.single_pub_model_kwargs:

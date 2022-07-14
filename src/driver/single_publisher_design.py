@@ -69,6 +69,7 @@ LEVELS = {
     "max_frequency": MAX_FREQUENCIES,
 }
 
+
 def generate_experimental_design_config(seed: int = 1) -> Iterable[TrialDescriptor]:
     """Generates a list of TrialDescriptors for a single publisher model."""
     keys = list(LEVELS.keys())

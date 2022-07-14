@@ -176,7 +176,7 @@ class CopulaDataSetTest(parameterized.TestCase):
                 # Suppose there are 100 * 2^p users in total, where p = #pubs.
                 # At each pub, half users have frequency 1, and the other half
                 # have frequency 2.
-                half_size = int(100 * 2 ** num_pubs / 2)
+                half_size = int(100 * 2**num_pubs / 2)
                 impressions = (
                     list(range(half_size)) * 1
                     + list(range(half_size, half_size * 2)) * 2
@@ -185,7 +185,7 @@ class CopulaDataSetTest(parameterized.TestCase):
                 dataset = CopulaDataSet(
                     unlabeled_publisher_data_list=[pdf] * num_pubs,
                     copula_generator=gen,
-                    universe_size=100 * 2 ** num_pubs,
+                    universe_size=100 * 2**num_pubs,
                     random_generator=np.random.default_rng(0),
                 )
                 res = dataset.frequency_vectors_sampled_distribution
@@ -205,7 +205,7 @@ class CopulaDataSetTest(parameterized.TestCase):
                 dataset = CopulaDataSet(
                     unlabeled_publisher_data_list=[pdf] * num_pubs,
                     copula_generator=gen,
-                    universe_size=100 * 2 ** num_pubs,
+                    universe_size=100 * 2**num_pubs,
                     random_generator=np.random.default_rng(0),
                 )
                 res = dataset.frequency_vectors_sampled_distribution
@@ -289,9 +289,9 @@ class CopulaCorrelationMatrixGeneratorTest(absltest.TestCase):
             - y = r sin(phi) sin(theta)
             - z = r cos(theta).
             """
-            r = np.sqrt(x ** 2 + y ** 2 + z ** 2)
+            r = np.sqrt(x**2 + y**2 + z**2)
             phi = np.arctan2(y, x)
-            theta = np.arctan2(np.sqrt(x ** 2 + y ** 2), z)
+            theta = np.arctan2(np.sqrt(x**2 + y**2), z)
             return (r, phi, theta)
 
         correlation_tuples = [

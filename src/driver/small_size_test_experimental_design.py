@@ -50,8 +50,11 @@ MODELING_STRATEGIES = [
         "dirac_mixture_single",
         {"dilution": 0.3, "largest_pub_to_universe_ratio": 0.25},
         "dirac_mixture_multi",
-        {"dilution": 0.3, "largest_pub_to_universe_ratio": 0.25, 
-        "single_publisher_reach_agreement": False},
+        {
+            "dilution": 0.3,
+            "largest_pub_to_universe_ratio": 0.25,
+            "single_publisher_reach_agreement": False,
+        },
     ),
     # Independent multi pub
     ModelingStrategyDescriptor(
@@ -74,15 +77,18 @@ LIQUID_LEGIONS_PARAMS = [
 
 PRIVACY_BUDGETS = [
     PrivacyBudget(1.0, 1e-9),
+    PrivacyBudget(0.1, 1e-9),
 ]
 
-REPLICA_IDS = [1,]
+REPLICA_IDS = [
+    1,
+]
 
 MAX_FREQUENCIES = [10]
 
 TEST_POINT_STRATEGIES = [
     ("subset", {"campaign_spend_fractions": [1]}),
-    ("shareshift", {"campaign_spend_fractions": [1]}),
+    # ("shareshift", {"campaign_spend_fractions": [1]}),
 ]
 
 LEVELS = {
@@ -100,8 +106,9 @@ LEVELS = {
 
 def generate_experimental_design_config(seed: int = 1) -> Iterable[TrialDescriptor]:
     """Generates a list of TrialDescriptors for the 1st round eval of M3."""
-    for level_combination in itertools.product(*LEVELS.values()):
-        print('\n', level_combination)
+    for id, level_combination in enumerate(itertools.product(*LEVELS.values())):
+        print("\n", id, "\n", level_combination)
+
         design_parameters = dict(zip(LEVELS.keys(), level_combination))
         mstrategy = design_parameters["modeling_strategies"]
         sparams = SystemParameters(
@@ -121,4 +128,9 @@ def generate_experimental_design_config(seed: int = 1) -> Iterable[TrialDescript
             test_point_generator,
             test_point_params,
         )
-        yield TrialDescriptor(mstrategy, sparams, eparams)
+        print(
+            "\n\n\n",
+            str(TrialDescriptor(mstrategy, sparams, eparams, id)),
+            "\n\n\n\n\n\n",
+        )
+        yield TrialDescriptor(mstrategy, sparams, eparams, id)

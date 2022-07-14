@@ -111,6 +111,7 @@ class ExperimentalTrial:
         self._data_design = data_design
         self._data_set_name = data_set_name
         self._trial_descriptor = trial_descriptor
+        print("\n\n\n======", self._trial_descriptor, "====\n\n\n")
         self._analysis_type = analysis_type
 
     def evaluate(
@@ -190,17 +191,17 @@ class ExperimentalTrial:
                     dataset, rng
                 )
             )
-            print(
-                '\n',
-                'Test points',
-                self._trial_descriptor.experiment_params.test_point_strategy,
-                self._trial_descriptor.experiment_params.test_point_strategy_kwargs,
-                '\n',
-                test_points,
-                '\n',
-                modeling_strategy._multi_pub_model,
-                '\n',
-            )
+            # print(
+            #     '\n',
+            #     'Test points',
+            #     self._trial_descriptor.experiment_params.test_point_strategy,
+            #     self._trial_descriptor.experiment_params.test_point_strategy_kwargs,
+            #     '\n',
+            #     test_points,
+            #     '\n',{hashlib.md5(trial_results_path.encode()).hexdigest()}
+            #     modeling_strategy._multi_pub_model,
+            #     '\n',
+            # )
             if len(test_points) == 0:
                 true_reach, fitted_reach = [], []
                 metrics = aggregate(true_reach, fitted_reach)
@@ -212,14 +213,14 @@ class ExperimentalTrial:
                     )
                     for t in test_points
                 ]
-                print('True: ', true_reach, '\n')
+                # print('True: ', true_reach, '\n')
                 fitted_reach = [
                     reach_surface.by_spend(
                         t, self._trial_descriptor.experiment_params.max_frequency
                     )
                     for t in test_points
                 ]
-                print('Fitted: ', fitted_reach, '\n\n')
+                # print('Fitted: ', fitted_reach, '\n\n')
                 metrics = aggregate(true_reach, fitted_reach)
                 if hasattr(reach_surface, "evaluate_single_pub_kplus_reach_agreement"):
                     metrics["single_pub_kplus_reach_agreement"] = [
@@ -264,6 +265,15 @@ class ExperimentalTrial:
             ],
             axis=1,
         )
+        print(
+            "\n\n\n\n",
+            result["multi_pub_model"],
+            "\n",
+            result["privacy_budget_epsilon"],
+            "\n",
+            trial_results_path,
+            "\n\n\n\n",
+        )
         filesystem.mkdir(
             filesystem.parent(trial_results_path), parents=True, exist_ok=True
         )
@@ -277,14 +287,22 @@ class ExperimentalTrial:
     def _compute_trial_results_path(self) -> str:
         """Returns path of file where the results of this trial are stored."""
         dir_name = self._experiment_dir
-        if len(dir_name) > 255:
-            dir_name = dir_name[:241] + str(np.random.randint(1e10))
         dataset_name = self._data_set_name
-        if len(dataset_name) > 255:
-            dataset_name = dataset_name[:241] + str(np.random.randint(1e10))
         descriptor_name = f"{self._trial_descriptor}"
         if len(descriptor_name) > 255:
-            descriptor_name = descriptor_name[:241] + str(np.random.randint(1e10))
+            print("\n\n\n", "full descriptor name\n", descriptor_name, "\n\n\n")
+            print(
+                "\n\n\n*****",
+                descriptor_name.split(",id=")[1],
+                "*****\n\n\n",
+            )
+            parsed = int(descriptor_name.split(",id=")[1])
+            if parsed == -1:
+                id = hashlib.md5(descriptor_name.encode()).hexdigest()[:6]
+            else:
+                id = f"id={parsed}"
+            print("\n\n\n", descriptor_name, "\n\n\n")
+            descriptor_name = descriptor_name[:241] + f"...,{id}"
         name = f"{dir_name}/{dataset_name}/{descriptor_name}.csv"
         return name
 

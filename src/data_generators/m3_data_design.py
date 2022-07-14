@@ -51,7 +51,6 @@ from wfa_planning_evaluation_framework.data_generators.sequentially_correlated_o
 )
 
 
-
 # Number of samples that will be taken in the latin hypercube design
 NUM_SAMPLES_FOR_LHS = 200
 
@@ -305,16 +304,18 @@ LEVELS = {
     "overlap_generator_params": OVERLAP_GENERATORS,
 }
 
+
 def generate_data_design_config(
     random_generator: np.random.Generator,
 ) -> Iterable[DataSetParameters]:
     """Generates the data design configuration for evaluating M3 strategy."""
     keys = LEVELS.keys()
     levels = [len(LEVELS[k]) for k in keys]
-    for i, sample in enumerate(
-        lhs(n=len(levels), samples=NUM_SAMPLES_FOR_LHS, criterion="maximin")
+    ids = [16, 41, 151, 103, 69, 98, 50, 91, 73]
+    for id, sample in zip(
+        ids, lhs(n=len(levels), samples=NUM_SAMPLES_FOR_LHS, criterion="maximin")[ids]
     ):
-        design_parameters = {"id": str(i)}
+        design_parameters = {"id": str(id)}
         for key, level in zip(keys, sample):
             design_parameters[key] = LEVELS[key][int(level * len(LEVELS[key]))]
         # Specify the universe size for some datasets

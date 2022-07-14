@@ -129,7 +129,9 @@ LEVELS = {
 
 def generate_experimental_design_config(seed: int = 1) -> Iterable[TrialDescriptor]:
     """Generates a list of TrialDescriptors for the 1st round eval of M3."""
-    for level_combination in itertools.product(*LEVELS.values()):
+    for id, level_combination in enumerate(itertools.product(*LEVELS.values())):
+        print("\n", id, "\n", level_combination)
+
         design_parameters = dict(zip(LEVELS.keys(), level_combination))
         mstrategy = design_parameters["modeling_strategies"]
         sparams = SystemParameters(
@@ -149,4 +151,4 @@ def generate_experimental_design_config(seed: int = 1) -> Iterable[TrialDescript
             test_point_generator,
             test_point_params,
         )
-        yield TrialDescriptor(mstrategy, sparams, eparams)
+        yield TrialDescriptor(mstrategy, sparams, eparams, id)

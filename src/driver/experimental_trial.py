@@ -290,12 +290,6 @@ class ExperimentalTrial:
         dataset_name = self._data_set_name
         descriptor_name = f"{self._trial_descriptor}"
         if len(descriptor_name) > 255:
-            print("\n\n\n", "full descriptor name\n", descriptor_name, "\n\n\n")
-            print(
-                "\n\n\n*****",
-                descriptor_name.split(",id=")[1],
-                "*****\n\n\n",
-            )
             parsed = int(descriptor_name.split(",id=")[1])
             if parsed == -1:
                 id = hashlib.md5(descriptor_name.encode()).hexdigest()[:6]

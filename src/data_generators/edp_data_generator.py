@@ -180,7 +180,7 @@ class EdpDataGenerator:
             else:
                 dataset = CopulaDataSet(
                     unlabeled_publisher_data_list=publishers[demo_group],
-                    copula_generator=IndependenceCopula(),
+                    copula_generator=IndependenceCopula(len(publishers[demo_group])),
                     random_generator=self._random_generator,
                 )
             cross_publisher_data[demo_group] = dataset

@@ -32,10 +32,10 @@ class ModelingStrategy:
     # TODO: Add args for pricing model when these are introduced.
     def __init__(
         self,
-        single_pub_model: Type[ReachCurve],
-        single_pub_model_kwargs: Dict,
-        multi_pub_model: Type[ReachSurface],
-        multi_pub_model_kwargs: Dict,
+        single_pub_model: Type[ReachCurve] = None,
+        single_pub_model_kwargs: Dict = None,
+        multi_pub_model: Type[ReachSurface] = None,
+        multi_pub_model_kwargs: Dict = None,
     ):
         """Initializes a modeling strategy object."""
         self._single_pub_model = single_pub_model

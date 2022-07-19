@@ -40,6 +40,9 @@ from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
 from wfa_planning_evaluation_framework.simulator.halo_simulator import (
     HaloSimulator,
 )
+from wfa_planning_evaluation_framework.simulator.local_dp_simulator import (
+    LocalDpSimulator,
+)
 from wfa_planning_evaluation_framework.simulator.system_parameters import (
     SystemParameters,
 )
@@ -173,9 +176,14 @@ class ExperimentalTrial:
 
         dataset = self._data_design.by_name(self._data_set_name)
         privacy_tracker = PrivacyTracker()
-        halo = HaloSimulator(
-            dataset, self._trial_descriptor.system_params, privacy_tracker
-        )
+        if self._trial_descriptor.modeling_strategy.strategy == "local_dp":
+            halo = LocalDpSimulator(
+                dataset, self._trial_descriptor.system_params, privacy_tracker
+            )
+        else:
+            halo = HaloSimulator(
+                dataset, self._trial_descriptor.system_params, privacy_tracker
+            )
         privacy_budget = self._trial_descriptor.experiment_params.privacy_budget
         modeling_strategy = (
             self._trial_descriptor.modeling_strategy.instantiate_strategy()
@@ -191,17 +199,6 @@ class ExperimentalTrial:
                     dataset, rng
                 )
             )
-            # print(
-            #     '\n',
-            #     'Test points',
-            #     self._trial_descriptor.experiment_params.test_point_strategy,
-            #     self._trial_descriptor.experiment_params.test_point_strategy_kwargs,
-            #     '\n',
-            #     test_points,
-            #     '\n',{hashlib.md5(trial_results_path.encode()).hexdigest()}
-            #     modeling_strategy._multi_pub_model,
-            #     '\n',
-            # )
             if len(test_points) == 0:
                 true_reach, fitted_reach = [], []
                 metrics = aggregate(true_reach, fitted_reach)

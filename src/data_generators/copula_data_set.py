@@ -90,9 +90,7 @@ class CopulaDataSet(DataSet):
             nobs=universe_size,
             random_state=random_generator.integers(0, 1e9),
         ).astype("int32")
-        imps = self.to_impressions(self.sample)
-        for pub_imps in imps:
-            random_generator.shuffle(pub_imps)
+        imps = self.to_impressions(self.sample, random_generator)
         super().__init__(
             publisher_data_list=[
                 PublisherData(
@@ -134,7 +132,8 @@ class CopulaDataSet(DataSet):
         return hist / sum(hist)
 
     @staticmethod
-    def to_impressions(frequency_vectors: List[np.ndarray]) -> List[List[int]]:
+    def to_impressions(frequency_vectors: List[np.ndarray],
+    random_generator: np.random.Generator) -> List[List[int]]:
         """Convert a sample of frequency vectors to a list of impressions.
 
         An intermediate step to convert a sample of frequency vectors to a
@@ -146,6 +145,8 @@ class CopulaDataSet(DataSet):
                 publishers.
                 frequency_vectors[k] [i] indicates the frequency at pub i of
                 the k-th user in the sample.
+            random_generator:  A numpy random generate to shuffle the order
+                of impressions.
 
         Returns:
             A list of <p> lists of lengths n_1, ..., n_p,
@@ -173,4 +174,6 @@ class CopulaDataSet(DataSet):
             for i in range(p):
                 impressions[i] = impressions[i] + vids * freq_vec[i]
             num_vids += count
+        for pub_imps in impressions:
+            random_generator.shuffle(pub_imps)
         return impressions

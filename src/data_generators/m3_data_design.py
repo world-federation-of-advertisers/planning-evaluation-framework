@@ -1,4 +1,4 @@
-# Copyright 2021 The Private Cardinality Estimation Framework Authors
+# Copyright 2022 The Private Cardinality Estimation Framework Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,14 @@
 from pyDOE import lhs
 from typing import Iterable
 import numpy as np
+from copy import deepcopy
+from statsmodels.distributions.copula.elliptical import GaussianCopula, StudentTCopula
 
+
+from wfa_planning_evaluation_framework.data_generators.copula_data_set import (
+    CopulaDataSet,
+    CopulaCorrelationMatrixGenerator,
+)
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.data_generators.data_set_parameters import (
     GeneratorParameters,
@@ -43,12 +50,16 @@ from wfa_planning_evaluation_framework.data_generators.sequentially_correlated_o
     CorrelatedSetsOptions,
 )
 
+
+# Number of samples that will be taken in the latin hypercube design
+NUM_SAMPLES_FOR_LHS = 200
+
 # The following are the parameter sets that are varied in this data design.
 # The latin hypercube design constructs a subset of the cartesian product
 # of these parameter settings.
-NUM_PUBLISHERS = [1, 2, 5, 10, 20, 100]
-LARGEST_PUBLISHER = [int(1e4), int(1e5), int(1e6), int(1e7)]
-PUBLISHER_RATIOS = [1, 0.5, 0.3, 0.1, 0.01]
+NUM_PUBLISHERS = [2, 3, 4, 5, 6, 7, 8, 9, 10]
+LARGEST_PUBLISHER = [int(1e5), int(2e5), int(3e5)]
+PUBLISHER_RATIOS = [1, 0.5, 0.3, 0.1]
 PRICING_GENERATORS = [
     GeneratorParameters(
         "FixedPrice", FixedPriceGenerator, {"cost_per_impression": 0.1}
@@ -85,36 +96,54 @@ IMPRESSION_GENERATORS = [
     GeneratorParameters("HeavyTailed", HeavyTailedImpressionGenerator, {"zeta_s": 5.0}),
 ]
 
-OVERLAP_GENERATORS = [
+RNG = np.random.default_rng(0)
+OVERLAP_GENERATORS_INDEPENDENT_GIVEN_UNIVERSE_SIZE = [
     GeneratorParameters("FullOverlap", DataSet, {}),
     GeneratorParameters(
         "Independent",
         IndependentOverlapDataSet,
-        {"largest_pub_to_universe_ratio": 0.9, "random_generator": 1},
+        {
+            # Below, "largest_pub_to_universe_ratio" = largest_pub_reach / universe_size.
+            # In line 58, PUBLISHER_RATIOS = smallest_pub_reach / largest_pub_reach.
+            # Together with LARGEST_PUBLISHER in line 56 they determine all the sizes.
+            # Note that "largest_pub_to_universe_ratio" is used only when the universe
+            # size is needed.
+            "largest_pub_to_universe_ratio": 0.9,
+            "random_generator": np.random.default_rng(RNG.integers(1e9)),
+        },
     ),
     GeneratorParameters(
         "Independent",
         IndependentOverlapDataSet,
-        {"largest_pub_to_universe_ratio": 0.75, "random_generator": 2},
+        {
+            "largest_pub_to_universe_ratio": 0.75,
+            "random_generator": np.random.default_rng(RNG.integers(1e9)),
+        },
     ),
     GeneratorParameters(
         "Independent",
         IndependentOverlapDataSet,
-        {"largest_pub_to_universe_ratio": 0.5, "random_generator": 3},
+        {
+            "largest_pub_to_universe_ratio": 0.5,
+            "random_generator": np.random.default_rng(RNG.integers(1e9)),
+        },
     ),
     GeneratorParameters(
         "Independent",
         IndependentOverlapDataSet,
-        {"largest_pub_to_universe_ratio": 0.25, "random_generator": 4},
+        {
+            "largest_pub_to_universe_ratio": 0.25,
+            "random_generator": np.random.default_rng(RNG.integers(1e9)),
+        },
     ),
     GeneratorParameters(
         "Sequential",
         SequentiallyCorrelatedOverlapDataSet,
         {
-            "order": OrderOptions.random,
+            "order": OrderOptions.original,
             "correlated_sets": CorrelatedSetsOptions.all,
             "shared_prop": 0.25,
-            "random_generator": 5,
+            "random_generator": np.random.default_rng(RNG.integers(1e9)),
         },
     ),
     GeneratorParameters(
@@ -126,7 +155,7 @@ OVERLAP_GENERATORS = [
             # evaluation framework. Can add them if needed.
             "correlated_sets": CorrelatedSetsOptions.all,
             "shared_prop": 0.75,
-            "random_generator": 6,
+            "random_generator": np.random.default_rng(RNG.integers(1e9)),
         },
     ),
     GeneratorParameters(
@@ -136,20 +165,134 @@ OVERLAP_GENERATORS = [
             "order": OrderOptions.original,
             "correlated_sets": CorrelatedSetsOptions.one,
             "shared_prop": 0.25,
-            "random_generator": 7,
+            "random_generator": np.random.default_rng(RNG.integers(1e9)),
         },
     ),
     GeneratorParameters(
         "Sequential",
         SequentiallyCorrelatedOverlapDataSet,
         {
-            "order": OrderOptions.random,
+            "order": OrderOptions.original,
             "correlated_sets": CorrelatedSetsOptions.one,
             "shared_prop": 0.75,
-            "random_generator": 8,
+            "random_generator": np.random.default_rng(RNG.integers(1e9)),
         },
     ),
 ]
+
+
+# Following this design that was reviewed by WFA:
+# https://docs.google.com/document/d/1pRA_fc0RbhRVUPsxbmUDmcrvNRwpNILpO-CGZtG5gYI/edit#
+OVERLAP_GENERATORS_COPULA_GAUSSIAN_HOMOGENEOUS = [
+    GeneratorParameters(
+        "Copula",
+        CopulaDataSet,
+        {
+            "largest_pub_to_universe_ratio": ratio,
+            "copula_class": {
+                "generator": GaussianCopula,
+                "kwargs": {},
+            },
+            "correlation_matrix": {
+                "generator": CopulaCorrelationMatrixGenerator.homogeneous,
+                "kwargs": {"rho": rho},
+            },
+            "random_generator": np.random.default_rng(RNG.integers(1e9)),
+        },
+    )
+    for ratio in [0.25, 0.75]
+    for rho in [0, 0.25, 0.5, 0.75]
+]
+OVERLAP_GENERATORS_COPULA_GAUSSIAN_AUTOREGRESSIVE = [
+    GeneratorParameters(
+        "Copula",
+        CopulaDataSet,
+        {
+            "largest_pub_to_universe_ratio": ratio,
+            "copula_class": {
+                "generator": GaussianCopula,
+                "kwargs": {},
+            },
+            "correlation_matrix": {
+                "generator": CopulaCorrelationMatrixGenerator.autoregressive,
+                "kwargs": {"rho": rho},
+            },
+            "random_generator": np.random.default_rng(RNG.integers(1e9)),
+        },
+    )
+    for ratio in [0.25, 0.75]
+    for rho in [-0.5, -0.25, 0.25, 0.5]
+]
+OVERLAP_GENERATORS_COPULA_GAUSSIAN_RANDOM = [
+    GeneratorParameters(
+        "Copula",
+        CopulaDataSet,
+        {
+            "largest_pub_to_universe_ratio": ratio,
+            "copula_class": {
+                "generator": GaussianCopula,
+                "kwargs": {},
+            },
+            "correlation_matrix": {
+                "generator": CopulaCorrelationMatrixGenerator.random,
+                "kwargs": {"rng": np.random.default_rng(seed)},
+            },
+            "random_generator": np.random.default_rng(RNG.integers(1e9)),
+        },
+    )
+    for ratio in [0.25, 0.75]
+    for seed in [1, 2, 3, 4]
+]
+OVERLAP_GENERATORS_COPULA_T_HOMOGENEOUS = [
+    GeneratorParameters(
+        "Copula",
+        CopulaDataSet,
+        {
+            "largest_pub_to_universe_ratio": ratio,
+            "copula_class": {
+                "generator": StudentTCopula,
+                "kwargs": {"df": df},  # degrees of freedom in t-copula
+            },
+            "correlation_matrix": {
+                "generator": CopulaCorrelationMatrixGenerator.homogeneous,
+                "kwargs": {"rho": 0.5},
+            },
+            "random_generator": np.random.default_rng(RNG.integers(1e9)),
+        },
+    )
+    for ratio in [0.25, 0.75]
+    for df in [2, 10]
+]
+OVERLAP_GENERATORS_COPULA_T_AUTOREGRESSIVE = [
+    GeneratorParameters(
+        "Copula",
+        CopulaDataSet,
+        {
+            "largest_pub_to_universe_ratio": ratio,
+            "copula_class": {
+                "generator": StudentTCopula,
+                "kwargs": {"df": df},
+            },
+            "correlation_matrix": {
+                "generator": CopulaCorrelationMatrixGenerator.autoregressive,
+                "kwargs": {"rho": rho},
+            },
+            "random_generator": np.random.default_rng(RNG.integers(1e9)),
+        },
+    )
+    for ratio in [0.25, 0.75]
+    for df in [2, 10]
+    for rho in [-0.5, 0.5]
+]
+
+OVERLAP_GENERATORS = (
+    OVERLAP_GENERATORS_INDEPENDENT_GIVEN_UNIVERSE_SIZE
+    + OVERLAP_GENERATORS_COPULA_GAUSSIAN_HOMOGENEOUS
+    + OVERLAP_GENERATORS_COPULA_GAUSSIAN_AUTOREGRESSIVE
+    + OVERLAP_GENERATORS_COPULA_GAUSSIAN_RANDOM
+    + OVERLAP_GENERATORS_COPULA_T_HOMOGENEOUS
+    + OVERLAP_GENERATORS_COPULA_T_AUTOREGRESSIVE
+)
 
 # Key values should be field names of DataSetParameters
 LEVELS = {
@@ -161,9 +304,6 @@ LEVELS = {
     "overlap_generator_params": OVERLAP_GENERATORS,
 }
 
-# Number of samples that will be taken in the latin hypercube design
-NUM_SAMPLES_FOR_LHS = 100
-
 
 def generate_data_design_config(
     random_generator: np.random.Generator,
@@ -171,21 +311,40 @@ def generate_data_design_config(
     """Generates the data design configuration for evaluating M3 strategy."""
     keys = LEVELS.keys()
     levels = [len(LEVELS[k]) for k in keys]
-    for i, sample in enumerate(
-        lhs(n=len(levels), samples=NUM_SAMPLES_FOR_LHS, criterion="maximin")
+    ids = [16, 41, 151, 103, 69, 98, 50, 91, 73]
+    for id, sample in zip(
+        ids, lhs(n=len(levels), samples=NUM_SAMPLES_FOR_LHS, criterion="maximin")[ids]
     ):
-        design_parameters = {"id": str(i)}
+        design_parameters = {"id": str(id)}
         for key, level in zip(keys, sample):
             design_parameters[key] = LEVELS[key][int(level * len(LEVELS[key]))]
-        if design_parameters["overlap_generator_params"].name == "Independent":
+        # Specify the universe size for some datasets
+        if design_parameters["overlap_generator_params"].name in [
+            "Independent",
+            "Copula",
+        ]:
             raw_overlap_params = design_parameters["overlap_generator_params"]
+            kwargs = deepcopy(raw_overlap_params.params)
+            kwargs["universe_size"] = int(
+                design_parameters["largest_publisher_size"]
+                / kwargs["largest_pub_to_universe_ratio"]
+            )
+            del kwargs["largest_pub_to_universe_ratio"]
+            if design_parameters["overlap_generator_params"].name == "Copula":
+                pricing_generator_params = design_parameters["pricing_generator_params"]
+                kwargs["pricing_generator"] = pricing_generator_params.generator(
+                    **pricing_generator_params.params
+                )
+                correlation_matrix = kwargs["correlation_matrix"]["generator"](
+                    p=design_parameters["num_publishers"],
+                    **kwargs["correlation_matrix"]["kwargs"]
+                )
+                kwargs["copula_generator"] = kwargs["copula_class"]["generator"](
+                    corr=correlation_matrix, **kwargs["copula_class"]["kwargs"]
+                )
+                del kwargs["copula_class"]
+                del kwargs["correlation_matrix"]
             design_parameters["overlap_generator_params"] = raw_overlap_params._replace(
-                params={
-                    "universe_size": int(
-                        design_parameters["largest_publisher_size"]
-                        / raw_overlap_params.params["largest_pub_to_universe_ratio"]
-                    ),
-                    "random_generator": raw_overlap_params.params["random_generator"],
-                }
+                params=kwargs
             )
         yield DataSetParameters(**design_parameters)

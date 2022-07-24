@@ -47,7 +47,6 @@ IMPRESSION_GENERATORS = [
     GeneratorParameters(
         "Homogeneous", HomogeneousImpressionGenerator, {"poisson_lambda": 0.5}
     ),
-
     # Exponential Poisson: Mean = 1.5, Var = 0.75
     # For the Exponential-Poisson, the mean is beta + 1 and the variance is
     # beta * (beta + 1), where beta is the "gamma_scale" parameter.  This can
@@ -58,7 +57,6 @@ IMPRESSION_GENERATORS = [
         HeterogeneousImpressionGenerator,
         {"gamma_shape": 1.0, "gamma_scale": 0.5},
     ),
-
     # Gamma Poisson: Mean = 1.5, Var = 6
     # For the shifted Gamma-Poisson, the mean is alpha * beta + 1, and the
     # variance is alpha * beta * (beta + 1), where alpha = gamma_shape and
@@ -66,18 +64,16 @@ IMPRESSION_GENERATORS = [
     # use of the equivalence between the Gamma-Poisson and the negative
     # binomial distribution.  Using the formulation for the negative binomial
     # given in Wikipedia, the equivalent negative binomial distribution is
-    # obtained by setting p = beta / (1 + beta) and r = alpha.  
+    # obtained by setting p = beta / (1 + beta) and r = alpha.
     GeneratorParameters(
         "Heterogeneous",
         HeterogeneousImpressionGenerator,
         {"gamma_shape": 0.04545, "gamma_scale": 11},
     ),
-    
     # Zeta: Mean = 1.5, Var = infinity
     GeneratorParameters(
         "HeavyTailed", HeavyTailedImpressionGenerator, {"zeta_s": 2.8106}
     ),
-    
     ## Mean 3
     # Shifted Poisson: Mean = 3, Var = 2
     GeneratorParameters(
@@ -99,7 +95,6 @@ IMPRESSION_GENERATORS = [
     GeneratorParameters(
         "HeavyTailed", HeavyTailedImpressionGenerator, {"zeta_s": 2.2662}
     ),
-    
     ## Mean 5
     # Shifted Poisson: Mean = 5, Var = 4
     GeneratorParameters(
@@ -121,7 +116,6 @@ IMPRESSION_GENERATORS = [
     GeneratorParameters(
         "HeavyTailed", HeavyTailedImpressionGenerator, {"zeta_s": 2.1416}
     ),
-
     ## Mean 10
     # Shifted Poisson: Mean = 10, Var = 9
     GeneratorParameters(

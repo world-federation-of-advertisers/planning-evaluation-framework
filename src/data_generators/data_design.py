@@ -15,7 +15,7 @@
 
 A DataDesign represents the collection of DataSets against which
 an experimental design is to be evaluated.  Because the size of all
-of the DataSets in a DataDesign can be large, the individual 
+of the DataSets in a DataDesign can be large, the individual
 DataSets within a DataDesign are loaded lazily.
 """
 
@@ -30,6 +30,7 @@ from wfa_planning_evaluation_framework.filesystem_wrappers import (
     filesystem_pathlib_wrapper,
 )
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
+import numpy as np
 
 
 FsWrapperBase = filesystem_wrapper_base.FilesystemWrapperBase
@@ -72,7 +73,13 @@ class DataDesign:
 
     def add(self, data_set: DataSet) -> None:
         """Adds a DataSet to this DataDesign."""
-        data_set_path = self._filesystem.joinpath(self._dirpath, data_set.name)
+        ## chenwei ##
+        if len(data_set.name) > 255:
+            new_data_set_name = data_set.name[:245] + str(np.random.randint(1e10))
+        else:
+            new_data_set_name = data_set.name
+        data_set_path = self._filesystem.joinpath(self._dirpath, new_data_set_name)
+        #############
         if self._filesystem.exists(data_set_path):
             raise ValueError(
                 "This DataDesign already contains a DataSet with name {}".format(

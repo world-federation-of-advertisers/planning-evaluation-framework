@@ -1,4 +1,4 @@
-# Copyright 2021 The Private Cardinality Estimation Framework Authors
+# Copyright 2022 The Private Cardinality Estimation Framework Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,14 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""A modeling strategy estimates reach surfaces using Halo instances."""
+"""Proposed modeling strategy for the M3 milestone."""
 
 from typing import Dict
 from typing import Type
 
-from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
+
 from wfa_planning_evaluation_framework.models.reach_surface import ReachSurface
-from wfa_planning_evaluation_framework.simulator.halo_simulator import HaloSimulator
+from wfa_planning_evaluation_framework.models.local_dp_reach_surface import (
+    LocalDpReachSurface,
+)
+from wfa_planning_evaluation_framework.simulator.local_dp_simulator import (
+    LocalDpSimulator,
+)
+from wfa_planning_evaluation_framework.simulator.modeling_strategy import (
+    ModelingStrategy,
+)
 from wfa_planning_evaluation_framework.simulator.privacy_tracker import PrivacyBudget
 from wfa_planning_evaluation_framework.simulator.system_parameters import (
     SystemParameters,
@@ -28,33 +36,28 @@ from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
 )
 
 
-class ModelingStrategy:
-    # TODO: Add args for pricing model when these are introduced.
-    def __init__(
-        self,
-        single_pub_model: Type[ReachCurve] = None,
-        single_pub_model_kwargs: Dict = None,
-        multi_pub_model: Type[ReachSurface] = None,
-        multi_pub_model_kwargs: Dict = None,
-    ):
-        """Initializes a modeling strategy object."""
-        self._single_pub_model = single_pub_model
-        self._single_pub_model_kwargs = single_pub_model_kwargs
-        self._multi_pub_model = multi_pub_model
-        self._multi_pub_model_kwargs = multi_pub_model_kwargs
+class LocalDpLiquidlegionsStrategy(ModelingStrategy):
+    """Modeling strategy that predicts by unioning local sketches."""
 
     def fit(
-        self, halo: HaloSimulator, params: SystemParameters, budget: PrivacyBudget
+        self, halo: LocalDpSimulator, params: SystemParameters, budget: PrivacyBudget
     ) -> ReachSurface:
-        """Returns the reach surface using this Halo instance.
+        """Returns the reach surface computed using the Local DP approach.
 
         Args:
-            halo: A Halo object for simulating the behavior of the Halo system.
+            halo:  A simulator of the Halo system. The simulator of this class should
+                be set as the LocalDpSimulator.  Note that it is a hypothetical
+                simulator, i.e., a simulator of a possible option of, instead of the
+                actual Halo system.
+                (I'm calling this arg as `halo` to be consistent with halo_simulator,
+                for interoperability with experimental_trial.)
             params:  Simulation parameters.
             budget:  A PrivacyBudget object specifying how much privacy budget
               is to be consumed for this operation.
+
         Returns:
             A differentially private ReachSurface model which can be queried
             for reach and frequency estimates for arbitrary spend allocations.
         """
-        raise NotImplementedError()
+        halo.obtain_local_dp_sketches(budget)
+        return LocalDpReachSurface(halo)

@@ -43,19 +43,29 @@ class TrialDescriptor(NamedTuple):
     modeling_strategy: ModelingStrategyDescriptor
     system_params: SystemParameters
     experiment_params: ExperimentParameters
+    id: int = None
 
     def __str__(self) -> str:
         """Returns string representing this trial."""
         return (
             f"{self.modeling_strategy},"
             f"{self.system_params},"
-            f"{self.experiment_params}"
+            f"{self.experiment_params},"
+            f"id={-1 if self.id is None else self.id}"
         )
 
     def update_from_dataset(self, dataset: DataSet) -> "TrialDescriptor":
         """Uses the dataset to fill in various context-specific items."""
+        system_params = self.system_params.update_from_dataset(dataset)
+        experimental_params = self.experiment_params.update_from_dataset(
+            dataset, system_params
+        )
+        modeling_strategy_descriptor = self.modeling_strategy.update_from_dataset(
+            dataset
+        )
         return TrialDescriptor(
-            copy.deepcopy(self.modeling_strategy),
-            self.system_params.update_from_dataset(dataset),
-            self.experiment_params.update_from_dataset(dataset),
+            modeling_strategy_descriptor,
+            system_params,
+            experimental_params,
+            self.id,
         )

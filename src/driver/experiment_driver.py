@@ -193,7 +193,9 @@ class ExperimentDriver:
             use_apache_beam=use_apache_beam,
             pipeline_options=pipeline_options,
         )
-        filesystem.write_text(self._output_file, result.to_csv(na_rep="NaN", index=False))
+        filesystem.write_text(
+            self._output_file, result.to_csv(na_rep="NaN", index=False)
+        )
 
         return result
 

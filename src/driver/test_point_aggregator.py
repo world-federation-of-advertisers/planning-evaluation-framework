@@ -140,9 +140,14 @@ def aggregate(
     Returns:
       A single row DataFrame representing the values of the statistics listed in keys.
     """
+    print("\n", true_reach, "\n", simulated_reach, "\n")
     stats = {"model_succeeded": [1], "model_exception": ["None"]}
-    for key in AGGREGATORS:
-        stats[key] = [AGGREGATORS[key](true_reach, simulated_reach)]
+    if len(true_reach) == 0:
+        for key in AGGREGATORS:
+            stats[key] = [np.nan]
+    else:
+        for key in AGGREGATORS:
+            stats[key] = [AGGREGATORS[key](true_reach, simulated_reach)]
     return pd.DataFrame(data=stats)
 
 

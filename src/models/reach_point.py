@@ -45,15 +45,19 @@ class ReachPoint:
           universe_size:  If given, the universe size associated with this
             reach point.
         """
-        if spends and len(impressions) != len(spends):
-            raise ValueError("impressions and spends must have same length")
+        if spends is not None:
+            if len(impressions) != len(spends):
+                raise ValueError("impressions and spends must have same length")
         self._impressions = tuple(impressions)
         self._kplus_reaches = tuple(kplus_reaches)
+        # TODO: include the last frequency level into the following
+        # list, and modify other places (such as dirac mixture models)
+        # accordingly.
         self._frequencies = [
             kplus_reaches[i] - kplus_reaches[i + 1]
             for i in range(len(kplus_reaches) - 1)
         ]
-        if spends:
+        if spends is not None:
             self._spends = tuple(spends)
         else:
             self._spends = None

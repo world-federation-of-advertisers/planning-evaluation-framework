@@ -40,6 +40,9 @@ from wfa_planning_evaluation_framework.simulator.privacy_tracker import (
 from wfa_planning_evaluation_framework.simulator.halo_simulator import (
     HaloSimulator,
 )
+from wfa_planning_evaluation_framework.simulator.local_dp_simulator import (
+    LocalDpSimulator,
+)
 from wfa_planning_evaluation_framework.simulator.system_parameters import (
     SystemParameters,
 )
@@ -111,6 +114,7 @@ class ExperimentalTrial:
         self._data_design = data_design
         self._data_set_name = data_set_name
         self._trial_descriptor = trial_descriptor
+        print("\n\n\n======", self._trial_descriptor, "====\n\n\n")
         self._analysis_type = analysis_type
 
     def evaluate(
@@ -172,9 +176,14 @@ class ExperimentalTrial:
 
         dataset = self._data_design.by_name(self._data_set_name)
         privacy_tracker = PrivacyTracker()
-        halo = HaloSimulator(
-            dataset, self._trial_descriptor.system_params, privacy_tracker
-        )
+        if self._trial_descriptor.modeling_strategy.strategy == "local_dp":
+            halo = LocalDpSimulator(
+                dataset, self._trial_descriptor.system_params, privacy_tracker
+            )
+        else:
+            halo = HaloSimulator(
+                dataset, self._trial_descriptor.system_params, privacy_tracker
+            )
         privacy_budget = self._trial_descriptor.experiment_params.privacy_budget
         modeling_strategy = (
             self._trial_descriptor.modeling_strategy.instantiate_strategy()
@@ -190,19 +199,35 @@ class ExperimentalTrial:
                     dataset, rng
                 )
             )
-            true_reach = [
-                halo.true_reach_by_spend(
-                    t, self._trial_descriptor.experiment_params.max_frequency
-                )
-                for t in test_points
-            ]
-            fitted_reach = [
-                reach_surface.by_spend(
-                    t, self._trial_descriptor.experiment_params.max_frequency
-                )
-                for t in test_points
-            ]
-            metrics = aggregate(true_reach, fitted_reach)
+            if len(test_points) == 0:
+                true_reach, fitted_reach = [], []
+                metrics = aggregate(true_reach, fitted_reach)
+                metrics["single_pub_kplus_reach_agreement"] = [{}]
+            else:
+                true_reach = [
+                    halo.true_reach_by_spend(
+                        t, self._trial_descriptor.experiment_params.max_frequency
+                    )
+                    for t in test_points
+                ]
+                # print('True: ', true_reach, '\n')
+                fitted_reach = [
+                    reach_surface.by_spend(
+                        t, self._trial_descriptor.experiment_params.max_frequency
+                    )
+                    for t in test_points
+                ]
+                # print('Fitted: ', fitted_reach, '\n\n')
+                metrics = aggregate(true_reach, fitted_reach)
+                if hasattr(reach_surface, "evaluate_single_pub_kplus_reach_agreement"):
+                    metrics["single_pub_kplus_reach_agreement"] = [
+                        reach_surface.evaluate_single_pub_kplus_reach_agreement(
+                            scaling_factor_choices=[0.5, 1, 2],
+                            max_frequency=max_frequency,
+                        )
+                    ]
+                else:
+                    metrics["single_pub_kplus_reach_agreement"] = [{}]
             if self._analysis_type == SINGLE_PUB_ANALYSIS:
                 single_publisher_dataframe = (
                     self._compute_single_publisher_fractions_dataframe(
@@ -216,6 +241,7 @@ class ExperimentalTrial:
             logging.vlog(1, f"Modeling failure: {inst}")
             logging.vlog(2, traceback.format_exc())
             metrics = aggregate_on_exception(traceback.format_exc())
+            metrics["single_pub_kplus_reach_agreement"] = [{}]
             if self._analysis_type == SINGLE_PUB_ANALYSIS:
                 single_publisher_dataframe = (
                     self._single_publisher_fractions_dataframe_on_exception(
@@ -236,6 +262,15 @@ class ExperimentalTrial:
             ],
             axis=1,
         )
+        print(
+            "\n\n\n\n",
+            result["multi_pub_model"],
+            "\n",
+            result["privacy_budget_epsilon"],
+            "\n",
+            trial_results_path,
+            "\n\n\n\n",
+        )
         filesystem.mkdir(
             filesystem.parent(trial_results_path), parents=True, exist_ok=True
         )
@@ -248,9 +283,19 @@ class ExperimentalTrial:
 
     def _compute_trial_results_path(self) -> str:
         """Returns path of file where the results of this trial are stored."""
-        return (
-            f"{self._experiment_dir}/{self._data_set_name}/{self._trial_descriptor}.csv"
-        )
+        dir_name = self._experiment_dir
+        dataset_name = self._data_set_name
+        descriptor_name = f"{self._trial_descriptor}"
+        if len(descriptor_name) > 255:
+            parsed = int(descriptor_name.split(",id=")[1])
+            if parsed == -1:
+                id = hashlib.md5(descriptor_name.encode()).hexdigest()[:6]
+            else:
+                id = f"id={parsed}"
+            print("\n\n\n", descriptor_name, "\n\n\n")
+            descriptor_name = descriptor_name[:241] + f"...,{id}"
+        name = f"{dir_name}/{dataset_name}/{descriptor_name}.csv"
+        return name
 
     def _make_independent_vars_dataframe(self) -> pd.DataFrame:
         """Returns a 1-row DataFrame of independent variables for this trial."""

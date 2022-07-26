@@ -69,22 +69,22 @@ MODELING_STRATEGIES = [
         },
     ),
     # Independent multi pub
-    ModelingStrategyDescriptor(
-        "m3strategy",
-        {"use_ground_truth_for_reach_curves": True},
-        "dirac_mixture_single",
-        {},
-        "independent",
-        {"largest_pub_to_universe_ratio": 0.25},
-    ),
-    ModelingStrategyDescriptor(
-        "m3strategy",
-        {"use_ground_truth_for_reach_curves": False},
-        "dirac_mixture_single",
-        {"dilution": 0.3, "largest_pub_to_universe_ratio": 0.25},
-        "independent",
-        {"largest_pub_to_universe_ratio": 0.25},
-    ),
+    # ModelingStrategyDescriptor(
+    #     "m3strategy",
+    #     {"use_ground_truth_for_reach_curves": True},
+    #     "dirac_mixture_single",
+    #     {},
+    #     "independent",
+    #     {"largest_pub_to_universe_ratio": 0.25},
+    # ),
+    # ModelingStrategyDescriptor(
+    #     "m3strategy",
+    #     {"use_ground_truth_for_reach_curves": False},
+    #     "dirac_mixture_single",
+    #     {"dilution": 0.3, "largest_pub_to_universe_ratio": 0.25},
+    #     "independent",
+    #     {"largest_pub_to_universe_ratio": 0.25},
+    # ),
 ]
 
 CAMPAIGN_SPEND_FRACTIONS_GENERATORS = [
@@ -100,8 +100,8 @@ LIQUID_LEGIONS_PARAMS = [
 
 PRIVACY_BUDGETS = [
     PrivacyBudget(1.0, 1e-9),
-    PrivacyBudget(0.1, 1e-9),
-    PrivacyBudget(0.01, 1e-9),
+    # PrivacyBudget(0.1, 1e-9),
+    # PrivacyBudget(0.01, 1e-9),
 ]
 
 REPLICA_IDS = [1, 2, 3]

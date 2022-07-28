@@ -118,7 +118,7 @@ class LocalDpSimulator:
             for pub, spend in zip(self._publishers, self._campaign_spends)
         ]
         noiser = BlipNoiser(
-            epsilon=budget.epsilon,
+            epsilon=self._data_set.publisher_count * (0.0072 + 0.2015),
             random_state=np.random.RandomState(
                 seed=self._params.generator.integers(1e9)
             ),

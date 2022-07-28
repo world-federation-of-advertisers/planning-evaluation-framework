@@ -109,11 +109,11 @@ class ModelingStrategyDescriptor(NamedTuple):
     """
 
     strategy: str
-    strategy_kwargs: Dict
-    single_pub_model: str
-    single_pub_model_kwargs: Dict
-    multi_pub_model: str
-    multi_pub_model_kwargs: Dict
+    strategy_kwargs: Dict = {}
+    single_pub_model: str = ""
+    single_pub_model_kwargs: Dict = {}
+    multi_pub_model: str = ""
+    multi_pub_model_kwargs: Dict = {}
 
     def update_from_dataset(
         self, data_set: DataSet = None
@@ -147,6 +147,8 @@ class ModelingStrategyDescriptor(NamedTuple):
 
     def instantiate_strategy(self):
         """Returns ModelingStrategy object defined by this descriptor."""
+        if self.strategy == "local_dp":
+            return LocalDpLiquidlegionsStrategy()
         return MODELING_STRATEGIES[self.strategy](
             SINGLE_PUB_MODELS[self.single_pub_model],
             self.single_pub_model_kwargs,

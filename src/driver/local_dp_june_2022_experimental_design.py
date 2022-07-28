@@ -40,7 +40,6 @@ from wfa_planning_evaluation_framework.driver.trial_descriptor import (
 )
 
 MODELING_STRATEGIES = [
-    # Dirac mixture multi pub
     ModelingStrategyDescriptor(
         strategy="local_dp",
     ),
@@ -48,6 +47,9 @@ MODELING_STRATEGIES = [
 
 CAMPAIGN_SPEND_FRACTIONS_GENERATORS = [
     lambda dataset: [0.1] * dataset.publisher_count,
+    lambda dataset: [0.5] * dataset.publisher_count,
+    lambda dataset: [0.9] * dataset.publisher_count,
+    lambda dataset: list(islice(cycle([0.1, 0.9]), dataset.publisher_count)),
 ]
 
 LIQUID_LEGIONS_PARAMS = [
@@ -56,11 +58,11 @@ LIQUID_LEGIONS_PARAMS = [
 
 PRIVACY_BUDGETS = [
     PrivacyBudget(1.0, 1e-9),
+    PrivacyBudget(0.1, 1e-9),
+    PrivacyBudget(0.01, 1e-9),
 ]
 
-REPLICA_IDS = [
-    1,
-]
+REPLICA_IDS = [1, 2, 3]
 
 MAX_FREQUENCIES = [10]
 

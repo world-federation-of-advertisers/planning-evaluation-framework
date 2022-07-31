@@ -173,8 +173,10 @@ class HaloSimulator:
             max_freq=max_frequency,
             reach_noiser_class=GeometricEstimateNoiser,
             frequency_noiser_class=GeometricEstimateNoiser,
-            reach_epsilon=budget.epsilon * privacy_budget_split,
-            frequency_epsilon=budget.epsilon * (1 - privacy_budget_split),
+            # reach_epsilon=budget.epsilon * privacy_budget_split,
+            reach_epsilon=0.0072,
+            # frequency_epsilon=budget.epsilon * (1 - privacy_budget_split),
+            frequency_epsilon=0.2015,
             reach_delta=budget.delta * privacy_budget_split,
             frequency_delta=budget.delta * (1 - privacy_budget_split),
             reach_noiser_kwargs={

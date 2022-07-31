@@ -117,14 +117,15 @@ class LocalDpSimulator:
             pub.liquid_legions_sketch(spend).exponential_bloom_filter
             for pub, spend in zip(self._publishers, self._campaign_spends)
         ]
+        total_epsilon = self._data_set.publisher_count * (0.0072 + 0.2015)
         noiser = BlipNoiser(
-            epsilon=budget.epsilon,
+            epsilon=total_epsilon,
             random_state=np.random.RandomState(
                 seed=self._params.generator.integers(1e9)
             ),
         )
         self.local_dp_sketches = [noiser(sketch) for sketch in raw_sketches]
-        self.denoiser = SurrealDenoiser(epsilon=budget.epsilon)
+        self.denoiser = SurrealDenoiser(epsilon=total_epsilon)
         self.local_dp_sketches_obtained = True
 
     @property

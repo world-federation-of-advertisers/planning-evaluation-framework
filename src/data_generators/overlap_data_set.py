@@ -30,11 +30,16 @@ from wfa_planning_evaluation_framework.data_generators.publisher_data import (
 
 
 class OverlapDataSet(DataSet):
-    """Construct a multi-pub DataSet from a list of single-pub PublisherData.
+    """A DataSet constructed from a list of PublisherData by overlapping their reached sets.
 
     Once we have a list of PublisherData for each publisher, this class
     generates the cross-publisher reach overlap, relabels the reached ids to
     reflect the overlap, and finally includes these labeled ids to a DataSet.
+
+    In other words, condition on having a fixed Venn diagram of the universes
+    of all publishers as input --- the frequency of each user on each publisher
+    is randomly, independently generated.  Then, the universe overlap will be
+    the only source of the cross-publisher correlation in reach and frequency.
     """
 
     def __init__(

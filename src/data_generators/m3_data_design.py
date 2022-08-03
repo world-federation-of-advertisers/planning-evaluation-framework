@@ -16,7 +16,13 @@
 from pyDOE import lhs
 from typing import Iterable
 import numpy as np
+from copy import deepcopy
+from statsmodels.distributions.copula.elliptical import GaussianCopula
 
+
+from wfa_planning_evaluation_framework.data_generators.copula_data_set import (
+    CopulaDataSet,
+)
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.data_generators.data_set_parameters import (
     GeneratorParameters,
@@ -85,6 +91,11 @@ IMPRESSION_GENERATORS = [
     GeneratorParameters("HeavyTailed", HeavyTailedImpressionGenerator, {"zeta_s": 5.0}),
 ]
 
+# TODO(jiayu):
+# 1. Add more Copula generators once we decide the parameters (say,
+# the Gaussian correlation matrix.)
+# 2. Remove some of the Independent & Sequential overlap_generators
+# So we have a higher fraction of Copula generators.
 OVERLAP_GENERATORS = [
     GeneratorParameters("FullOverlap", DataSet, {}),
     GeneratorParameters(
@@ -149,6 +160,15 @@ OVERLAP_GENERATORS = [
             "random_generator": 8,
         },
     ),
+    GeneratorParameters(
+        "Copula",
+        CopulaDataSet,
+        {
+            "largest_pub_to_universe_ratio": 0.5,
+            "copula_generator": GaussianCopula(corr=0),
+            "random_generator": 1,
+        },
+    ),
 ]
 
 # Key values should be field names of DataSetParameters
@@ -177,15 +197,24 @@ def generate_data_design_config(
         design_parameters = {"id": str(i)}
         for key, level in zip(keys, sample):
             design_parameters[key] = LEVELS[key][int(level * len(LEVELS[key]))]
-        if design_parameters["overlap_generator_params"].name == "Independent":
+        # Specify the universe size for some datasets
+        if design_parameters["overlap_generator_params"].name in [
+            "Independent",
+            "Copula",
+        ]:
             raw_overlap_params = design_parameters["overlap_generator_params"]
+            kwargs = deepcopy(raw_overlap_params.params)
+            kwargs["universe_size"] = int(
+                design_parameters["largest_publisher_size"]
+                / kwargs["largest_pub_to_universe_ratio"]
+            )
+            del kwargs["largest_pub_to_universe_ratio"]
+            if design_parameters["overlap_generator_params"].name == "Copula":
+                pricing_generator_params = design_parameters["pricing_generator_params"]
+                kwargs["pricing_generator"] = pricing_generator_params.generator(
+                    **pricing_generator_params.params
+                )
             design_parameters["overlap_generator_params"] = raw_overlap_params._replace(
-                params={
-                    "universe_size": int(
-                        design_parameters["largest_publisher_size"]
-                        / raw_overlap_params.params["largest_pub_to_universe_ratio"]
-                    ),
-                    "random_generator": raw_overlap_params.params["random_generator"],
-                }
+                params=kwargs
             )
         yield DataSetParameters(**design_parameters)

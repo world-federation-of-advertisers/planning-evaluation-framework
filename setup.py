@@ -35,11 +35,11 @@ REQUIRED = [
     "absl-py==0.12.0",
     "pathos>=0.2.7",
     "pyfarmhash==0.2.2",
-    "numpy==1.20.2",
+    "numpy>=1.20.2",
     "pyDOE==0.3.8",
-    "scipy==1.6.2",
-    "lxml==4.5.2",
-    "cvxopt==1.2.6",
+    "scipy>=1.6.2",
+    "lxml>=4.5.2",
+    "cvxopt>=1.2.6",
     "cvxpy>=1.1.18",
     "dp-accounting==0.0.1",
     "pandas>=1.2.5",
@@ -47,6 +47,7 @@ REQUIRED = [
     "fsspec==2021.7.0",
     "gcsfs==2021.7.0",
     "tqdm>=4.47.0",
+    "statsmodels>=0.12.2",
 ]
 
 # What packages are optional?

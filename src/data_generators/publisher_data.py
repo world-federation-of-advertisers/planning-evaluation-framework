@@ -20,6 +20,7 @@ from bisect import bisect_right
 from collections import Counter
 from copy import deepcopy
 from io import IOBase
+import numpy as np
 from numpy.random import randint
 from typing import Dict
 from typing import Iterable
@@ -54,7 +55,10 @@ class PublisherData:
     """
 
     def __init__(
-        self, impression_log_data: Iterable[Tuple[int, float]], name: str = None
+        self,
+        impression_log_data: Iterable[Tuple[int, float]],
+        name: str = None,
+        universe_size: int = None,
     ):
         """Constructs a PublisherData object from raw event data.
 
@@ -83,6 +87,7 @@ class PublisherData:
         self._spends = [spend for (_, spend) in impression_log_data]
         self._max_spend = max([spend for (_, spend) in impression_log_data])
         self._max_reach = len(set([id for (id, _) in impression_log_data]))
+        self._universe_size = universe_size
 
     @property
     def max_impressions(self):
@@ -108,6 +113,23 @@ class PublisherData:
     def name(self, new_name):
         """Updates the name associated with this PublisherData object."""
         self._name = new_name
+
+    @property
+    def universe_size(self) -> int:
+        return self._universe_size
+
+    @property
+    def zero_included_pmf(self) -> np.ndarray:
+        """Convert a PublisherData to a zero-included pmf vector."""
+        if self.universe_size is None:
+            raise ValueError(
+                "To obtain the zero included pmf, universe size must be specified."
+            )
+        hist = np.bincount(
+            list(self.user_counts_by_impressions(self.max_impressions).values())
+        )
+        hist[0] = self.universe_size - sum(hist)
+        return hist / sum(hist)
 
     def spend_by_impressions(self, impressions: int) -> float:
         """Returns the amount spent to obtain a given number of impressions.

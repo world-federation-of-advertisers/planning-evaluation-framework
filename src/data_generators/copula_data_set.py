@@ -75,9 +75,11 @@ class CopulaDataSet(DataSet):
             universe_size = 2 * max(
                 [1] + [data.max_reach for data in unlabeled_publisher_data_list]
             )
+
         self.marginal_distributions = []
         for pub in unlabeled_publisher_data_list:
-            pmf = self.zero_included_pmf(pub, universe_size)
+            pub._universe_size = universe_size
+            pmf = pub.zero_included_pmf
             self.marginal_distributions.append(
                 stats.rv_discrete(values=(range(len(pmf)), pmf))
             )
@@ -132,8 +134,9 @@ class CopulaDataSet(DataSet):
         return hist / sum(hist)
 
     @staticmethod
-    def to_impressions(frequency_vectors: List[np.ndarray],
-    random_generator: np.random.Generator) -> List[List[int]]:
+    def to_impressions(
+        frequency_vectors: List[np.ndarray], random_generator: np.random.Generator
+    ) -> List[List[int]]:
         """Convert a sample of frequency vectors to a list of impressions.
 
         An intermediate step to convert a sample of frequency vectors to a

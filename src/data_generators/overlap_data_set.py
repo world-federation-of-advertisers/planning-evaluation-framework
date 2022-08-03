@@ -36,9 +36,10 @@ class OverlapDataSet(DataSet):
     generates the cross-publisher reach overlap, relabels the reached ids to
     reflect the overlap, and finally includes these labeled ids to a DataSet.
 
-    In other words, the universes are overlapped while for each user, their
-    frequencies at different publishers are indepednent conditional on the
-    overlap of universe.
+    In other words, condition on having a fixed Venn diagram of the universes
+    of all publishers as input --- the frequency of each user on each publisher
+    is randomly, independently generated.  Then, the universe overlap will be
+    the only source of the cross-publisher correlation in reach and frequency.
     """
 
     def __init__(

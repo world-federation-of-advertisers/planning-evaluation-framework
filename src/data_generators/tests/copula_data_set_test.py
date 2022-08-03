@@ -14,7 +14,7 @@
 """Tests for copula_data_set.py."""
 
 from collections import Counter
-from typing import Dict
+from typing import List, Dict
 from copy import deepcopy
 from absl.testing import absltest
 import numpy as np
@@ -32,18 +32,20 @@ from wfa_planning_evaluation_framework.data_generators.fixed_price_generator imp
 )
 
 
-class CopulaDataSetTest(absltest.TestCase):
-    def test_zero_included_pmf(self):
-        pdf = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)])
-        res = CopulaDataSet.zero_included_pmf(pdf, 10)
-        expected = np.array([0.7, 0.2, 0.1])
-        np.testing.assert_equal(res, expected)
+class FakeRandomGeneratorWithReversedShuffle:
+    @staticmethod
+    def shuffle(pub_imps: List) -> None:
+        pub_imps.reverse()
 
+
+class CopulaDataSetTest(absltest.TestCase):
     def test_to_impressions(self):
         frequnecy_vectors = [(1, 1), (1, 1), (2, 0), (2, 0), (3, 3)]
         frequnecy_vectors = [np.array(vec) for vec in frequnecy_vectors]
-        res = CopulaDataSet.to_impressions(frequnecy_vectors)
-        expected = [[0, 1, 2, 3, 2, 3, 4, 4, 4], [0, 1, 4, 4, 4]]
+        res = CopulaDataSet.to_impressions(
+            frequnecy_vectors, FakeRandomGeneratorWithReversedShuffle()
+        )
+        expected = [[4, 4, 4, 3, 2, 3, 2, 1, 0], [4, 4, 4, 1, 0]]
         np.testing.assert_equal(res[0], expected[0])
         np.testing.assert_equal(res[1], expected[1])
 
@@ -85,7 +87,7 @@ class CopulaDataSetTest(absltest.TestCase):
         res = dataset.frequency_vectors_sampled_distribution
         # Because of the independence, the frequency vectors
         # (1, 1), (1, 2), (2, 1), (2, 2) should roughly appear
-        # 50 times respectively.
+        # 100 times each.
         self.assertTrue((1, 1) in res)
         self.assertTrue((2, 1) in res)
         self.assertTrue((1, 2) in res)

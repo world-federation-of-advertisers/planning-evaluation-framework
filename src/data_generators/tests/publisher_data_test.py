@@ -14,6 +14,7 @@
 """Tests for publisher_data_file.py."""
 
 from absl.testing import absltest
+import numpy as np
 from numpy.random import RandomState
 from os.path import join
 from tempfile import TemporaryDirectory
@@ -31,11 +32,19 @@ from wfa_planning_evaluation_framework.data_generators.publisher_data import (
 
 class PublisherDataTest(absltest.TestCase):
     def test_properties(self):
-        pdf = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04)], "test")
+        pdf = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04)], "test", 100)
         self.assertEqual(pdf.max_impressions, 3)
         self.assertEqual(pdf.max_spend, 0.04)
         self.assertEqual(pdf.max_reach, 2)
         self.assertEqual(pdf.name, "test")
+        self.assertEqual(pdf.universe_size, 100)
+
+    def test_zero_included_pmf(self):
+        pdf = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04), (3, 0.05)])
+        with self.assertRaises(ValueError):
+            pdf.zero_included_pmf
+        pdf._universe_size = 10
+        np.testing.assert_equal(pdf.zero_included_pmf, [0.7, 0.2, 0.1])
 
     def test_spend_by_impressions(self):
         pdf = PublisherData([(1, 0.01), (2, 0.02), (1, 0.04)], "test")

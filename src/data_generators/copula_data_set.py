@@ -119,21 +119,6 @@ class CopulaDataSet(DataSet):
         return dict(Counter(tuple(obs) for obs in self.sample))
 
     @staticmethod
-    def zero_included_pmf(
-        publisher_data: PublisherData, universe_size: int
-    ) -> np.ndarray:
-        """Convert a PublisherData to a zero-included pmf vector."""
-        hist = np.bincount(
-            list(
-                publisher_data.user_counts_by_impressions(
-                    publisher_data.max_impressions
-                ).values()
-            )
-        )
-        hist[0] = universe_size - sum(hist)
-        return hist / sum(hist)
-
-    @staticmethod
     def to_impressions(
         frequency_vectors: List[np.ndarray], random_generator: np.random.Generator
     ) -> List[List[int]]:

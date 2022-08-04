@@ -44,7 +44,6 @@ from wfa_cardinality_estimation_evaluation_framework.estimators.vector_of_counts
 from wfa_cardinality_estimation_evaluation_framework.estimators.estimator_noisers import (
     GeometricEstimateNoiser,
 )
-
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.models.reach_curve import ReachCurve
 from wfa_planning_evaluation_framework.models.reach_point import ReachPoint
@@ -177,8 +176,8 @@ class HaloSimulator:
             reach_epsilon=0.0072,
             # frequency_epsilon=budget.epsilon * (1 - privacy_budget_split),
             frequency_epsilon=0.2015,
-            reach_delta=budget.delta * privacy_budget_split,
-            frequency_delta=budget.delta * (1 - privacy_budget_split),
+            reach_delta=0,
+            frequency_delta=0,
             reach_noiser_kwargs={
                 "random_state": np.random.RandomState(
                     seed=self._params.generator.integers(low=0, high=1e9)

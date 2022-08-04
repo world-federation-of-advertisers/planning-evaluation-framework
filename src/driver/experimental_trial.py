@@ -43,6 +43,9 @@ from wfa_planning_evaluation_framework.simulator.halo_simulator import (
 from wfa_planning_evaluation_framework.simulator.local_dp_simulator import (
     LocalDpSimulator,
 )
+from wfa_planning_evaluation_framework.simulator.global_dp_simulator import (
+    GlobalDpSimulator,
+)
 from wfa_planning_evaluation_framework.simulator.system_parameters import (
     SystemParameters,
 )
@@ -178,6 +181,10 @@ class ExperimentalTrial:
         privacy_tracker = PrivacyTracker()
         if self._trial_descriptor.modeling_strategy.strategy == "local_dp":
             halo = LocalDpSimulator(
+                dataset, self._trial_descriptor.system_params, privacy_tracker
+            )
+        if self._trial_descriptor.modeling_strategy.strategy == "global_dp":
+            halo = GlobalDpSimulator(
                 dataset, self._trial_descriptor.system_params, privacy_tracker
             )
         else:

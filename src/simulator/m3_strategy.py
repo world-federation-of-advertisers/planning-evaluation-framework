@@ -53,6 +53,7 @@ class M3Strategy(ModelingStrategy):
             multi_pub_model,
             multi_pub_model_kwargs,
         )
+        self.max_freq = 3
         self._use_ground_truth_for_reach_curves = use_ground_truth_for_reach_curves
 
     def fit(
@@ -69,8 +70,9 @@ class M3Strategy(ModelingStrategy):
             A differentially private ReachSurface model which can be queried
             for reach and frequency estimates for arbitrary spend allocations.
         """
-
         p = halo.publisher_count
+        if p > 3:
+            self.max_freq = 1
 
         # TODO: Compute total budget usage with advanced composition or PLD's
         per_request_budget = PrivacyBudget(
@@ -78,7 +80,7 @@ class M3Strategy(ModelingStrategy):
         )
 
         total_reach = halo.simulated_reach_by_spend(
-            halo.campaign_spends, per_request_budget, max_frequency=10
+            halo.campaign_spends, per_request_budget, max_frequency=self.max_freq
         )
 
         # Compute reach point for each publisher
@@ -89,7 +91,7 @@ class M3Strategy(ModelingStrategy):
             spend_vec = [0.0] * p
             spend_vec[i] = halo.campaign_spends[i]
             point_for_surface = halo.simulated_reach_by_spend(
-                spend_vec, per_request_budget, max_frequency=10
+                spend_vec, per_request_budget, max_frequency=self.max_freq
             )
             point_for_curve = ReachPoint(
                 [point_for_surface.impressions[i]],
@@ -106,7 +108,7 @@ class M3Strategy(ModelingStrategy):
                 spend_vec = list(halo.campaign_spends)
                 spend_vec[i] = 0.0
                 reach = halo.simulated_reach_by_spend(
-                    spend_vec, per_request_budget, max_frequency=10
+                    spend_vec, per_request_budget, max_frequency=self.max_freq
                 )
                 all_but_one_reach.append(reach)
 
@@ -121,7 +123,7 @@ class M3Strategy(ModelingStrategy):
                     **self._single_pub_model_kwargs
                 )
                 curve._fit()
-            single_pub_curves.append(curve)
+        single_pub_curves.append(curve)
 
         if p == 1:
             return single_pub_curves[0]

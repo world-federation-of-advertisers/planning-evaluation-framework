@@ -168,17 +168,19 @@ class HaloSimulator:
             Liquid Legions sketches, one per publisher, combining them, and
             adding differentially private noise to the result.
         """
+        self.reach_epsilon = 0.0072
+        self.frequency_epsilon = 0.2015
+        if self.publisher_count > 3:
+            self.frequency_epsilon = 10
         combined_sketch = self._publishers[0].liquid_legions_sketch(spends[0])
         estimator = StandardizedHistogramEstimator(
             max_freq=max_frequency,
             reach_noiser_class=GeometricEstimateNoiser,
             frequency_noiser_class=GeometricEstimateNoiser,
-            # reach_epsilon=budget.epsilon * privacy_budget_split,
-            reach_epsilon=0.0072,
-            # frequency_epsilon=budget.epsilon * (1 - privacy_budget_split),
-            frequency_epsilon=0.2015,
-            reach_delta=budget.delta * privacy_budget_split,
-            frequency_delta=budget.delta * (1 - privacy_budget_split),
+            reach_epsilon=self.reach_epsilon,
+            frequency_epsilon=self.frequency_epsilon,
+            reach_delta=0,
+            frequency_delta=0,
             reach_noiser_kwargs={
                 "random_state": np.random.RandomState(
                     seed=self._params.generator.integers(low=0, high=1e9)

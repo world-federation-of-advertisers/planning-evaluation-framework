@@ -53,7 +53,7 @@ class M3Strategy(ModelingStrategy):
             multi_pub_model,
             multi_pub_model_kwargs,
         )
-        self.max_freq = 3
+        self.max_freq = 10
         self._use_ground_truth_for_reach_curves = use_ground_truth_for_reach_curves
 
     def fit(
@@ -123,7 +123,8 @@ class M3Strategy(ModelingStrategy):
                     **self._single_pub_model_kwargs
                 )
                 curve._fit()
-        single_pub_curves.append(curve)
+            # TODO: indent the following line
+            single_pub_curves.append(curve)
 
         if p == 1:
             return single_pub_curves[0]

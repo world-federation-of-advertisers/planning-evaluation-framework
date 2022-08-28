@@ -111,7 +111,6 @@ class ExperimentalTrial:
         self._data_design = data_design
         self._data_set_name = data_set_name
         self._trial_descriptor = trial_descriptor
-        print("\n\n\n======", self._trial_descriptor, "====\n\n\n")
         self._analysis_type = analysis_type
 
     def evaluate(
@@ -191,17 +190,6 @@ class ExperimentalTrial:
                     dataset, rng
                 )
             )
-            # print(
-            #     '\n',
-            #     'Test points',
-            #     self._trial_descriptor.experiment_params.test_point_strategy,
-            #     self._trial_descriptor.experiment_params.test_point_strategy_kwargs,
-            #     '\n',
-            #     test_points,
-            #     '\n',{hashlib.md5(trial_results_path.encode()).hexdigest()}
-            #     modeling_strategy._multi_pub_model,
-            #     '\n',
-            # )
             if (
                 self._trial_descriptor.experiment_params.test_point_strategy
                 == "incremental"
@@ -273,15 +261,6 @@ class ExperimentalTrial:
             ],
             axis=1,
         )
-        print(
-            "\n\n\n\n",
-            result["multi_pub_model"],
-            "\n",
-            result["privacy_budget_epsilon"],
-            "\n",
-            trial_results_path,
-            "\n\n\n\n",
-        )
         filesystem.mkdir(
             filesystem.parent(trial_results_path), parents=True, exist_ok=True
         )
@@ -305,6 +284,7 @@ class ExperimentalTrial:
                 id = f"id={parsed}"
             print("\n\n\n", descriptor_name, "\n\n\n")
             descriptor_name = descriptor_name[:241] + f"...,{id}"
+        descriptor_name = descriptor_name.replace("[", "(").replace("]", ")")
         name = f"{dir_name}/{dataset_name}/{descriptor_name}.csv"
         return name
 

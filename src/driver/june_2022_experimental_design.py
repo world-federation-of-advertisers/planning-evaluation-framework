@@ -69,22 +69,22 @@ MODELING_STRATEGIES = [
         },
     ),
     # Independent multi pub
-    # ModelingStrategyDescriptor(
-    #     "m3strategy",
-    #     {"use_ground_truth_for_reach_curves": True},
-    #     "dirac_mixture_single",
-    #     {},
-    #     "independent",
-    #     {"largest_pub_to_universe_ratio": 0.25},
-    # ),
-    # ModelingStrategyDescriptor(
-    #     "m3strategy",
-    #     {"use_ground_truth_for_reach_curves": False},
-    #     "dirac_mixture_single",
-    #     {"dilution": 0.3, "largest_pub_to_universe_ratio": 0.25},
-    #     "independent",
-    #     {"largest_pub_to_universe_ratio": 0.25},
-    # ),
+    ModelingStrategyDescriptor(
+        "m3strategy",
+        {"use_ground_truth_for_reach_curves": True},
+        "dirac_mixture_single",
+        {},
+        "independent",
+        {"largest_pub_to_universe_ratio": 0.25},
+    ),
+    ModelingStrategyDescriptor(
+        "m3strategy",
+        {"use_ground_truth_for_reach_curves": False},
+        "dirac_mixture_single",
+        {"dilution": 0.3, "largest_pub_to_universe_ratio": 0.25},
+        "independent",
+        {"largest_pub_to_universe_ratio": 0.25},
+    ),
 ]
 
 CAMPAIGN_SPEND_FRACTIONS_GENERATORS = [
@@ -109,9 +109,10 @@ REPLICA_IDS = [1, 2, 3]
 MAX_FREQUENCIES = [10]
 
 TEST_POINT_STRATEGIES = [
-    ("latin_hypercube", {"npublishers": 1}),
-    ("subset", {"campaign_spend_fractions": [1]}),
-    ("shareshift", {"campaign_spend_fractions": [1]}),
+    ("incremental", {"campaign_spend_fractions": [1]}),
+    # ("latin_hypercube", {"npublishers": 1}),
+    # ("subset", {"campaign_spend_fractions": [1]}),
+    # ("shareshift", {"campaign_spend_fractions": [1]}),
 ]
 
 LEVELS = {

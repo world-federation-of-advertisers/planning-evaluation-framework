@@ -202,9 +202,17 @@ class ExperimentalTrial:
             #     modeling_strategy._multi_pub_model,
             #     '\n',
             # )
+            if (
+                self._trial_descriptor.experiment_params.test_point_strategy
+                == "incremental"
+            ):
+                raw = True
+            else:
+                raw = False
+
             if len(test_points) == 0:
                 true_reach, fitted_reach = [], []
-                metrics = aggregate(true_reach, fitted_reach)
+                metrics = aggregate(true_reach, fitted_reach, raw)
                 metrics["single_pub_kplus_reach_agreement"] = [{}]
             else:
                 true_reach = [
@@ -221,7 +229,7 @@ class ExperimentalTrial:
                     for t in test_points
                 ]
                 # print('Fitted: ', fitted_reach, '\n\n')
-                metrics = aggregate(true_reach, fitted_reach)
+                metrics = aggregate(true_reach, fitted_reach, raw)
                 if hasattr(reach_surface, "evaluate_single_pub_kplus_reach_agreement"):
                     metrics["single_pub_kplus_reach_agreement"] = [
                         reach_surface.evaluate_single_pub_kplus_reach_agreement(

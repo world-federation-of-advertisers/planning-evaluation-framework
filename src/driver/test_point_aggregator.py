@@ -125,29 +125,40 @@ def _shuffle_distance(xpoint: ReachPoint, ypoint: ReachPoint, k=5) -> float:
 
 
 def aggregate(
-    true_reach: List[ReachPoint], simulated_reach: List[ReachPoint]
+    true_reach: List[ReachPoint],
+    simulated_reach: List[ReachPoint],
+    raw: bool = False,
 ) -> pd.DataFrame:
     """Returns a DataFrame of the statistics listed in keys.
 
     Args:
-      keys:  A list of strings.  Each string should specify the name of an aggregation
-        statistic, as given in AGGREGATORS.
-      true_reach:  A list of points representing true reach values.
-      simulated_reach:  A list of points representing modeled reach values.  This list must
-        be of the same length as true_reach.  The value of simulated_reach[i] should be the
-        output of the modeling function for the spend vector that was used to compute
-        true_reach[i].
+        keys:  A list of strings.  Each string should specify the name of an aggregation
+            statistic, as given in AGGREGATORS.
+        true_reach:  A list of points representing true reach values.
+        simulated_reach:  A list of points representing modeled reach values.  This list must
+            be of the same length as true_reach.  The value of simulated_reach[i] should be the
+            output of the modeling function for the spend vector that was used to compute
+            true_reach[i].
+
     Returns:
       A single row DataFrame representing the values of the statistics listed in keys.
     """
-    print("\n", true_reach, "\n", simulated_reach, "\n")
     stats = {"model_succeeded": [1], "model_exception": ["None"]}
-    if len(true_reach) == 0:
+    if raw or (len(true_reach) == 0):
         for key in AGGREGATORS:
             stats[key] = [np.nan]
     else:
         for key in AGGREGATORS:
             stats[key] = [AGGREGATORS[key](true_reach, simulated_reach)]
+    if raw:
+        stats["raw"] = [
+            {
+                "true": [rp.reach(1) for rp in true_reach],
+                "predicted": [rp.reach(1) for rp in simulated_reach],
+            }
+        ]
+    else:
+        stats["raw"] = []
     return pd.DataFrame(data=stats)
 
 

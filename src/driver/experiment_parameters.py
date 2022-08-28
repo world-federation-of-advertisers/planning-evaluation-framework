@@ -39,6 +39,9 @@ from wfa_planning_evaluation_framework.driver.uniformly_random_test_point_genera
 from wfa_planning_evaluation_framework.driver.m3_subset_test_point_generator import (
     M3SubsetTestPointGenerator,
 )
+from wfa_planning_evaluation_framework.driver.incremental_test_point_generator import (
+    IncrementalTestPointGenerator,
+)
 from wfa_planning_evaluation_framework.driver.shareshift_test_point_generator import (
     ShareShiftTestPointGenerator,
 )
@@ -52,6 +55,7 @@ TEST_POINT_STRATEGIES = {
     "grid": GridTestPointGenerator,
     "subset": M3SubsetTestPointGenerator,
     "shareshift": ShareShiftTestPointGenerator,
+    "incremental": IncrementalTestPointGenerator,
 }
 
 

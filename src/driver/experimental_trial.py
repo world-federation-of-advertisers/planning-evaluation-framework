@@ -209,14 +209,12 @@ class ExperimentalTrial:
                     )
                     for t in test_points
                 ]
-                # print('True: ', true_reach, '\n')
                 fitted_reach = [
                     reach_surface.by_spend(
                         t, self._trial_descriptor.experiment_params.max_frequency
                     )
                     for t in test_points
                 ]
-                # print('Fitted: ', fitted_reach, '\n\n')
                 metrics = aggregate(true_reach, fitted_reach, raw)
                 if hasattr(reach_surface, "evaluate_single_pub_kplus_reach_agreement"):
                     metrics["single_pub_kplus_reach_agreement"] = [
@@ -279,11 +277,10 @@ class ExperimentalTrial:
         if len(descriptor_name) > 255:
             parsed = int(descriptor_name.split(",id=")[1])
             if parsed == -1:
-                id = hashlib.md5(descriptor_name.encode()).hexdigest()[:6]
+                identity = hashlib.md5(descriptor_name.encode()).hexdigest()[:6]
             else:
-                id = f"id={parsed}"
-            print("\n\n\n", descriptor_name, "\n\n\n")
-            descriptor_name = descriptor_name[:241] + f"...,{id}"
+                identity = f"id={parsed}"
+            descriptor_name = descriptor_name[:241] + f"...,{identity}"
         descriptor_name = descriptor_name.replace("[", "(").replace("]", ")")
         name = f"{dir_name}/{dataset_name}/{descriptor_name}.csv"
         return name

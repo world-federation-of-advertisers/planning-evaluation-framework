@@ -158,7 +158,7 @@ def aggregate(
             }
         ]
     else:
-        stats["raw"] = []
+        stats["raw"] = [np.nan]
     return pd.DataFrame(data=stats)
 
 

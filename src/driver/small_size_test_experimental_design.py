@@ -84,10 +84,12 @@ REPLICA_IDS = [
     1,
 ]
 
-MAX_FREQUENCIES = [10]
+MAX_FREQUENCIES = [3]
 
 TEST_POINT_STRATEGIES = [
-    ("incremental", {"campaign_spend_fractions": [1]}),
+    ("training", {"campaign_spend_fractions": [1], "test_sketch_error": True}),
+    ("training", {"campaign_spend_fractions": [1], "test_sketch_error": False}),
+    # ("incremental", {"campaign_spend_fractions": [1]}),
     # ("subset", {"campaign_spend_fractions": [1]}),
     # ("shareshift", {"campaign_spend_fractions": [1]}),
 ]

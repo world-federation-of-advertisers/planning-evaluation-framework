@@ -42,6 +42,9 @@ from wfa_planning_evaluation_framework.driver.m3_subset_test_point_generator imp
 from wfa_planning_evaluation_framework.driver.incremental_test_point_generator import (
     IncrementalTestPointGenerator,
 )
+from wfa_planning_evaluation_framework.driver.m3_training_point_generator import (
+    M3TrainingPointGenerator,
+)
 from wfa_planning_evaluation_framework.driver.shareshift_test_point_generator import (
     ShareShiftTestPointGenerator,
 )
@@ -56,6 +59,7 @@ TEST_POINT_STRATEGIES = {
     "subset": M3SubsetTestPointGenerator,
     "shareshift": ShareShiftTestPointGenerator,
     "incremental": IncrementalTestPointGenerator,
+    "training": M3TrainingPointGenerator,
 }
 
 

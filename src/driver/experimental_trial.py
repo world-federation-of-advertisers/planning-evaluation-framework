@@ -182,49 +182,61 @@ class ExperimentalTrial:
         single_publisher_dataframe = pd.DataFrame()
         max_frequency = self._trial_descriptor.experiment_params.max_frequency
         try:
-            reach_surface = modeling_strategy.fit(
-                halo, self._trial_descriptor.system_params, privacy_budget
-            )
+            # evaluate the error of the model or just the sketch
+            test_sketch_error = False
+            if (
+                self._trial_descriptor.experiment_params.test_point_strategy
+                == "training"
+            ):
+                if self._trial_descriptor.experiment_params.test_point_strategy_kwargs[
+                    "test_sketch_error"
+                ]:
+                    test_sketch_error = True
+            # obtain test spends
             test_points = list(
                 self._trial_descriptor.experiment_params.generate_test_points(
                     dataset, rng
                 )
             )
-            if (
-                self._trial_descriptor.experiment_params.test_point_strategy
-                == "incremental"
-            ):
-                raw = True
-            else:
-                raw = False
-
-            if len(test_points) == 0:
-                true_reach, fitted_reach = [], []
-                metrics = aggregate(true_reach, fitted_reach, raw)
-                metrics["single_pub_kplus_reach_agreement"] = [{}]
-            else:
-                true_reach = [
-                    halo.true_reach_by_spend(
-                        t, self._trial_descriptor.experiment_params.max_frequency
+            # obtain true and fitted reach on the testing points
+            true_reach = [
+                halo.true_reach_by_spend(
+                    t, self._trial_descriptor.experiment_params.max_frequency
+                )
+                for t in test_points
+            ]
+            if test_sketch_error:
+                fitted_reach = [
+                    halo.simulated_reach_by_spend(
+                        spends=t,
+                        budget=privacy_budget,
+                        max_frequency=self._trial_descriptor.experiment_params.max_frequency,
                     )
                     for t in test_points
                 ]
+            else:
+                reach_surface = modeling_strategy.fit(
+                    halo, self._trial_descriptor.system_params, privacy_budget
+                )
                 fitted_reach = [
                     reach_surface.by_spend(
                         t, self._trial_descriptor.experiment_params.max_frequency
                     )
                     for t in test_points
                 ]
-                metrics = aggregate(true_reach, fitted_reach, raw)
-                if hasattr(reach_surface, "evaluate_single_pub_kplus_reach_agreement"):
-                    metrics["single_pub_kplus_reach_agreement"] = [
-                        reach_surface.evaluate_single_pub_kplus_reach_agreement(
-                            scaling_factor_choices=[0.5, 1, 2],
-                            max_frequency=max_frequency,
-                        )
-                    ]
-                else:
-                    metrics["single_pub_kplus_reach_agreement"] = [{}]
+            # raw or aggregated error
+            raw = (
+                self._trial_descriptor.experiment_params.test_point_strategy
+                == "incremental"
+            )
+            # raw = self._trial_descriptor.experiment_params.test_point_strategy in [
+            #     "incremental",
+            #     "training",
+            # ]
+
+            # aggregate the error
+            metrics = aggregate(true_reach, fitted_reach, raw)
+            metrics["test_sketch_error"] = test_sketch_error
             if self._analysis_type == SINGLE_PUB_ANALYSIS:
                 single_publisher_dataframe = (
                     self._compute_single_publisher_fractions_dataframe(

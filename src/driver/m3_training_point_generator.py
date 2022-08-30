@@ -16,14 +16,13 @@
 from typing import Iterable, List
 
 import numpy as np
-from itertools import combinations
 from wfa_planning_evaluation_framework.data_generators.data_set import DataSet
 from wfa_planning_evaluation_framework.driver.test_point_generator import (
     TestPointGenerator,
 )
 
 
-class IncrementalTestPointGenerator(TestPointGenerator):
+class M3TrainingPointGenerator(TestPointGenerator):
     """Generates a sequence of subset reach from which we can calculate incremental reach."""
 
     def __init__(
@@ -31,19 +30,12 @@ class IncrementalTestPointGenerator(TestPointGenerator):
         dataset: DataSet,
         campaign_spend_fractions: np.ndarray,
         rng: np.random.Generator = np.random.default_rng(0),
+        test_sketch_error: bool = False,
     ):
         super().__init__(dataset)
         self._rng = rng
         self._campaign_spends = self._max_spends * campaign_spend_fractions
-
-    @staticmethod
-    def sequential_subset_indicator(sequence: List[int]) -> List[np.ndarray]:
-        indicator = np.zeros(len(sequence))
-        ret = []
-        for i in sequence:
-            indicator[i] = 1
-            ret.append(indicator.copy())
-        return ret
+        self._test_sketch_error = test_sketch_error
 
     def test_points(self) -> Iterable[List[float]]:
         """Returns a generator for generating a list of test points.
@@ -54,9 +46,12 @@ class IncrementalTestPointGenerator(TestPointGenerator):
             surface.
         """
         p = self._npublishers
-        num_sequences = int(2 * p)
-        sequence = [i for i in range(p)]
-        for _ in range(num_sequences):
-            self._rng.shuffle(sequence)
-            for indicator in self.sequential_subset_indicator(sequence):
-                yield list(self._campaign_spends * indicator)
+        yield list(self._campaign_spends)
+        for i in range(p):
+            spends = np.zeros(p)
+            spends[i] = self._campaign_spends[i]
+            yield list(spends)
+        for i in range(p):
+            spends = self._campaign_spends.copy()
+            spends[i] = 0
+            yield list(spends)

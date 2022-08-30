@@ -107,13 +107,6 @@ class MultivariateMixedPoissonOptimizer:
         )
         if self.observable_directions.shape[0] != self.observed_pmf_matrix.shape[0]:
             raise ValueError("Inconsistent number of directions")
-        print(
-            "\nObservable directions and pmfs:\n",
-            self.observable_directions,
-            "\n",
-            self.observed_pmf_matrix,
-            "\n\n",
-        )
         self.max_freq = self.observed_pmf_matrix.shape[1] - 1
         self.rng = rng
         self.ncomponents = ncomponents
